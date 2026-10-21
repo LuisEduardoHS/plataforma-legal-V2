@@ -1,0 +1,53 @@
+
+# ==================================================
+# Plataforma Legal V2 - Git Ignore
+# ==================================================
+
+# Laravel / PHP
+/vendor/
+/.env
+/.env.*
+!/.env.example
+/.phpunit.cache/
+/phpunit.xml.bak
+/auth.json
+/public/storage
+/storage/*.key
+
+# Laravel - Cache y archivos generados
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+
+/storage/framework/cache/*
+!/storage/framework/cache/.gitignore
+
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+
+/storage/logs/*
+!/storage/logs/.gitignore
+
+# Node.js / Vite / Tailwind
+/node_modules/
+/public/build/
+/public/hot
+/npm-debug.log*
+/yarn-error.log*
+
+# Herramientas de desarrollo
+/.idea/
+/.vscode/
+*.log
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python - Integracion futura de LEXA
+__pycache__/
+*.pyc
+.venv/
