@@ -17,7 +17,7 @@
 
     <title>@yield('title', 'Plataforma Legal')</title>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/components/userHeader.css'])
 </head>
 
 <body class="min-h-screen bg-gray-50 text-gray-900">
