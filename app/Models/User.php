@@ -45,4 +45,24 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
+    }
+
+    public function isDisabled(): bool
+    {
+        return $this->status === 'disabled';
+    }
+
+    public function isPendingDeletion(): bool
+    {
+        return $this->status === 'pending_deletion';
+    }
 }
