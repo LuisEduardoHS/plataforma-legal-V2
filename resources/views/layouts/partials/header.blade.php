@@ -57,7 +57,7 @@
             >
                 <x-dynamic-component 
                     :component="'lucide-' . $item['icon']" 
-                    class="w-6 h-6 text-center {{ $active ? 'text-[#7F1842]' : 'text-[#1A1A1A]' }}" 
+                    class="w-6 h-6 text-center {{ $active ? 'text-dark-accent' : 'text-text' }}" 
                     stroke-width="2" 
                 />
                 {{ $item['label'] }}
@@ -102,7 +102,7 @@
             >
                 <x-dynamic-component 
                     :component="'lucide-' . $item['icon']" 
-                    class="w-6 h-6 text-center {{ $active ? 'text-[#7F1842]' : 'text-[#1A1A1A]' }}" 
+                    class="w-6 h-6 text-center {{ $active ? 'text-dark-accent' : 'text-text' }}" 
                     stroke-width="2" 
                 />
                 {{ $item['label'] }}

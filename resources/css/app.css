@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -8,8 +7,7 @@
 @source "../**/*.vue";
 
 @theme {
-    --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: "DM Sans", sans-serif;;
 
     --color-accent: #9E1F52;
     --color-light-accent: #BE2562;
@@ -23,4 +21,10 @@
     --color-accent-bg: #E6E6E6;
     --color-accent-bg-hover: #EAEAEA;
     --color-light-hover: #F8F8F8;
+}
+
+.html {
+    font-family: var(--font-sans);
+    color: var(--color-text);
+    background-color: var(--color-bg);
 }
