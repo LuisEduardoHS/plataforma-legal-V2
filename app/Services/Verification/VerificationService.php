@@ -62,6 +62,12 @@ class VerificationService
                 || DB::table('message_attachments')->where('attachment_id', $attachment->id)->lockForUpdate()->first() !== null) {
                 $this->invalid('Un archivo compartido por mensajería no puede reutilizarse como evidencia privada.');
             }
+            if ($attachment->editorial_published_at !== null
+                || DB::table('article_attachment')->where('attachment_id', $attachment->id)->lockForUpdate()->first() !== null
+                || DB::table('legal_resource_attachment')->where('attachment_id', $attachment->id)->lockForUpdate()->first() !== null
+                || DB::table('content_revision_attachments')->where('attachment_id', $attachment->id)->lockForUpdate()->first() !== null) {
+                $this->invalid('Un archivo editorial no puede reutilizarse como evidencia privada.');
+            }
             $stream = $this->integrity->verifiedStream($attachment);
             fclose($stream);
             if ($request->evidences()->where('content_sha256', $attachment->sha256)->exists()) {

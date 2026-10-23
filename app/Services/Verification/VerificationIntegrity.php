@@ -63,6 +63,7 @@ class VerificationIntegrity
             if ($attachment->status !== AttachmentStatus::Available || $attachment->visibility !== 'private'
                 || $attachment->community_published_at !== null
                 || $attachment->messaging_shared_at !== null
+                || $attachment->editorial_published_at !== null
                 || ! in_array($attachment->category, ['image', 'document'], true)
                 || $attachment->size_bytes < 1 || $attachment->size_bytes > config('verification.max_evidence_bytes')
                 || ($settings['visibility'] ?? null) !== 'private' || ($settings['serve'] ?? false)

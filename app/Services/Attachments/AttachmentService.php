@@ -111,7 +111,7 @@ class AttachmentService
     {
         $this->safely(fn () => DB::transaction(function () use ($actor, $id): void {
             $record = $this->authorized($actor, $id, 'delete', true);
-            if ($this->isVerificationRetained($record) || $this->isCommunityReferenced($record) || $this->isMessagingReferenced($record)) {
+            if ($this->isVerificationRetained($record) || $this->isCommunityReferenced($record) || $this->isMessagingReferenced($record) || $this->isEditorialReferenced($record)) {
                 throw new AttachmentException;
             }
             if (in_array($record->status, [AttachmentStatus::PendingDeletion, AttachmentStatus::Deleted], true)) {
@@ -129,7 +129,7 @@ class AttachmentService
         try {
             DB::transaction(function () use ($actor, $id): void {
                 $record = $this->authorized($actor, $id, 'delete', true);
-                if ($this->isVerificationRetained($record) || $this->isCommunityReferenced($record) || $this->isMessagingReferenced($record)) {
+                if ($this->isVerificationRetained($record) || $this->isCommunityReferenced($record) || $this->isMessagingReferenced($record) || $this->isEditorialReferenced($record)) {
                     throw new AttachmentException;
                 }
                 if ($record->status === AttachmentStatus::Deleted) {
@@ -253,5 +253,16 @@ class AttachmentService
         return DB::table('message_attachments as linked')->join('messages', 'messages.id', '=', 'linked.message_id')
             ->where('linked.attachment_id', $record->id)->whereNull('messages.deleted_at')
             ->select('linked.message_id')->lockForUpdate()->first() !== null;
+    }
+
+    private function isEditorialReferenced(Attachment $record): bool
+    {
+        foreach (['article_attachment', 'legal_resource_attachment', 'content_revision_attachments'] as $table) {
+            if (DB::table($table)->where('attachment_id', $record->id)->lockForUpdate()->first() !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

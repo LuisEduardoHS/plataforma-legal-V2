@@ -719,10 +719,13 @@ class VerificationTest extends TestCase
         $before = Permission::orderBy('id')->pluck('id', 'name')->all();
         $this->seed(DatabaseSeeder::class);
         $this->seed(VerificationPermissionSeeder::class);
-        $this->assertSame($before, Permission::orderBy('id')->pluck('id', 'name')->all());
+        $after = Permission::orderBy('id')->pluck('id', 'name')->all();
+        $this->assertSame($before, array_intersect_key($after, $before));
         $this->assertTrue($admin->fresh()->can('verification.review'));
         $this->assertFalse($admin->fresh()->can('verification.decide'));
-        $this->assertSame(17, Permission::count());
+        $this->assertSame(25, Permission::count());
+        $this->assertFalse($admin->fresh()->can('articles.manage'));
+        $this->assertFalse($admin->fresh()->can('resources.manage'));
     }
 
     public function test_pending_queue_and_audit_permission_do_not_expose_private_credential_or_draft_files(): void
