@@ -76,7 +76,7 @@
         bookmarkedPosts: {}, 
         followingUsers: {} 
     }" 
-    class="min-h-screen bg-bg flex flex-col font-sans pb-24 lg:pb-12 text-text">
+    class="min-h-screen bg-bg dark:bg-bg-dark flex flex-col font-sans pb-24 lg:pb-12 text-text dark:text-text-dark">
 
     <main class="w-full max-w-[1080px] mx-auto px-4 sm:px-6 pt-6">
         <div class="flex flex-col lg:flex-row gap-5 items-start">
@@ -85,9 +85,9 @@
             <div class="w-full lg:flex-1 flex flex-col gap-5">
 
                 {{-- Tarjeta de Perfil --}}
-                <section class="bg-white rounded-2xl overflow-hidden shadow-xs border border-gray-100/50">
+                <section class="bg-white dark:bg-black rounded-2xl overflow-hidden shadow-xs border border-gray-100/50 dark:border-gray-800/50">
                     {{-- Banner Decorativo --}}
-                    <div class="h-36 sm:h-44 w-full relative overflow-hidden bg-light-accent">
+                    <div class="h-36 sm:h-44 w-full relative overflow-hidden bg-light-accent dark:bg-light-accent">
                         <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 523 119" preserveAspectRatio="none" fill="none">
                             <path d="M 190 119 C 260 55, 330 65, 380 84 C 430 102, 470 90, 523 48 L 523 119 Z" fill="#9E1F52" opacity="0.95"/>
                         </svg>
@@ -99,7 +99,7 @@
                             
                             {{-- Avatar Grande --}}
                             <div class="-mt-16 sm:-mt-20 shrink-0">
-                                <div class="size-24 sm:size-28 rounded-full border-4 border-white bg-[#EEEEEE] overflow-hidden shrink-0 shadow-xs flex items-center justify-center">
+                                <div class="size-24 sm:size-28 rounded-full border-4 border-white dark:border-black bg-bg dark:bg-bg-dark overflow-hidden shrink-0 shadow-xs flex items-center justify-center">
                                     <svg viewBox="0 0 100 100" class="w-full h-full" fill="#D3D3D3">
                                         <circle cx="50" cy="35" r="17" />
                                         <path d="M 18 88 C 18 64, 32 58, 50 58 C 68 58, 82 64, 82 88 Z" />
@@ -111,10 +111,10 @@
                             <div class="flex-1 w-full flex flex-col justify-between pt-1">
                                 <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                                     <div>
-                                        <h1 class="text-xl sm:text-2xl font-bold text-text tracking-tight leading-tight">
+                                        <h1 class="text-xl sm:text-2xl font-bold text-text dark:text-text-dark tracking-tight leading-tight">
                                             Juanito Pérez
                                         </h1>
-                                        <div class="flex items-center gap-1.5 text-xs text-light-text mt-1">
+                                        <div class="flex items-center gap-1.5 text-xs text-light-text dark:text-light-text-dark mt-1">
                                             <x-lucide-map-pin class="w-3.5 h-3.5 shrink-0" stroke-width="1.8" />
                                             <span>Monterrey, Nuevo León, México</span>
                                         </div>
@@ -125,31 +125,31 @@
                                         <button
                                             @click="isFollowing = !isFollowing"
                                             :class="isFollowing 
-                                                ? 'bg-gray-100 text-text border border-gray-300 hover:bg-gray-200' 
-                                                : 'bg-dark-accent hover:opacity-90 text-white'"
+                                                ? 'bg-gray-100 dark:bg-bg-dark text-text dark:text-text-dark border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700' 
+                                                : 'bg-dark-accent dark:bg-light-accent hover:opacity-90 text-white'"
                                             class="text-xs sm:text-sm font-semibold px-7 py-1.5 rounded-full cursor-pointer transition-all duration-200 shadow-xs"
                                         >
                                             <span x-text="isFollowing ? 'Siguiendo' : 'Seguir'"></span>
                                         </button>
                                         
-                                        <button class="bg-dark-accent hover:opacity-90 transition-opacity text-white size-8 sm:size-8.5 rounded-full flex items-center justify-center cursor-pointer shadow-xs shrink-0" title="Enviar mensaje">
+                                        <button class="bg-dark-accent dark:bg-light-accent hover:opacity-90 transition-opacity text-white dark:text-black size-8 sm:size-8.5 rounded-full flex items-center justify-center cursor-pointer shadow-xs shrink-0" title="Enviar mensaje">
                                             <x-lucide-message-circle class="w-4 h-4" stroke-width="2" />
                                         </button>
                                     </div>
                                 </div>
 
                                 {{-- Estadísticas --}}
-                                <div class="flex items-center gap-4 sm:gap-5 mt-2.5 text-xs text-light-text">
+                                <div class="flex items-center gap-4 sm:gap-5 mt-2.5 text-xs text-light-text dark:text-light-text-dark">
                                     <div class="flex items-center gap-1">
-                                        <span class="font-bold text-text text-xs sm:text-sm" x-text="isFollowing ? 85 : 84">84</span>
+                                        <span class="font-bold text-text dark:text-text-dark text-xs sm:text-sm" x-text="isFollowing ? 85 : 84">84</span>
                                         <span>Seguidores</span>
                                     </div>
                                     <div class="flex items-center gap-1">
-                                        <span class="font-bold text-text text-xs sm:text-sm">43</span>
+                                        <span class="font-bold text-text dark:text-text-dark text-xs sm:text-sm">43</span>
                                         <span>Seguidos</span>
                                     </div>
                                     <div class="flex items-center gap-1">
-                                        <span class="font-bold text-text text-xs sm:text-sm">12</span>
+                                        <span class="font-bold text-text dark:text-text-dark text-xs sm:text-sm">12</span>
                                         <span>Publicaciones</span>
                                     </div>
                                 </div>
@@ -163,23 +163,23 @@
                   
                     {{-- Datos personales --}}
                     <div class="md:col-span-4">
-                        <section class="bg-white rounded-2xl p-5 shadow-xs border border-gray-100/50">
-                            <h2 class="text-xs font-semibold text-light-text mb-4">Datos personales</h2>
-                            <ul class="flex flex-col gap-3.5 text-xs text-text">
+                        <section class="bg-white dark:bg-black rounded-2xl p-5 shadow-xs border border-gray-100/50 dark:border-gray-800/50">
+                            <h2 class="text-xs font-semibold text-light-text dark:text-light-text-dark mb-4">Datos personales</h2>
+                            <ul class="flex flex-col gap-3.5 text-xs text-text dark:text-text-dark">
                                 <li class="flex items-center gap-2.5">
-                                    <x-lucide-home class="w-[18px] h-[18px] text-light-text shrink-0" stroke-width="1.8" />
-                                    <span>Vive en <strong class="font-bold text-text">Monterrey</strong></span>
+                                    <x-lucide-home class="w-[18px] h-[18px] text-light-text dark:text-light-text-dark shrink-0" stroke-width="1.8" />
+                                    <span>Vive en <strong class="font-bold text-text dark:text-text-dark">Monterrey</strong></span>
                                 </li>
                                 <li class="flex items-center gap-2.5">
-                                    <x-lucide-map-pin class="w-[18px] h-[18px] text-light-text shrink-0" stroke-width="1.8" />
-                                    <span>Es de <strong class="font-bold text-text">Monterrey</strong></span>
+                                    <x-lucide-map-pin class="w-[18px] h-[18px] text-light-text dark:text-light-text-dark shrink-0" stroke-width="1.8" />
+                                    <span>Es de <strong class="font-bold text-text dark:text-text-dark">Monterrey</strong></span>
                                 </li>
                                 <li class="flex items-center gap-2.5">
-                                    <svg class="w-[18px] h-[18px] text-light-text shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <svg class="w-[18px] h-[18px] text-light-text dark:text-light-text-dark shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                         <circle cx="9" cy="15" r="5.5" />
                                         <circle cx="15" cy="9" r="5.5" />
                                     </svg>
-                                    <span class="text-light-text font-normal">Hombre</span>
+                                    <span class="text-light-text dark:text-light-text-dark font-normal">Hombre</span>
                                 </li>
                             </ul>
                         </section>
@@ -188,17 +188,17 @@
                     {{-- Feed de Publicaciones --}}
                     <div class="md:col-span-8 flex flex-col gap-4">
                         @foreach($posts as $post)
-                            <article class="bg-white rounded-2xl p-5 shadow-xs border border-gray-100/50">
+                            <article class="bg-white dark:bg-black rounded-2xl p-5 shadow-xs border border-gray-100/50 dark:border-gray-800/50">
                                 
                                 <div class="flex items-start justify-between">
                                     <div class="flex items-center gap-3">
-                                        <div class="size-9 rounded-full bg-[#757575] shrink-0"></div>
+                                        <div class="size-9 rounded-full bg-[#757575] dark:bg-gray-600 shrink-0"></div>
                                         <div>
-                                            <h3 class="font-bold text-xs sm:text-sm text-text leading-tight">{{ $post['author'] }}</h3>
+                                            <h3 class="font-bold text-xs sm:text-sm text-text dark:text-text-dark leading-tight">{{ $post['author'] }}</h3>
                                             <div class="flex items-center gap-1.5 text-xs mt-0.5">
-                                                <span class="bg-[#EEEEEE] text-light-text px-2 py-0.5 rounded text-[11px] font-normal">{{ $post['tag'] }}</span>
-                                                <span class="text-light-text text-[10px]">·</span>
-                                                <span class="text-light-text text-xs">{{ $post['time'] }}</span>
+                                                <span class="bg-bg dark:bg-bg-dark text-light-text dark:text-light-text-dark px-2 py-0.5 rounded text-[11px] font-normal">{{ $post['tag'] }}</span>
+                                                <span class="text-light-text dark:text-light-text-dark text-[10px]">·</span>
+                                                <span class="text-light-text dark:text-light-text-dark text-xs">{{ $post['time'] }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -206,7 +206,7 @@
                                     {{-- Botón Guardar (Bookmark) dinámico --}}
                                     <button
                                         @click="bookmarkedPosts[{{ $post['id'] }}] = !bookmarkedPosts[{{ $post['id'] }}]"
-                                        class="text-dark-accent hover:opacity-80 transition-opacity cursor-pointer p-0.5"
+                                        class="text-dark-accent dark:text-light-accent hover:opacity-80 transition-opacity cursor-pointer p-0.5"
                                         title="Guardar publicación"
                                     >
                                         <x-lucide-bookmark 
@@ -217,17 +217,17 @@
                                     </button>
                                 </div>
 
-                                <h4 class="font-bold text-sm sm:text-base text-text mt-3.5 leading-snug">{{ $post['title'] }}</h4>
-                                <p class="text-xs sm:text-sm text-light-text mt-1.5 leading-relaxed">{{ $post['excerpt'] }}</p>
+                                <h4 class="font-bold text-sm sm:text-base text-text dark:text-text-dark mt-3.5 leading-snug">{{ $post['title'] }}</h4>
+                                <p class="text-xs sm:text-sm text-light-text dark:text-light-text-dark mt-1.5 leading-relaxed">{{ $post['excerpt'] }}</p>
 
-                                <hr class="border-t border-[#EEEEEE] my-3.5 mx-0.5" />
+                                <hr class="border-t border-bg dark:border-bg-dark my-3.5 mx-0.5" />
 
                                 <div class="flex items-center justify-between text-xs">
-                                    <div class="flex items-center gap-1.5 text-light-text">
-                                        <x-lucide-message-circle class="w-4 h-4 text-dark-accent" stroke-width="1.8" />
+                                    <div class="flex items-center gap-1.5 text-light-text dark:text-light-text-dark">
+                                        <x-lucide-message-circle class="w-4 h-4 text-dark-accent dark:text-light-accent" stroke-width="1.8" />
                                         <span>{{ $post['replies'] }} respuestas</span>
                                     </div>
-                                    <a href="#" class="font-semibold text-dark-accent hover:underline flex items-center gap-1 cursor-pointer">
+                                    <a href="#" class="font-semibold text-dark-accent dark:text-light-accent hover:underline flex items-center gap-1 cursor-pointer">
                                         <span>Ver publicación</span>
                                         <span class="text-sm">→</span>
                                     </a>
@@ -240,16 +240,16 @@
 
             {{-- Sidebar Derecho: Más para ti --}}
             <aside class="w-full lg:w-60 xl:w-64 shrink-0">
-                <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-gray-100/50">
-                    <h2 class="font-bold text-sm sm:text-base text-text mb-3.5 px-0.5">Más para ti</h2>
+                <div class="bg-white dark:bg-black rounded-2xl p-4 sm:p-5 shadow-xs border border-gray-100/50 dark:border-gray-800/50">
+                    <h2 class="font-bold text-sm sm:text-base text-text dark:text-text-dark mb-3.5 px-0.5">Más para ti</h2>
 
                     <div class="flex flex-col gap-3">
                         @foreach($recommendations as $index => $rec)
-                            <div class="bg-[#FAFAFA] rounded-xl p-3 border border-gray-100/60">
+                            <div class="bg-bg/30 dark:bg-bg-dark/30 rounded-xl p-3 border border-gray-100/60 dark:border-gray-800/60">
                                 <div class="flex items-start gap-2.5">
                                     
                                     {{-- Avatar Pequeño --}}
-                                    <div class="size-9 rounded-full bg-[#EEEEEE] overflow-hidden shrink-0 flex items-center justify-center">
+                                    <div class="size-9 rounded-full bg-bg dark:bg-bg-dark overflow-hidden shrink-0 flex items-center justify-center">
                                         <svg viewBox="0 0 100 100" class="w-full h-full" fill="#D3D3D3">
                                             <circle cx="50" cy="35" r="17" />
                                             <path d="M 18 88 C 18 64, 32 58, 50 58 C 68 58, 82 64, 82 88 Z" />
@@ -257,10 +257,10 @@
                                     </div>
 
                                     <div class="min-w-0 flex-1">
-                                        <h3 class="font-bold text-xs sm:text-sm text-text truncate leading-tight">{{ $rec['name'] }}</h3>
-                                        <p class="text-[11px] text-light-text truncate leading-tight mt-0.5">{{ $rec['location'] }}</p>
-                                        <p class="text-[11px] text-light-text mt-0.5">
-                                            <strong class="font-bold text-text" x-text="followingUsers[{{ $index }}] ? {{ $rec['followers'] + 1 }} : {{ $rec['followers'] }}">
+                                        <h3 class="font-bold text-xs sm:text-sm text-text dark:text-text-dark truncate leading-tight">{{ $rec['name'] }}</h3>
+                                        <p class="text-[11px] text-light-text dark:text-light-text-dark truncate leading-tight mt-0.5">{{ $rec['location'] }}</p>
+                                        <p class="text-[11px] text-light-text dark:text-light-text-dark mt-0.5">
+                                            <strong class="font-bold text-text dark:text-text-dark" x-text="followingUsers[{{ $index }}] ? {{ $rec['followers'] + 1 }} : {{ $rec['followers'] }}">
                                                 {{ $rec['followers'] }}
                                             </strong> Seguidores
                                         </p>
@@ -271,8 +271,8 @@
                                 <button
                                     @click="followingUsers[{{ $index }}] = !followingUsers[{{ $index }}]"
                                     :class="followingUsers[{{ $index }}] 
-                                        ? 'bg-gray-100 text-text border border-gray-300 hover:bg-gray-200' 
-                                        : 'bg-dark-accent hover:opacity-90 text-white'"
+                                        ? 'bg-bg dark:bg-bg-dark text-text dark:text-text-dark border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700' 
+                                        : 'bg-dark-accent dark:bg-light-accent hover:opacity-90 text-white'"
                                     class="w-full mt-2.5 text-xs font-semibold py-1.5 rounded-full cursor-pointer transition-all duration-200 text-center shadow-xs"
                                 >
                                     <span x-text="followingUsers[{{ $index }}] ? 'Siguiendo' : 'Seguir'"></span>

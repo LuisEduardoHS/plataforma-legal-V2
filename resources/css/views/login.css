@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@import "../app.css";
+
+.login-input-label {
+    @apply block text-sm text-light-text dark:text-light-text-dark font-semibold mb-1;
+}
+
+.login-input {
+    @apply bg-bg dark:bg-bg-dark rounded-md w-full text-text dark:text-text-dark font-medium py-3 px-3 focus:outline-none focus:ring-2 focus:ring-dark-accent dark:focus:ring-light-accent;
+}
+
+.login-remember-label {
+    @apply text-sm text-light-text dark:text-light-text-dark font-semibold;
+}
+
+.login-link {
+    @apply text-sm text-text dark:text-text-dark font-semibold hover:underline;
+}
+
+.login-alt-button {
+    @apply bg-bg dark:bg-bg-dark hover:bg-accent-bg-hover dark:hover:bg-accent-bg-hover-dark transition-colors duration-200 py-2 px-2 w-22 lg:w-29 h-12
+    text-sm text-light-text font-semibold rounded-lg cursor-pointer flex flex-row items-center justify-center;
+}
