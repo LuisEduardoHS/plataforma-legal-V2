@@ -21,6 +21,14 @@
     --color-accent-bg: #E6E6E6;
     --color-accent-bg-hover: #EAEAEA;
     --color-light-hover: #F8F8F8;
+
+    --color-text-dark: #EAEAEA;
+    --color-light-text-dark: #A0A0A0;
+
+    --color-bg-dark: #1A1A1A;
+    --color-accent-bg-dark: #262626;
+    --color-accent-bg-hover-dark: #303030;
+    --color-light-hover-dark: #222222;
 }
 
 .html {

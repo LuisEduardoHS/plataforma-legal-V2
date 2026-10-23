@@ -29,16 +29,16 @@
     ];
 @endphp
 
-<header class="bg-white w-full py-4 lg:px-6 px-3 lg:h-18 sm:h-16 h-12 flex items-center justify-between">
+<header class="bg-white dark:bg-black w-full py-4 lg:px-6 px-3 lg:h-18 sm:h-16 h-12 flex items-center justify-between">
 
     {{-- Desktop Logo --}}
-    <div class="lg:inline hidden bg-linear-to-l from-dark-accent to-light-accent lg:size-11 size-8 rounded-full"></div>
+    <div class="lg:inline hidden bg-linear-to-l from-dark-accent to-light-accent dark:from-light-accent-dark dark:to-light-accent-dark lg:size-11 size-8 rounded-full"></div>
 
     {{-- Mobile Profile --}}
     <a href="{{ route('profile') }}" aria-label="Ver mi perfil">
         <div class="bg-linear-to-br from-[#E33F3F] to-[#D98040] sm:size-9 size-8 rounded-full lg:hidden flex items-end justify-end cursor-pointer">
-            <div class="bg-accent-bg sm:size-4 size-3 rounded-full flex items-center justify-center">
-                <x-lucide-chevron-down class="w-3 h-3 text-black" stroke-width="2" />
+            <div class="bg-accent-bg dark:bg-accent-bg-dark sm:size-4 size-3 rounded-full flex items-center justify-center">
+                <x-lucide-chevron-down class="w-3 h-3 text-black dark:text-white" stroke-width="2" />
             </div>
         </div>
     </a>
@@ -57,7 +57,7 @@
             >
                 <x-dynamic-component 
                     :component="'lucide-' . $item['icon']" 
-                    class="w-6 h-6 text-center {{ $active ? 'text-dark-accent' : 'text-text' }}" 
+                    class="w-6 h-6 text-center {{ $active ? 'text-dark-accent dark:text-light-accent' : 'text-text dark:text-text-dark' }}" 
                     stroke-width="2" 
                 />
                 {{ $item['label'] }}
@@ -66,20 +66,20 @@
     </nav>
 
     {{-- Mobile Logo --}}
-    <div class="lg:hidden space-x-2 absolute left-1/2 transform -translate-x-1/2 bg-linear-to-l from-dark-accent to-light-accent sm:size-9 size-8 rounded-lg"></div>
+    <div class="lg:hidden space-x-2 absolute left-1/2 transform -translate-x-1/2 bg-linear-to-l from-dark-accent to-light-accent dark:from-light-accent-dark dark:to-light-accent-dark sm:size-9 size-8 rounded-lg"></div>
 
     {{-- Desktop LEXA and User Profile --}}
     <div class="lg:flex hidden items-center space-x-4">
-        <button class="bg-accent-bg-hover text-md font-semibold sm:px-12 px-8 py-1 tracking-[0.4rem] rounded-lg hover:bg-accent-bg cursor-pointer transition-colors duration-200">
-            <span class="text-transparent text-center bg-clip-text bg-linear-to-l from-lexa via-accent to-dark-accent">
+        <button class="bg-accent-bg-hover dark:bg-accent-bg-hover-dark text-md font-semibold sm:px-12 px-8 py-1 tracking-[0.4rem] rounded-lg hover:bg-accent-bg dark:hover:bg-accent-bg-dark cursor-pointer transition-colors duration-200">
+            <span class="text-transparent text-center bg-clip-text bg-linear-to-l from-lexa dark:from-lexa-dark via-accent dark:via-light-accent-dark to-dark-accent dark:to-light-accent-dark">
                 LEX<span class="tracking-normal">A</span>
             </span>
         </button>
 
         <a href="{{ route('profile') }}" aria-label="Ver mi perfil">
             <div class="bg-linear-to-br from-[#E33F3F] to-[#D98040] lg:size-11 size-8 rounded-full flex items-end justify-end cursor-pointer">
-                <div class="bg-accent-bg lg:size-4 size-3 rounded-full flex items-center justify-center">
-                    <x-lucide-chevron-down class="w-3 h-3 text-black" stroke-width="2" />
+                <div class="bg-accent-bg dark:bg-accent-bg-dark lg:size-4 size-3 rounded-full flex items-center justify-center">
+                    <x-lucide-chevron-down class="w-3 h-3 text-black dark:text-black" stroke-width="2" />
                 </div>
             </div>
         </a>
@@ -88,7 +88,7 @@
 </header>
 
 {{-- Mobile NavBar --}}
-<div class="bg-white lg:hidden flex items-center justify-center rounded-t-xl fixed bottom-0 sm:h-18 h-14 w-full py-1 px-4">
+<div class="bg-white dark:bg-black lg:hidden flex items-center justify-center rounded-t-xl fixed bottom-0 sm:h-18 h-14 w-full py-1 px-4">
     <nav class="flex w-full space-x-2 absolute left-1/2 transform -translate-x-1/2">
         @foreach ($navItems as $item)
             @php
@@ -102,7 +102,7 @@
             >
                 <x-dynamic-component 
                     :component="'lucide-' . $item['icon']" 
-                    class="w-6 h-6 text-center {{ $active ? 'text-dark-accent' : 'text-text' }}" 
+                    class="w-6 h-6 text-center {{ $active ? 'text-dark-accent dark:text-light-accent' : 'text-text dark:text-text-dark' }}" 
                     stroke-width="2" 
                 />
                 {{ $item['label'] }}

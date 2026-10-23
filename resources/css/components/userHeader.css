@@ -2,11 +2,11 @@
 @import "../app.css";
 
 .headerNav-button {
-    @apply text-text rounded-lg lg:w-25 sm:px-4 lg:py-2 sm:text-xs text-[0.625rem] text-center flex flex-col gap-0.5
-    items-center justify-center transition-colors duration-200 lg:hover:bg-light-hover cursor-pointer
+    @apply text-text dark:text-text-dark rounded-lg lg:w-25 sm:px-4 lg:py-2 sm:text-xs text-[0.625rem] text-center flex flex-col gap-0.5
+    items-center justify-center transition-colors duration-200 lg:hover:bg-light-hover dark:lg:hover:bg-light-hover-dark cursor-pointer
     w-auto basis-1/5 sm:py-2 px-2 py-1;
 }
 
 .headerNav-button.selected {
-    @apply lg:bg-accent-bg bg-transparent lg:hover:bg-accent-bg-hover text-dark-accent;
+    @apply lg:bg-accent-bg hover:lg:bg-accent-bg-hover-dark bg-transparent lg:dark:bg-accent-bg-dark text-dark-accent dark:text-light-accent;
 }
