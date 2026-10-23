@@ -111,7 +111,7 @@ class AttachmentService
     {
         $this->safely(fn () => DB::transaction(function () use ($actor, $id): void {
             $record = $this->authorized($actor, $id, 'delete', true);
-            if ($this->isVerificationRetained($record)) {
+            if ($this->isVerificationRetained($record) || $this->isCommunityReferenced($record)) {
                 throw new AttachmentException;
             }
             if (in_array($record->status, [AttachmentStatus::PendingDeletion, AttachmentStatus::Deleted], true)) {
@@ -129,7 +129,7 @@ class AttachmentService
         try {
             DB::transaction(function () use ($actor, $id): void {
                 $record = $this->authorized($actor, $id, 'delete', true);
-                if ($this->isVerificationRetained($record)) {
+                if ($this->isVerificationRetained($record) || $this->isCommunityReferenced($record)) {
                     throw new AttachmentException;
                 }
                 if ($record->status === AttachmentStatus::Deleted) {
@@ -238,5 +238,13 @@ class AttachmentService
             ->join('verification_requests as request', 'request.id', '=', 'evidence.verification_request_id')
             ->where('evidence.attachment_id', $record->id)->whereNotNull('request.submitted_at')
             ->select('evidence.id')->lockForUpdate()->first() !== null;
+    }
+
+    private function isCommunityReferenced(Attachment $record): bool
+    {
+        return DB::table('post_attachments as linked')
+            ->join('posts', 'posts.id', '=', 'linked.post_id')
+            ->where('linked.attachment_id', $record->id)->whereNull('posts.deleted_at')
+            ->select('linked.post_id')->lockForUpdate()->first() !== null;
     }
 }

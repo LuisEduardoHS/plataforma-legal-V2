@@ -61,6 +61,7 @@ class VerificationIntegrity
         try {
             $settings = config('filesystems.disks.'.$attachment->disk, []);
             if ($attachment->status !== AttachmentStatus::Available || $attachment->visibility !== 'private'
+                || $attachment->community_published_at !== null
                 || ! in_array($attachment->category, ['image', 'document'], true)
                 || $attachment->size_bytes < 1 || $attachment->size_bytes > config('verification.max_evidence_bytes')
                 || ($settings['visibility'] ?? null) !== 'private' || ($settings['serve'] ?? false)

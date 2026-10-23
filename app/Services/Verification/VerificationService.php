@@ -54,6 +54,10 @@ class VerificationService
             if (! $attachment || (int) $attachment->user_id !== (int) $profile->user_id) {
                 throw new AuthorizationException;
             }
+            if ($attachment->community_published_at !== null
+                || DB::table('post_attachments')->where('attachment_id', $attachment->id)->lockForUpdate()->first() !== null) {
+                $this->invalid('Un archivo de Comunidad no puede reutilizarse como evidencia privada.');
+            }
             $stream = $this->integrity->verifiedStream($attachment);
             fclose($stream);
             if ($request->evidences()->where('content_sha256', $attachment->sha256)->exists()) {
