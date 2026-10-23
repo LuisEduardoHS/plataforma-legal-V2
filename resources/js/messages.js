@@ -1,7 +1,8 @@
+import { onPage, navigate } from './ui/navigation.js';
 import { validateAttachment, createAttachment, formatBytes, releaseAttachment } from './messages/attachments';
 
-const root = document.querySelector('[data-messaging]');
-if (root) {
+
+onPage('[data-messaging]', (root, { listen, onCleanup }) => {
     const $ = (selector, scope = root) => scope.querySelector(selector);
     const $$ = (selector, scope = root) => [...scope.querySelectorAll(selector)];
     const clone = (name) => $('[data-' + name + '-template]').content.firstElementChild.cloneNode(true);
@@ -221,7 +222,7 @@ if (root) {
         infoDialog.append(info);
         infoDialog.showModal();
     }
-    desktop.addEventListener('change', () => { if (desktop.matches) closeInfo(); });
+    listen(desktop, 'change', () => { if (desktop.matches) closeInfo(); });
     function findFile(id) {
         return [...allFiles(), ...(current?.draftAttachments || [])].find((file) => file.id === id);
     }
@@ -262,7 +263,7 @@ if (root) {
         if (target.matches('[data-open-info]')) openInfo(target);
         if (target.matches('[data-close-info]')) closeInfo();
         if (target.matches('[data-all-files]')) { expandedFiles = !expandedFiles; renderInfo(); $('[data-all-files]').focus(); }
-        if (target.matches('[data-profile]') && target.dataset.url) location.assign(target.dataset.url);
+        if (target.matches('[data-profile]') && target.dataset.url) navigate(target.dataset.url);
         if (target.matches('[data-file-id]')) openFile(findFile(target.dataset.fileId), target);
         if (target.matches('[data-close-preview]')) previewDialog.close();
         if (target.matches('[data-remove-file]')) {
@@ -297,7 +298,7 @@ if (root) {
         event.target.value = '';
         setStatus(current.draftAttachments.length + ' archivos en el borrador.');
     });
-    window.addEventListener('pagehide', (event) => {
+    onCleanup( (event) => {
         if (!event.persisted) conversations.forEach((conversation) => {
             [...conversation.draftAttachments, ...conversation.messages.flatMap((message) => message.attachments || [])].forEach(releaseAttachment);
         });
@@ -305,8 +306,8 @@ if (root) {
     function viewport() {
         root.style.setProperty('--messages-viewport', (window.visualViewport?.height || window.innerHeight) + 'px');
     }
-    window.visualViewport?.addEventListener('resize', viewport);
-    window.addEventListener('resize', viewport);
+    listen(window.visualViewport, 'resize', viewport);
+    listen(window, 'resize', viewport);
     viewport();
     $('#messages-contact-name').tabIndex = -1;
     $('#messages-info-title').tabIndex = -1;
@@ -322,4 +323,4 @@ if (root) {
         $('[data-list-empty]').hidden = false;
         $('[data-list-empty]').textContent = 'Las conversaciones no están disponibles por el momento.';
     }
-}
+});

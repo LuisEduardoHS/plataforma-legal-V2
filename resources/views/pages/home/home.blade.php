@@ -1,67 +1,68 @@
 @extends('layouts.app')
 @section('title', 'Inicio | Plataforma Legal')
+@section('page-assets')
+    @vite(['resources/css/home.css'])
+@endsection
 @section('content')
-    @vite(['resources/css/home.css', 'resources/js/home.js'])
     @php($dashboard = $dashboard ?? require resource_path('views/pages/home/demo.php'))
-    <section class="home-dashboard" data-home aria-label="Inicio">
+    <section class="home-dashboard" data-home data-resources-url="{{ route('articles') }}" aria-label="Inicio">
         <script type="application/json" data-home-data>{!! Illuminate\Support\Js::encode($dashboard) !!}</script>
-        <h1 class="home-sr">Inicio</h1>
+        <p class="home-error" data-home-error role="alert" hidden></p>
         <div class="home-grid">
             <div class="home-main">
-                <section aria-label="Comenzar una consulta en LEXA">
-                    <form class="home-card home-composer" data-home-composer>
-                        <label for="home-question" class="home-sr">Describe tu situación legal</label>
-                        <textarea id="home-question" data-home-question rows="3" maxlength="5000" placeholder="Describe tu situación legal o pregunta lo que necesites…"></textarea>
-                        <div class="home-composer-tools">
-                            <label class="home-mode"><x-lucide-sparkles aria-hidden="true" /><span class="home-sr">Tipo de consulta</span><select data-home-mode><option value="orientation">Orientación</option><option value="contract">Revisar un contrato</option><option value="organize">Ordenar mi consulta</option></select><x-lucide-chevron-down aria-hidden="true" /></label>
-                            <a href="{{ route('lexa') }}" class="home-context" data-add-context><x-lucide-paperclip aria-hidden="true" /><span>Agregar contexto</span></a>
-                            <div class="home-compose-actions"><button type="button" class="home-icon" disabled aria-label="Entrada de voz no habilitada"><x-lucide-mic aria-hidden="true" /></button><button type="submit" class="home-send" data-home-send disabled aria-label="Continuar consulta en LEXA"><x-lucide-arrow-up aria-hidden="true" /></button></div>
-                        </div>
-                    </form>
-                    <p class="home-disclaimer">La orientación informativa no sustituye la asesoría profesional.</p>
-                    <p class="home-error" data-home-error role="alert" hidden></p>
+                <h1 class="home-page-title">Inicio</h1>
+                <section class="home-card home-start" aria-label="Comenzar una consulta en LEXA">
+                    <div class="home-start-title"><span class="home-lexa-wordmark">LEXA</span><h2>¿Qué necesitas entender?</h2></div>
+                        <form class="home-composer" data-home-composer>
+                            <label for="home-question" class="home-sr">Describe tu situación legal</label>
+                            <textarea id="home-question" data-home-question rows="2" maxlength="5000" placeholder="Cuéntame tu situación…"></textarea>
+                            <div class="home-composer-tools">
+                                <label class="home-mode"><x-lucide-sparkles aria-hidden="true" /><span class="home-sr">Tipo de consulta</span><select data-home-mode><option value="orientation">Orientación</option><option value="contract">Revisar un contrato</option><option value="organize">Ordenar mi consulta</option></select><x-lucide-chevron-down aria-hidden="true" /></label>
+                                <a href="{{ route('lexa') }}" class="home-context" data-add-context aria-label="Agregar contexto"><x-lucide-paperclip aria-hidden="true" /><span>Agregar contexto</span></a>
+                                <button type="submit" class="home-send" data-home-send disabled aria-label="Continuar consulta en LEXA"><x-lucide-arrow-up aria-hidden="true" /></button>
+                            </div>
+
+                        </form>
+                        <div class="home-starters" aria-label="Ideas para comenzar">@foreach (['Mi finiquito' => 'Quiero entender qué información reunir sobre mi finiquito.', 'Un contrato' => 'Quiero preparar las preguntas para revisar un contrato.', 'Mi renta' => 'Tengo una duda sobre mi contrato de renta.'] as $label => $prompt)<button type="button" data-home-prompt="{{ $prompt }}">{{ $label }}</button>@endforeach</div>
+
+                    <p class="home-disclaimer">Orientación informativa; no sustituye la asesoría profesional.</p>
                 </section>
-                <section aria-labelledby="home-continue-title">
-                    <div class="home-section-heading"><h2 id="home-continue-title">Continuar</h2></div>
-                    <div class="home-three">@foreach ($dashboard['continue'] as $item)<x-home.continuation :item="$item" />@endforeach</div>
+                <section aria-labelledby="home-pending-title">
+                    <div class="home-section-heading"><h2 id="home-pending-title">Continuar</h2><span class="home-count" data-pending-count>{{ count($dashboard['continue']) }}</span></div>
+                    <div class="home-continue-grid">@foreach ($dashboard['continue'] as $item)<x-home.continuation :item="$item" />@endforeach</div>
+                    <p class="home-muted" data-pending-empty hidden>No tienes asuntos por retomar en esta vista.</p>
                 </section>
                 <section aria-labelledby="home-recommended-title">
-                    <div class="home-section-heading"><h2 id="home-recommended-title">Recomendados para ti</h2><a href="{{ route('articles') }}">Ver todo <x-lucide-arrow-right aria-hidden="true" /></a></div>
-                    <div class="home-three">
-                        <article class="home-card home-recommendation">
-                            <header><span class="home-type">Artículo</span><x-home.bookmark :label="$dashboard['article']['title']" /></header>
-                            <h3>{{ $dashboard['article']['title'] }}</h3><p>{{ $dashboard['article']['summary'] }}</p>
-                            <div class="home-recommendation-meta"><span><x-lucide-briefcase-business aria-hidden="true" />{{ $dashboard['article']['category'] }}</span><span><x-lucide-clock aria-hidden="true" />{{ $dashboard['article']['duration'] }}</span></div>
-                            <button type="button" class="home-action" data-open-article>Leer artículo</button>
+                    <div class="home-section-heading"><h2 id="home-recommended-title">Para ti</h2><a href="{{ route('articles') }}">Explorar recursos <x-lucide-arrow-right aria-hidden="true" /></a></div>
+                    <div class="home-recommend-grid">
+                        <article class="home-card home-reading">
+                            <div class="home-reading-heading"><span class="home-type"><x-lucide-book-open aria-hidden="true" />Artículo · {{ $dashboard['article']['duration'] }}</span><x-home.bookmark :label="$dashboard['article']['title']" /></div>
+                            <h3>{{ $dashboard['article']['title'] }}</h3>
+                            <div class="home-reading-footer"><span>{{ $dashboard['article']['category'] }}</span><button type="button" data-open-article>Leer artículo <x-lucide-arrow-right aria-hidden="true" /></button></div>
                         </article>
-                        <article class="home-card home-recommendation">
-                            <header><span class="home-type">Comunidad</span><x-home.bookmark :label="$dashboard['recommendation']['title']" /></header>
-                            <h3>{{ $dashboard['recommendation']['title'] }}</h3>
-                            <div class="home-recommendation-meta"><span>{{ $dashboard['recommendation']['category'] }} · {{ $dashboard['recommendation']['time'] }}</span><span><x-lucide-message-square aria-hidden="true" />{{ $dashboard['recommendation']['replies'] }} respuestas</span></div>
-                            <a class="home-action" href="{{ route('community') }}#post-{{ $dashboard['recommendation']['id'] }}">Ver publicación</a>
-                        </article>
-                        <article class="home-card home-recommendation">
-                            <header><span class="home-type">Abogada</span></header>
-                            <span class="home-avatar home-avatar-large" aria-hidden="true">AM</span>
-                            <h3>{{ $dashboard['professional']['name'] }}</h3><p>{{ $dashboard['professional']['specialty'] }}</p>
-                            <div class="home-recommendation-meta"><span><x-lucide-map-pin aria-hidden="true" />{{ $dashboard['professional']['location'] }}</span><span><x-lucide-badge-check aria-hidden="true" />Perfil de referencia</span></div>
-                            <button type="button" class="home-action" data-open-professional>Ver perfil</button>
+                        <article class="home-card home-professional" aria-label="Profesional recomendado">
+                            <h3>Profesional</h3>
+                            <div class="home-professional-identity"><span class="home-avatar" aria-hidden="true">AM</span><div><h4>{{ $dashboard['professional']['name'] }}</h4><p>{{ $dashboard['professional']['specialty'] }}</p></div></div>
+                            <a href="{{ route('professionals') }}#perfil-ana-martinez" class="home-action">Conocer perfil</a>
                         </article>
                     </div>
                 </section>
-                <section aria-labelledby="home-community-title">
-                    <div class="home-section-heading"><h2 id="home-community-title">De la comunidad</h2><a href="{{ route('community') }}">Ver todo <x-lucide-arrow-right aria-hidden="true" /></a></div>
+                <section class="home-community-peek" aria-labelledby="home-community-title">
+                    <div class="home-section-heading"><h2 id="home-community-title">En la comunidad</h2><a href="{{ route('community') }}">Ver todo <x-lucide-arrow-right aria-hidden="true" /></a></div>
                     <div class="home-feed">@foreach ($dashboard['feed'] as $post)<x-home.post :post="$post" />@endforeach</div>
                 </section>
             </div>
-            <aside class="home-sidebar" aria-label="Pendientes y accesos rápidos">
-                <section aria-labelledby="home-pending-title"><div class="home-section-heading"><h2 id="home-pending-title">Pendientes</h2><span class="home-count" data-pending-count>3</span></div><div class="home-card home-pending">
-                    @foreach ($dashboard['continue'] as $item)<div class="home-pending-item" data-pending-item><a href="{{ $item['url'] }}" data-continue="{{ $item['id'] }}">{{ $item['title'] }}</a><button type="button" class="home-icon" data-dismiss-pending aria-label="Ocultar recordatorio: {{ $item['title'] }}"><x-lucide-x aria-hidden="true" /></button></div>@endforeach
-                    <p class="home-muted" data-pending-empty hidden>No tienes recordatorios en esta vista.</p>
-                </div></section>
-                <section aria-labelledby="home-shortcuts-title"><div class="home-section-heading"><h2 id="home-shortcuts-title">Accesos rápidos</h2></div><nav class="home-card home-shortcuts" aria-label="Accesos rápidos">
-                    @foreach (['community' => ['users', 'Comunidad'], 'messages' => ['message-circle', 'Mensajes'], 'articles' => ['archive', 'Recursos'], 'professionals' => ['briefcase-business', 'Profesionales']] as $route => [$icon, $label])<a href="{{ route($route) }}"><x-dynamic-component :component="'lucide-' . $icon" aria-hidden="true" /><span>{{ $label }}</span></a>@endforeach
-                </nav></section>
+            <aside class="home-sidebar" aria-label="Accesos rápidos">
+                <section class="home-card home-personal-links">
+                    <h2>Tu espacio</h2>
+                    <nav aria-label="Accesos personales">
+                        <a href="{{ route('profile') }}"><span class="home-personal-icon"><x-lucide-user-round aria-hidden="true" /></span><span>Mi perfil</span><x-lucide-chevron-right aria-hidden="true" /></a>
+                        <a href="{{ route('saved') }}"><span class="home-personal-icon"><x-lucide-bookmark aria-hidden="true" /></span><span>Mis guardados</span><x-lucide-chevron-right aria-hidden="true" /></a>
+                        <a href="{{ route('settings') }}"><span class="home-personal-icon"><x-lucide-settings aria-hidden="true" /></span><span>Configuración</span><x-lucide-chevron-right aria-hidden="true" /></a>
+                    </nav>
+                </section>
+                <section class="home-card home-explore"><h2>Explorar</h2><nav class="home-shortcuts" aria-label="Secciones de la plataforma">@foreach (['community' => ['users', 'Comunidad'], 'messages' => ['message-circle', 'Mensajes'], 'articles' => ['book-open', 'Recursos'], 'professionals' => ['briefcase-business', 'Profesionales']] as $route => [$icon, $label])<a href="{{ route($route) }}"><x-dynamic-component :component="'lucide-' . $icon" aria-hidden="true" /><span>{{ $label }}</span></a>@endforeach</nav></section>
+                <section class="home-card home-share-note"><x-lucide-messages-square aria-hidden="true" /><h2>Comparte con la comunidad</h2><a href="{{ route('community') }}" class="home-action" data-home-share>Crear publicación</a></section>
             </aside>
         </div>
         <dialog class="home-dialog" data-home-dialog aria-labelledby="home-detail-title"><header><h2 id="home-detail-title"></h2><button type="button" class="home-icon" data-close-dialog aria-label="Cerrar detalle"><x-lucide-x aria-hidden="true" /></button></header><div data-home-detail></div></dialog>

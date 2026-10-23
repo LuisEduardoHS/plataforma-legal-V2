@@ -154,7 +154,7 @@
 .community-discard > div { display: flex; justify-content: flex-end; gap: 10px; }
 .community-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (prefers-color-scheme: dark) {
-    .community { --community-page: #1a1a1a; --community-surface: #242424; --community-soft: #2c2c2c; --community-hover: #363636; --community-text: #f2f2f2; --community-muted: #b5b5ba; --community-border: #424246; --community-focus: #96969c; --community-accent: color-mix(in srgb, var(--color-accent) 42%, white); --community-selected: color-mix(in srgb, var(--color-accent) 20%, var(--community-surface)); --community-selected-hover: color-mix(in srgb, var(--color-accent) 28%, var(--community-surface)); }
+    .community { --community-page: var(--color-bg-dark); --community-surface: var(--color-surface-dark); --community-soft: var(--color-accent-bg-dark); --community-hover: var(--color-accent-bg-hover-dark); --community-text: var(--color-text-dark); --community-muted: var(--color-light-text-dark); --community-border: var(--color-border-dark); --community-focus: var(--color-focus-dark); --community-accent: var(--color-accent-text-dark); --community-selected: var(--color-selected-dark); --community-selected-hover: var(--color-selected-hover-dark); }
 }
 @media (max-width: 1023px) {
     .community { padding-bottom: 110px; }
@@ -188,4 +188,17 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .community *, .community *::before, .community *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+@media (min-width:1024px) {
+    .community-sidebar {
+        position:sticky;
+        top:100px;
+        align-self:start;
+        max-height:calc(100dvh - 124px);
+        overflow-y:auto;
+        overscroll-behavior-y:contain;
+        scrollbar-width:thin;
+        scrollbar-color:color-mix(in srgb,var(--color-accent) 55%,transparent) transparent;
+    }
+    .community-sidebar > section { flex-shrink:0; }
 }

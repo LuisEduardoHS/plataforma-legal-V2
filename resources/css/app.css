@@ -6,7 +6,7 @@
 @source "../**/*.js";
 @source "../**/*.vue";
 
-@theme {
+@theme static {
     /* Standard corner radius for Community and future page components. */
     --radius-ui: 10px;
 
@@ -16,6 +16,7 @@
     --color-light-accent: #BE2562;
     --color-dark-accent: #7F1842;
     --color-lexa: #6C4ACB;
+    --color-lexa-rose: #B32667;
 
     --color-text: #1A1A1A;
     --color-light-text: #848484;
@@ -25,13 +26,22 @@
     --color-accent-bg-hover: #EAEAEA;
     --color-light-hover: #F8F8F8;
 
-    --color-text-dark: #EAEAEA;
-    --color-light-text-dark: #A0A0A0;
+    /* Shared dark palette: page, surfaces, controls, text and readable accents. */
+    --color-text-dark: #F2F2F2;
+    --color-light-text-dark: #B6B3BA;
 
     --color-bg-dark: #1A1A1A;
-    --color-accent-bg-dark: #262626;
-    --color-accent-bg-hover-dark: #303030;
-    --color-light-hover-dark: #222222;
+    --color-surface-dark: #242424;
+    --color-accent-bg-dark: #2E2E30;
+    --color-accent-bg-hover-dark: #363636;
+    --color-light-hover-dark: var(--color-accent-bg-dark);
+    --color-raised-dark: #303030;
+    --color-border-dark: #38383C;
+    --color-focus-dark: #9C969F;
+    --color-accent-text-dark: color-mix(in srgb, var(--color-accent) 42%, white);
+    --color-lexa-dark: color-mix(in srgb, var(--color-lexa) 46%, white);
+    --color-selected-dark: color-mix(in srgb, var(--color-accent) 20%, var(--color-surface-dark));
+    --color-selected-hover-dark: color-mix(in srgb, var(--color-accent) 28%, var(--color-surface-dark));
 }
 
 .html {
@@ -39,3 +49,75 @@
     color: var(--color-text);
     background-color: var(--color-bg);
 }
+
+@media (prefers-color-scheme: dark) {
+    :root { color-scheme: dark; }
+    .html {
+        color: var(--color-text-dark);
+        background-color: var(--color-bg-dark);
+    }
+}
+/* Shared motion: short feedback, with no layout shifts or artificial delays. */
+:root { --motion-fast: 140ms; --motion-normal: 200ms; --motion-ease: cubic-bezier(.2,.7,.2,1); }
+#main-content { view-transition-name: page-content; }
+#main-content:focus { outline: none; }
+.platform-header { position: relative; z-index: 60; view-transition-name: platform-header; }
+@media (min-width: 1024px) {
+    #app { padding-top: 72px; }
+    .platform-header { position: fixed; inset: 0 0 auto; }
+    html { scroll-padding-top: 88px; }
+}
+.platform-mobile-nav { z-index: 50; view-transition-name: mobile-nav; }
+::view-transition-group(root), ::view-transition-group(platform-header), ::view-transition-group(mobile-nav) { animation: none; }
+::view-transition-old(root), ::view-transition-new(root),
+::view-transition-old(platform-header), ::view-transition-new(platform-header),
+::view-transition-old(mobile-nav), ::view-transition-new(mobile-nav) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(page-content) { animation: page-out 130ms ease-out both; }
+::view-transition-new(page-content) { animation: page-in 200ms var(--motion-ease) both; }
+@keyframes page-out { to { opacity: 0; } }
+@keyframes page-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.turbo-progress-bar { height: 2px; background: var(--color-accent); }
+#app :where(button, a, select, input, textarea, summary) {
+    transition-property: background-color, color, border-color, box-shadow, opacity;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: var(--motion-ease);
+}
+#app :where(button, a, select, input, textarea, summary):focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+}
+@media (hover: hover) and (pointer: fine) {
+    #app :where(.home-card, .resource-card, .professional-card, .community-post) {
+        transition: box-shadow var(--motion-normal) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+    }
+    #app :where(.home-card, .resource-card, .professional-card, .community-post):hover {
+        box-shadow: 0 4px 16px color-mix(in srgb,var(--color-text) 7%,transparent);
+    }
+    #app :where(button:not(:disabled), a):active { opacity: .85; }
+    .home-mode select:hover { border-color: var(--home-muted); }
+}
+@media (prefers-color-scheme: dark) {
+    #app :where(button, a, select, input, textarea, summary):focus-visible { outline-color: var(--color-focus-dark); }
+}
+@media (prefers-reduced-motion: reduce) {
+    #app *, #app *::before, #app *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: 0ms !important; scroll-behavior: auto !important; }
+    ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
+.platform-mobile-nav .headerNav-button { min-width: 0; padding-inline: 2px; }
+.platform-mobile-nav nav { gap: 0; }
+.platform-mobile-nav nav > * { margin-inline: 0; }
+
+.home-bookmark[aria-pressed="true"] svg { fill:currentColor; fill-opacity:.18; }
+/* Sidebar scrollbars follow the shared brand palette. */
+.home-sidebar, .community-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb,var(--color-accent) 55%,transparent) transparent;
+}
+.home-sidebar::-webkit-scrollbar, .community-sidebar::-webkit-scrollbar { width: 6px; }
+.home-sidebar::-webkit-scrollbar-track, .community-sidebar::-webkit-scrollbar-track { background: transparent; }
+.home-sidebar::-webkit-scrollbar-thumb, .community-sidebar::-webkit-scrollbar-thumb {
+    border-radius: var(--radius-ui);
+    background: color-mix(in srgb,var(--color-accent) 55%,transparent);
+}
+.home-sidebar:hover, .community-sidebar:hover { scrollbar-color: var(--color-accent) transparent; }
+.home-sidebar::-webkit-scrollbar-thumb:hover, .community-sidebar::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }

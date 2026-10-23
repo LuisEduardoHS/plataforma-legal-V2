@@ -138,8 +138,26 @@
 .messages-skeleton > span:not(.messages-sr) { display: block; width: 70%; height: 36px; border-radius: var(--radius-ui); background: var(--messages-hover); }
 .messages-skeleton > span:nth-child(even) { margin-left: auto; width: 50%; }
 .messages-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* Shared burgundy palette, with quiet surfaces around the conversation. */
+.messages-list-heading { background:linear-gradient(145deg,color-mix(in srgb,var(--color-accent) 9%,var(--messages-surface)),var(--messages-surface) 85%); }
+.messages-list-heading h2 { text-align:left; color:var(--messages-text); margin-bottom:6px; font-weight:650; }
+.messages-list-description { color:var(--messages-muted); font-size:12px; line-height:1.6; margin-bottom:20px; }
+.messages-chat-header { background:linear-gradient(110deg,var(--messages-surface) 30%,color-mix(in srgb,var(--color-accent) 9%,var(--messages-surface))); }
+.messages .messages-conversation[aria-current="true"] { background:linear-gradient(115deg,var(--messages-selected),color-mix(in srgb,var(--color-light-accent) 7%,var(--messages-surface))); }
+.messages-contact .messages-avatar,.messages-conversation[aria-current="true"] .messages-avatar { background:linear-gradient(135deg,var(--color-dark-accent),var(--color-accent)); }
+.messages-bubble.is-own { background:linear-gradient(115deg,var(--color-dark-accent),var(--color-accent)); }
+.messages-bubble footer { font-size:11px; gap:8px; margin-top:7px; }
+.messages-date { align-self:center; padding:4px 12px; background:var(--messages-surface); border-radius:var(--radius-ui); font-size:11px; }
+.messages .messages-send { background:linear-gradient(135deg,var(--color-dark-accent),var(--color-accent)); }
+.messages .messages-send:not(:disabled):hover { background:var(--color-light-accent); }
+.messages-search { border:0; }
+.messages-search:focus-within { outline:2px solid var(--messages-focus); outline-offset:2px; }
+.messages .messages-filters button[aria-pressed="true"] { background:var(--messages-selected); color:var(--messages-accent); font-weight:600; }
+.messages .messages-filters button[aria-pressed="true"]:hover { background:var(--messages-selected-hover); }
+
 @media (prefers-color-scheme: dark) {
-    .messages { --messages-page: #1a1a1a; --messages-surface: #242424; --messages-soft: #2d2d2d; --messages-hover: #383838; --messages-text: #f0f0f0; --messages-muted: #b4b4ba; --messages-border: #38383c; --messages-focus: #96969c; --messages-accent: color-mix(in srgb, var(--color-accent) 42%, white); --messages-selected: color-mix(in srgb, var(--color-accent) 20%, var(--messages-surface)); --messages-selected-hover: color-mix(in srgb, var(--color-accent) 28%, var(--messages-surface)); --messages-received: #303030; }
+    .messages { --messages-page: var(--color-bg-dark); --messages-surface: var(--color-surface-dark); --messages-soft: var(--color-accent-bg-dark); --messages-hover: var(--color-accent-bg-hover-dark); --messages-text: var(--color-text-dark); --messages-muted: var(--color-light-text-dark); --messages-border: var(--color-border-dark); --messages-focus: var(--color-focus-dark); --messages-accent: var(--color-accent-text-dark); --messages-selected: var(--color-selected-dark); --messages-selected-hover: var(--color-selected-hover-dark); --messages-received: var(--color-raised-dark); }
 }
 @media (max-width: 1199px) {
     .messages-layout { grid-template-columns: 280px minmax(0, 1fr); }

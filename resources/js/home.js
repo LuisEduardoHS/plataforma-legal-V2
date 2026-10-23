@@ -1,18 +1,37 @@
+import { onPage, navigate } from './ui/navigation.js';
 import { writeHandoff } from './ui/handoff.js';
+import { library } from './saved/library.js';
 
-const root = document.querySelector('[data-home]');
-if (root) {
+
+onPage('[data-home]', (root, { listen, onCleanup }) => {
     const $ = (selector) => root.querySelector(selector);
     const data = JSON.parse($('[data-home-data]').textContent);
     const question = $('[data-home-question]');
     const dialog = $('[data-home-dialog]');
     let opener;
     let previousOverflow;
+    function bookmarkRecord(button) {
+        const post = data.feed.find((post) => post.id === button.closest('[data-home-post]')?.dataset.homePost);
+        return post ? { id: post.id, kind: 'post', title: post.title, category: post.category, summary: post.body, author: post.author, href: '/comunidad#post-' + post.id }
+            : { id: 'inicio-finiquito', kind: 'article', ...data.article, href: '/inicio#lectura-finiquito' };
+    }
+    function syncBookmarks() {
+        root.querySelectorAll('[data-bookmark]').forEach((button) => {
+            const record = bookmarkRecord(button);
+            const saved = library.has(record.kind, record.id);
+            button.setAttribute('aria-pressed', String(saved));
+            button.setAttribute('aria-label', (saved ? 'Quitar de Guardados: ' : 'Guardar: ') + record.title);
+            button.title = saved ? 'Quitar de Guardados' : 'Guardar';
+        });
+    }
+    listen(window, 'saved:change', syncBookmarks);
+    listen(window, 'storage', syncBookmarks);
+    syncBookmarks();
 
     function forward(target, value, url) {
         try {
             writeHandoff(target, value);
-            location.assign(url);
+            navigate(url);
         } catch {
             $('[data-home-error]').hidden = false;
             $('[data-home-error]').textContent = 'No pudimos trasladar el borrador. Conserva el texto y vuelve a intentarlo.';
@@ -52,14 +71,7 @@ if (root) {
                 const li = document.createElement('li'); li.textContent = text; list.append(li);
             }
             box.append(list);
-            const link = document.createElement('a'); link.href = root.querySelector('.home-section-heading a').href; link.className = 'home-action'; link.textContent = 'Explorar recursos'; box.append(link);
-        } else {
-            $('#home-detail-title').textContent = data.professional.name;
-            paragraph(data.professional.specialty + ' · ' + data.professional.location);
-            paragraph('Perfil de referencia. El contacto y la verificación se conectarán con el directorio de profesionales.');
-            const link = document.createElement('a');
-            link.href = root.querySelector('.home-shortcuts a:last-child').href;
-            link.className = 'home-action'; link.textContent = 'Explorar profesionales'; box.append(link);
+            const link = document.createElement('a'); link.href = root.dataset.resourcesUrl; link.className = 'home-action'; link.textContent = 'Explorar recursos'; box.append(link);
         }
         dialog.showModal();
     }
@@ -68,6 +80,11 @@ if (root) {
         opener?.focus({ preventScroll: true });
     });
     root.addEventListener('click', (event) => {
+        if (event.target.closest('[data-home-share]')) {
+            event.preventDefault();
+            forward('community', { text: '' }, event.target.closest('[data-home-share]').href);
+            return;
+        }
         const continuation = event.target.closest('[data-continue]');
         if (continuation) {
             const item = data.continue.find((item) => item.id === continuation.dataset.continue);
@@ -83,10 +100,18 @@ if (root) {
         if (event.target.closest('[data-add-context]')) { event.preventDefault(); toLexa(true); }
         const button = event.target.closest('button');
         if (!button) return;
+        if (button.matches('[data-home-prompt]')) {
+            question.value = (question.value.trim() ? question.value.trim() + '\n' : '') + button.dataset.homePrompt;
+            question.value = question.value.slice(0, question.maxLength);
+            question.dispatchEvent(new Event('input', { bubbles: true }));
+            question.focus();
+            $('[data-home-status]').textContent = 'Sugerencia añadida. Puedes editarla antes de continuar.';
+        }
         if (button.matches('[data-bookmark]')) {
-            const saved = button.getAttribute('aria-pressed') !== 'true';
-            button.setAttribute('aria-pressed', String(saved));
-            $('[data-home-status]').textContent = saved ? 'Guardado temporalmente en esta página.' : 'Retirado de los guardados de esta página.';
+            try {
+                const saved = library.toggle(bookmarkRecord(button));
+                $('[data-home-status]').textContent = saved ? 'Añadido a Guardados en este navegador.' : 'Retirado de Guardados.';
+            } catch { $('[data-home-status]').textContent = 'No se pudo guardar. Comprueba que el navegador permita almacenar datos del sitio.'; }
         }
         if (button.matches('[data-dismiss-pending]')) {
             button.closest('[data-pending-item]').remove();
@@ -97,8 +122,9 @@ if (root) {
             (root.querySelector('[data-dismiss-pending]') || $('#home-pending-title')).focus();
         }
         if (button.matches('[data-open-article]')) showDetail('article', button);
-        if (button.matches('[data-open-professional]')) showDetail('professional', button);
+
         if (button.matches('[data-close-dialog]')) dialog.close();
     });
     $('#home-pending-title').tabIndex = -1;
-}
+    if (location.hash === '#lectura-finiquito') showDetail('article', $('[data-open-article]'));
+});

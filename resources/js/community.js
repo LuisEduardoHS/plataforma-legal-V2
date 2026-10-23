@@ -1,8 +1,10 @@
+import { onPage } from './ui/navigation.js';
 import { takeHandoff } from './ui/handoff.js';
+import { library } from './saved/library.js';
 
-const community = document.querySelector('[data-community]');
 
-if (community) {
+
+onPage('[data-community]', (community, { listen, onCleanup }) => {
     const $ = (selector) => community.querySelector(selector);
     const $$ = (selector) => [...community.querySelectorAll(selector)];
     const create = $('[data-create-dialog]');
@@ -14,6 +16,18 @@ if (community) {
     const error = $('[data-file-error]');
     const feed = $('#community-feed');
     const posts = $$('[data-post]');
+    function syncBookmarks() {
+        posts.forEach((post) => {
+            const button = post.querySelector('[data-save-post]');
+            const saved = library.has('post', post.id.replace('post-', ''));
+            button.setAttribute('aria-pressed', String(saved));
+            button.setAttribute('aria-label', (saved ? 'Quitar de Guardados: ' : 'Guardar: ') + post.querySelector('h2').textContent);
+            button.title = saved ? 'Quitar de Guardados' : 'Guardar';
+        });
+    }
+    listen(window, 'saved:change', syncBookmarks);
+    listen(window, 'storage', syncBookmarks);
+    syncBookmarks();
     const tabs = $$('[data-filter]');
     const limits = { image: 10, video: 50, document: 20 };
     const types = {
@@ -71,7 +85,7 @@ if (community) {
             const url = new URL(location.href);
             url.searchParams.set('filtro', activeFilter);
             if (activeTopic) url.searchParams.set('tema', activeTopic); else url.searchParams.delete('tema');
-            history.replaceState(null, '', url);
+            history.replaceState(history.state, '', url);
         }
     }
     function readUrl() {
@@ -80,7 +94,7 @@ if (community) {
         applyFilter(url.searchParams.get('filtro') || 'para-ti', false);
     }
     readUrl();
-    window.addEventListener('popstate', readUrl);
+    listen(window, 'popstate', readUrl);
     $('.community-tabs').addEventListener('keydown', (event) => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
         const current = tabs.indexOf(document.activeElement);
@@ -246,10 +260,14 @@ if (community) {
         }
         if (target.matches('[data-close-dialog]')) detail.close();
         if (target.matches('[data-save-post]')) {
-            const saved = target.getAttribute('aria-pressed') !== 'true';
-            target.setAttribute('aria-pressed', String(saved));
-            target.setAttribute('aria-label', saved ? 'Quitar de guardados de esta sesión' : 'Guardar en esta sesión');
-            target.closest('article').querySelector('[data-action-status]').textContent = saved ? 'Guardado durante esta sesión.' : 'Retirado de guardados.';
+            const post = target.closest('article');
+            const status = post.querySelector('[data-action-status]');
+            try {
+                const saved = library.toggle({ kind: 'post', id: post.id.replace('post-', ''), title: post.querySelector('h2').textContent,
+                    category: post.dataset.category, summary: post.querySelector('.community-post-body').textContent,
+                    author: post.querySelector('.community-author-name').textContent.trim(), href: '/comunidad#' + post.id });
+                status.textContent = saved ? 'Añadido a Guardados en este navegador.' : 'Retirado de Guardados.';
+            } catch { status.textContent = 'No se pudo guardar. Comprueba que el navegador permita almacenar datos del sitio.'; }
         }
         if (target.matches('[data-share-post]')) {
             const url = new URL(location.href);
@@ -264,13 +282,16 @@ if (community) {
             }
         }
     });
-    window.addEventListener('beforeunload', (event) => {
+    listen(document, 'turbo:before-visit', (event) => {
+        if (create.open && (draft.value.trim() || category.value || attachments.length) && !confirm('Hay una publicación sin terminar. ¿Quieres salir y descartar el borrador?')) event.preventDefault();
+    });
+    listen(window, 'beforeunload', (event) => {
         if (create.open && (draft.value.trim() || category.value || attachments.length)) {
             event.preventDefault();
             event.returnValue = '';
         }
     });
-    window.addEventListener('pagehide', (event) => {
+    onCleanup( (event) => {
         // A page kept in the back/forward cache still needs its preview URLs.
         if (!event.persisted) attachments.forEach((item) => URL.revokeObjectURL(item.url));
     });
@@ -282,4 +303,4 @@ if (community) {
         draft.dispatchEvent(new Event('input', { bubbles: true }));
         draft.focus();
     }
-}
+});

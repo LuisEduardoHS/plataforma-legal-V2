@@ -38,6 +38,8 @@ Route::view('/articulos', 'pages.articles.index')->name('articles');
 
 Route::view('/guardados', 'pages.saved.index')->name('saved');
 
+Route::view('/ayuda', 'pages.help.index')->name('help');
+
 Route::view('/perfil', 'pages.profile.show')->name('profile');
 
 Route::view('/configuracion', 'pages.settings.index')->name('settings');

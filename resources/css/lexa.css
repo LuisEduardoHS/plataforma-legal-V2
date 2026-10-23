@@ -138,9 +138,9 @@
 .lexa-preview-link:hover { background: var(--lexa-tint); }
 .lexa-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (prefers-color-scheme: dark) {
-    .lexa { --lexa-page: #1a1a1a; --lexa-surface: #232225; --lexa-soft: #2d2b31; --lexa-text: #f2eff6; --lexa-muted: #b8b2c1; --lexa-border: #413d48; --lexa-focus: #a59baa; --lexa-link: color-mix(in srgb, var(--color-lexa) 46%, white); --lexa-tint: color-mix(in srgb, var(--color-lexa) 18%, var(--lexa-surface)); --lexa-wash: color-mix(in srgb, var(--color-lexa) 28%, transparent); --lexa-warm-wash: color-mix(in srgb, var(--color-accent) 14%, transparent); color-scheme: dark; }
+    .lexa { --lexa-page: var(--color-bg-dark); --lexa-surface: var(--color-surface-dark); --lexa-soft: var(--color-accent-bg-dark); --lexa-text: var(--color-text-dark); --lexa-muted: var(--color-light-text-dark); --lexa-border: var(--color-border-dark); --lexa-focus: var(--color-focus-dark); --lexa-link: var(--color-lexa-dark); --lexa-tint: color-mix(in srgb, var(--color-lexa) 18%, var(--lexa-surface)); --lexa-wash: color-mix(in srgb, var(--color-lexa) 28%, transparent); --lexa-warm-wash: color-mix(in srgb, var(--color-accent) 14%, transparent); color-scheme: dark; }
     .lexa-sidebar-heading h2 { background-image: linear-gradient(110deg, var(--lexa-link), color-mix(in srgb, var(--color-light-accent) 50%, white)); }
-    .lexa-welcome h1 { background-image: linear-gradient(110deg, color-mix(in srgb, var(--color-accent) 44%, white), var(--lexa-link) 88%); }
+    .lexa-welcome h1 { background-image: linear-gradient(110deg, var(--color-accent-text-dark), var(--lexa-link) 88%); }
 }
 @media (max-width: 1279px) {
     .lexa-layout { grid-template-columns: 264px minmax(0, 1fr); }

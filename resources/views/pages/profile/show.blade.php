@@ -85,7 +85,7 @@
             <div class="w-full lg:flex-1 flex flex-col gap-5">
 
                 {{-- Tarjeta de Perfil --}}
-                <section class="bg-white dark:bg-black rounded-2xl overflow-hidden shadow-xs border border-gray-100/50 dark:border-gray-800/50">
+                <section class="bg-white dark:bg-surface-dark rounded-2xl overflow-hidden shadow-xs border border-gray-100/50 dark:border-border-dark/50">
                     {{-- Banner Decorativo --}}
                     <div class="h-36 sm:h-44 w-full relative overflow-hidden bg-light-accent dark:bg-light-accent">
                         <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 523 119" preserveAspectRatio="none" fill="none">
@@ -99,7 +99,7 @@
                             
                             {{-- Avatar Grande --}}
                             <div class="-mt-16 sm:-mt-20 shrink-0">
-                                <div class="size-24 sm:size-28 rounded-full border-4 border-white dark:border-black bg-bg dark:bg-bg-dark overflow-hidden shrink-0 shadow-xs flex items-center justify-center">
+                                <div class="size-24 sm:size-28 rounded-full border-4 border-white dark:border-surface-dark bg-bg dark:bg-bg-dark overflow-hidden shrink-0 shadow-xs flex items-center justify-center">
                                     <svg viewBox="0 0 100 100" class="w-full h-full" fill="#D3D3D3">
                                         <circle cx="50" cy="35" r="17" />
                                         <path d="M 18 88 C 18 64, 32 58, 50 58 C 68 58, 82 64, 82 88 Z" />
@@ -125,7 +125,7 @@
                                         <button
                                             @click="isFollowing = !isFollowing"
                                             :class="isFollowing 
-                                                ? 'bg-gray-100 dark:bg-bg-dark text-text dark:text-text-dark border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700' 
+                                                ? 'bg-gray-100 dark:bg-bg-dark text-text dark:text-text-dark border border-gray-300 dark:border-border-dark hover:bg-gray-200 dark:hover:bg-accent-bg-hover-dark'
                                                 : 'bg-dark-accent dark:bg-light-accent hover:opacity-90 text-white'"
                                             class="text-xs sm:text-sm font-semibold px-7 py-1.5 rounded-full cursor-pointer transition-all duration-200 shadow-xs"
                                         >
@@ -163,7 +163,7 @@
                   
                     {{-- Datos personales --}}
                     <div class="md:col-span-4">
-                        <section class="bg-white dark:bg-black rounded-2xl p-5 shadow-xs border border-gray-100/50 dark:border-gray-800/50">
+                        <section class="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-xs border border-gray-100/50 dark:border-border-dark/50">
                             <h2 class="text-xs font-semibold text-light-text dark:text-light-text-dark mb-4">Datos personales</h2>
                             <ul class="flex flex-col gap-3.5 text-xs text-text dark:text-text-dark">
                                 <li class="flex items-center gap-2.5">
@@ -188,11 +188,11 @@
                     {{-- Feed de Publicaciones --}}
                     <div class="md:col-span-8 flex flex-col gap-4">
                         @foreach($posts as $post)
-                            <article class="bg-white dark:bg-black rounded-2xl p-5 shadow-xs border border-gray-100/50 dark:border-gray-800/50">
+                            <article class="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-xs border border-gray-100/50 dark:border-border-dark/50">
                                 
                                 <div class="flex items-start justify-between">
                                     <div class="flex items-center gap-3">
-                                        <div class="size-9 rounded-full bg-[#757575] dark:bg-gray-600 shrink-0"></div>
+                                        <div class="size-9 rounded-full bg-[#757575] dark:bg-accent-bg-hover-dark shrink-0"></div>
                                         <div>
                                             <h3 class="font-bold text-xs sm:text-sm text-text dark:text-text-dark leading-tight">{{ $post['author'] }}</h3>
                                             <div class="flex items-center gap-1.5 text-xs mt-0.5">
@@ -206,7 +206,7 @@
                                     {{-- Botón Guardar (Bookmark) dinámico --}}
                                     <button
                                         @click="bookmarkedPosts[{{ $post['id'] }}] = !bookmarkedPosts[{{ $post['id'] }}]"
-                                        class="text-dark-accent dark:text-light-accent hover:opacity-80 transition-opacity cursor-pointer p-0.5"
+                                        class="text-dark-accent dark:text-accent-text-dark hover:opacity-80 transition-opacity cursor-pointer p-0.5"
                                         title="Guardar publicación"
                                     >
                                         <x-lucide-bookmark 
@@ -224,10 +224,10 @@
 
                                 <div class="flex items-center justify-between text-xs">
                                     <div class="flex items-center gap-1.5 text-light-text dark:text-light-text-dark">
-                                        <x-lucide-message-circle class="w-4 h-4 text-dark-accent dark:text-light-accent" stroke-width="1.8" />
+                                        <x-lucide-message-circle class="w-4 h-4 text-dark-accent dark:text-accent-text-dark" stroke-width="1.8" />
                                         <span>{{ $post['replies'] }} respuestas</span>
                                     </div>
-                                    <a href="#" class="font-semibold text-dark-accent dark:text-light-accent hover:underline flex items-center gap-1 cursor-pointer">
+                                    <a href="#" class="font-semibold text-dark-accent dark:text-accent-text-dark hover:underline flex items-center gap-1 cursor-pointer">
                                         <span>Ver publicación</span>
                                         <span class="text-sm">→</span>
                                     </a>
@@ -240,12 +240,12 @@
 
             {{-- Sidebar Derecho: Más para ti --}}
             <aside class="w-full lg:w-60 xl:w-64 shrink-0">
-                <div class="bg-white dark:bg-black rounded-2xl p-4 sm:p-5 shadow-xs border border-gray-100/50 dark:border-gray-800/50">
+                <div class="bg-white dark:bg-surface-dark rounded-2xl p-4 sm:p-5 shadow-xs border border-gray-100/50 dark:border-border-dark/50">
                     <h2 class="font-bold text-sm sm:text-base text-text dark:text-text-dark mb-3.5 px-0.5">Más para ti</h2>
 
                     <div class="flex flex-col gap-3">
                         @foreach($recommendations as $index => $rec)
-                            <div class="bg-bg/30 dark:bg-bg-dark/30 rounded-xl p-3 border border-gray-100/60 dark:border-gray-800/60">
+                            <div class="bg-bg/30 dark:bg-bg-dark/30 rounded-xl p-3 border border-gray-100/60 dark:border-border-dark/60">
                                 <div class="flex items-start gap-2.5">
                                     
                                     {{-- Avatar Pequeño --}}
@@ -271,7 +271,7 @@
                                 <button
                                     @click="followingUsers[{{ $index }}] = !followingUsers[{{ $index }}]"
                                     :class="followingUsers[{{ $index }}] 
-                                        ? 'bg-bg dark:bg-bg-dark text-text dark:text-text-dark border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700' 
+                                        ? 'bg-bg dark:bg-bg-dark text-text dark:text-text-dark border border-gray-300 dark:border-border-dark hover:bg-gray-200 dark:hover:bg-accent-bg-hover-dark'
                                         : 'bg-dark-accent dark:bg-light-accent hover:opacity-90 text-white'"
                                     class="w-full mt-2.5 text-xs font-semibold py-1.5 rounded-full cursor-pointer transition-all duration-200 text-center shadow-xs"
                                 >

@@ -1,8 +1,10 @@
 @extends('layouts.app')
 @section('title', 'Mensajes | Plataforma Legal')
 
+@section('page-assets')
+    @vite(['resources/css/messages.css'])
+@endsection
 @section('content')
-    @vite(['resources/css/messages.css', 'resources/js/messages.js'])
     @php($messaging = $messaging ?? require resource_path('views/pages/messages/demo.php'))
     <section class="messages" data-messaging data-view="list" aria-label="Mensajes">
         <script type="application/json" data-messaging-data>{!! Illuminate\Support\Js::encode($messaging) !!}</script>

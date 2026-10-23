@@ -34,11 +34,11 @@
 
 @section('content')
 <main class="flex flex-row min-h-screen items-center justify-center bg-bg dark:bg-bg-dark">
-    <section class="bg-white dark:bg-black flex w-full sm:w-4xl h-164 rounded-lg overflow-clip">
+    <section class="bg-white dark:bg-surface-dark flex w-full sm:w-4xl h-164 rounded-lg overflow-clip">
 
         {{-- Banner side --}}
         <div class="sm:basis-1/2 hidden sm:flex relative flex-col justify-center">
-            <div class="absolute bg-linear-to-l from-dark-accent to-light-accent dark:from-light-accent-dark dark:to-light-accent-dark size-full"></div>
+            <div class="absolute bg-linear-to-l from-dark-accent to-light-accent size-full"></div>
         </div>
 
         {{-- Form side --}}

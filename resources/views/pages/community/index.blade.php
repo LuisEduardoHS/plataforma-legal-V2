@@ -2,8 +2,10 @@
 
 @section('title', 'Comunidad | Plataforma Legal')
 
+@section('page-assets')
+    @vite(['resources/css/community.css'])
+@endsection
 @section('content')
-    @vite(['resources/css/community.css', 'resources/js/community.js'])
     @php
         $community = $community ?? require resource_path('views/pages/community/demo.php');
         $state = $community['state'] ?? 'ready';

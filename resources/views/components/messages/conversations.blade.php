@@ -1,6 +1,7 @@
 <aside class="messages-conversations" aria-labelledby="messages-list-title">
     <div class="messages-list-heading">
         <h2 id="messages-list-title">Conversaciones</h2>
+        <p class="messages-list-description">Tus conversaciones en un solo lugar.</p>
         <label class="messages-search"><x-lucide-search aria-hidden="true" /><span class="messages-sr">Buscar conversaciones</span><input type="search" placeholder="Buscar…" data-search autocomplete="off"></label>
         <div class="messages-filters" role="group" aria-label="Filtrar conversaciones">
             <button type="button" data-list-filter="all" aria-pressed="true">Todas</button>

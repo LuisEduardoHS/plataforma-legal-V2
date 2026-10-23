@@ -32,7 +32,7 @@
     @if ($label)
         <label
             for="{{ $inputId }}"
-            class="mb-2 block text-sm font-medium text-gray-700"
+            class="mb-2 block text-sm font-medium text-gray-700 dark:text-light-text-dark"
         >
             {{ $label }}
         </label>
@@ -51,17 +51,17 @@
             aria-describedby="{{ $inputId }}-error"
         @endif
         {{ $attributes->class([
-            'w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900',
-            'placeholder:text-gray-400 transition-colors',
+            'w-full rounded-lg border bg-white dark:bg-surface-dark px-4 py-2.5 text-sm text-gray-900 dark:text-text-dark',
+            'placeholder:text-gray-400 dark:placeholder:text-light-text-dark transition-colors',
             'focus:outline-none focus:ring-2 focus:ring-[#7F1842]/20',
-            'focus:border-[#7F1842]',
+            'focus:border-[#7F1842] dark:focus:border-focus-dark dark:focus:ring-focus-dark/20',
             'border-red-500' => $hasError,
-            'border-gray-300' => ! $hasError,
+            'border-gray-300 dark:border-border-dark' => ! $hasError,
         ]) }}
     >
 
     @error($name)
-        <p id="{{ $inputId }}-error" class="mt-1 text-sm text-red-600">
+        <p id="{{ $inputId }}-error" class="mt-1 text-sm text-red-600 dark:text-red-400">
             {{ $message }}
         </p>
     @enderror

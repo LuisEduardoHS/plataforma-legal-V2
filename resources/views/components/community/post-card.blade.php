@@ -19,7 +19,7 @@
     <footer class="community-post-footer">
         <div class="community-post-actions">
             <button type="button" data-open-post aria-label="Ver {{ $post['replies'] }} respuestas a {{ $post['title'] }}"><x-lucide-message-circle aria-hidden="true" /><span>{{ $post['replies'] }}</span></button>
-            <button type="button" aria-label="Guardar en esta sesión" title="Guardar en esta sesión" aria-pressed="false" data-save-post><x-lucide-bookmark aria-hidden="true" /></button>
+            <button type="button" aria-label="Guardar publicación" title="Guardar publicación" aria-pressed="false" data-save-post><x-lucide-bookmark aria-hidden="true" /></button>
             <button type="button" aria-label="Copiar enlace" title="Copiar enlace" data-share-post><x-lucide-share-2 aria-hidden="true" /></button>
         </div>
         <button class="community-detail-link" type="button" data-open-post>Ver publicación <x-lucide-arrow-up-right aria-hidden="true" /></button>

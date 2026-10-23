@@ -38,14 +38,14 @@
 @section('title', 'Bienvenido | Plataforma Legal')
 
 @section('content')
-    <section class="flex min-h-screen items-center justify-center bg-gray-50 px-6">
+    <section class="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-bg-dark px-6">
         <div class="max-w-2xl text-center">
 
-            <h1 class="mb-4 text-4xl font-bold text-[#7F1842]">
+            <h1 class="mb-4 text-4xl font-bold text-[#7F1842] dark:text-accent-text-dark">
                 Bienvenido a Plataforma Legal
             </h1>
 
-            <p class="mb-8 text-lg text-gray-600">
+            <p class="mb-8 text-lg text-gray-600 dark:text-light-text-dark">
                 Un espacio para encontrar información,
                 orientación y profesionales legales en México.
             </p>

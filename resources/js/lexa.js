@@ -1,9 +1,10 @@
+import { onPage } from './ui/navigation.js';
 import { createDraft, createSession, appendExchange, matchesSession, validateContext } from './lexa/state.js';
 import { createAttachment, releaseAttachment, formatBytes } from './messages/attachments.js';
 import { takeHandoff } from './ui/handoff.js';
 
-const root = document.querySelector('[data-lexa]');
-if (root) {
+
+onPage('[data-lexa]', (root, { listen, onCleanup }) => {
     const $ = (selector, scope = root) => scope.querySelector(selector);
     const $$ = (selector, scope = root) => [...scope.querySelectorAll(selector)];
     const clone = (name) => $('[data-' + name + '-template]').content.firstElementChild.cloneNode(true);
@@ -127,7 +128,7 @@ if (root) {
         sidebarDialog.showModal();
         $('[data-search]').focus();
     }
-    sidebarBreakpoint.addEventListener('change', () => { if (sidebarBreakpoint.matches) closeSidebar(); });
+    listen(sidebarBreakpoint, 'change', () => { if (sidebarBreakpoint.matches) closeSidebar(); });
     function focusPrompt() {
         prompt.focus({ preventScroll: true });
         if (!currentSession()) requestAnimationFrame(() => prompt.scrollIntoView({ block: 'nearest', behavior: 'instant' }));
@@ -245,9 +246,9 @@ if (root) {
         root.style.setProperty('--lexa-viewport', (window.visualViewport?.height || window.innerHeight) + 'px');
         if (document.activeElement === prompt && !currentSession()) requestAnimationFrame(() => prompt.scrollIntoView({ block: 'nearest', behavior: 'instant' }));
     }
-    window.visualViewport?.addEventListener('resize', resizeViewport);
-    window.addEventListener('resize', resizeViewport);
-    window.addEventListener('pagehide', (event) => {
+    listen(window.visualViewport, 'resize', resizeViewport);
+    listen(window, 'resize', resizeViewport);
+    onCleanup( (event) => {
         if (!event.persisted) {
             welcomeDraft.attachments.forEach(releaseAttachment);
             sessions.forEach((session) => [...session.draft.attachments, ...session.messages.flatMap((message) => message.attachments || [])].forEach(releaseAttachment));
@@ -271,4 +272,4 @@ if (root) {
             }
         }
     }
-}
+});

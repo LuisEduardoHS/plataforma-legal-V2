@@ -1,8 +1,10 @@
 @extends('layouts.app')
 @section('title', 'LEXA | Plataforma Legal')
 
+@section('page-assets')
+    @vite(['resources/css/lexa.css'])
+@endsection
 @section('content')
-    @vite(['resources/css/lexa.css', 'resources/js/lexa.js'])
     @php($lexa = $lexa ?? require resource_path('views/pages/lexa/demo.php'))
     <section class="lexa" data-lexa data-stage="welcome" aria-label="LEXA, asistente de orientación legal">
         <script type="application/json" data-lexa-data>{!! Illuminate\Support\Js::encode($lexa) !!}</script>
