@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\ProfessionalProfile;
+use App\Models\UserProfile;
+use App\Policies\ProfilePolicy;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Gate::policy(UserProfile::class, ProfilePolicy::class);
+        Gate::policy(ProfessionalProfile::class, ProfilePolicy::class);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class LegalSpecialty extends Model
 {
@@ -26,6 +27,11 @@ class LegalSpecialty extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    public function professionalProfiles(): BelongsToMany
+    {
+        return $this->belongsToMany(ProfessionalProfile::class, 'professional_profile_specialties')->withTimestamps();
     }
 
     public function scopeOrdered(Builder $query): Builder
