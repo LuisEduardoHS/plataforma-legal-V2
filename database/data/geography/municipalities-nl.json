@@ -1,0 +1,257 @@
+﻿[
+    {
+        "state_code":  "19",
+        "code":  "001",
+        "name":  "Abasolo"
+    },
+    {
+        "state_code":  "19",
+        "code":  "002",
+        "name":  "Agualeguas"
+    },
+    {
+        "state_code":  "19",
+        "code":  "003",
+        "name":  "Los Aldamas"
+    },
+    {
+        "state_code":  "19",
+        "code":  "004",
+        "name":  "Allende"
+    },
+    {
+        "state_code":  "19",
+        "code":  "005",
+        "name":  "Anáhuac"
+    },
+    {
+        "state_code":  "19",
+        "code":  "006",
+        "name":  "Apodaca"
+    },
+    {
+        "state_code":  "19",
+        "code":  "007",
+        "name":  "Aramberri"
+    },
+    {
+        "state_code":  "19",
+        "code":  "008",
+        "name":  "Bustamante"
+    },
+    {
+        "state_code":  "19",
+        "code":  "009",
+        "name":  "Cadereyta Jiménez"
+    },
+    {
+        "state_code":  "19",
+        "code":  "010",
+        "name":  "El Carmen"
+    },
+    {
+        "state_code":  "19",
+        "code":  "011",
+        "name":  "Cerralvo"
+    },
+    {
+        "state_code":  "19",
+        "code":  "012",
+        "name":  "Ciénega de Flores"
+    },
+    {
+        "state_code":  "19",
+        "code":  "013",
+        "name":  "China"
+    },
+    {
+        "state_code":  "19",
+        "code":  "014",
+        "name":  "Doctor Arroyo"
+    },
+    {
+        "state_code":  "19",
+        "code":  "015",
+        "name":  "Doctor Coss"
+    },
+    {
+        "state_code":  "19",
+        "code":  "016",
+        "name":  "Doctor González"
+    },
+    {
+        "state_code":  "19",
+        "code":  "017",
+        "name":  "Galeana"
+    },
+    {
+        "state_code":  "19",
+        "code":  "018",
+        "name":  "García"
+    },
+    {
+        "state_code":  "19",
+        "code":  "019",
+        "name":  "San Pedro Garza García"
+    },
+    {
+        "state_code":  "19",
+        "code":  "020",
+        "name":  "General Bravo"
+    },
+    {
+        "state_code":  "19",
+        "code":  "021",
+        "name":  "General Escobedo"
+    },
+    {
+        "state_code":  "19",
+        "code":  "022",
+        "name":  "General Terán"
+    },
+    {
+        "state_code":  "19",
+        "code":  "023",
+        "name":  "General Treviño"
+    },
+    {
+        "state_code":  "19",
+        "code":  "024",
+        "name":  "General Zaragoza"
+    },
+    {
+        "state_code":  "19",
+        "code":  "025",
+        "name":  "General Zuazua"
+    },
+    {
+        "state_code":  "19",
+        "code":  "026",
+        "name":  "Guadalupe"
+    },
+    {
+        "state_code":  "19",
+        "code":  "027",
+        "name":  "Los Herreras"
+    },
+    {
+        "state_code":  "19",
+        "code":  "028",
+        "name":  "Higueras"
+    },
+    {
+        "state_code":  "19",
+        "code":  "029",
+        "name":  "Hualahuises"
+    },
+    {
+        "state_code":  "19",
+        "code":  "030",
+        "name":  "Iturbide"
+    },
+    {
+        "state_code":  "19",
+        "code":  "031",
+        "name":  "Juárez"
+    },
+    {
+        "state_code":  "19",
+        "code":  "032",
+        "name":  "Lampazos de Naranjo"
+    },
+    {
+        "state_code":  "19",
+        "code":  "033",
+        "name":  "Linares"
+    },
+    {
+        "state_code":  "19",
+        "code":  "034",
+        "name":  "Marín"
+    },
+    {
+        "state_code":  "19",
+        "code":  "035",
+        "name":  "Melchor Ocampo"
+    },
+    {
+        "state_code":  "19",
+        "code":  "036",
+        "name":  "Mier y Noriega"
+    },
+    {
+        "state_code":  "19",
+        "code":  "037",
+        "name":  "Mina"
+    },
+    {
+        "state_code":  "19",
+        "code":  "038",
+        "name":  "Montemorelos"
+    },
+    {
+        "state_code":  "19",
+        "code":  "039",
+        "name":  "Monterrey"
+    },
+    {
+        "state_code":  "19",
+        "code":  "040",
+        "name":  "Parás"
+    },
+    {
+        "state_code":  "19",
+        "code":  "041",
+        "name":  "Pesquería"
+    },
+    {
+        "state_code":  "19",
+        "code":  "042",
+        "name":  "Los Ramones"
+    },
+    {
+        "state_code":  "19",
+        "code":  "043",
+        "name":  "Rayones"
+    },
+    {
+        "state_code":  "19",
+        "code":  "044",
+        "name":  "Sabinas Hidalgo"
+    },
+    {
+        "state_code":  "19",
+        "code":  "045",
+        "name":  "Salinas Victoria"
+    },
+    {
+        "state_code":  "19",
+        "code":  "046",
+        "name":  "San Nicolás de los Garza"
+    },
+    {
+        "state_code":  "19",
+        "code":  "047",
+        "name":  "Hidalgo"
+    },
+    {
+        "state_code":  "19",
+        "code":  "048",
+        "name":  "Santa Catarina"
+    },
+    {
+        "state_code":  "19",
+        "code":  "049",
+        "name":  "Santiago"
+    },
+    {
+        "state_code":  "19",
+        "code":  "050",
+        "name":  "Vallecillo"
+    },
+    {
+        "state_code":  "19",
+        "code":  "051",
+        "name":  "Villaldama"
+    }
+]
