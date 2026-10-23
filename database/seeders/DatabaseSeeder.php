@@ -13,9 +13,12 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RolePermissionSeeder::class,
+
             CountrySeeder::class,
             StateSeeder::class,
             MunicipalitySeeder::class,
+
+            LegalSpecialtySeeder::class,
         ]);
     }
 }
