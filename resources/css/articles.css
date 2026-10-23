@@ -1,0 +1,37 @@
+/* Estilos específicos para la sección de Recursos / Artículos */
+
+.articles-page {
+    min-height: calc(100vh - 4.5rem);
+    background-color: #F5F5F5;
+}
+
+@media (prefers-color-scheme: dark) {
+    .articles-page {
+        background-color: #171717;
+    }
+}
+
+/* Ocultar barra de scroll pero mantener funcionalidad de arrastre */
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Animaciones suaves para tarjetas y modales */
+@keyframes fadeInCard {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-card-fade-in {
+    animation: fadeInCard 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

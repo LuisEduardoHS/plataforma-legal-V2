@@ -17,6 +17,7 @@ export default defineConfig({
                 'resources/js/lexa.js',
                 'resources/css/home.css',
                 'resources/js/home.js',
+                'resources/css/articles.css',
             ],
             refresh: true,
         }),
