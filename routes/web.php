@@ -30,6 +30,8 @@ Route::view('/comunidad', 'pages.community.index')->name('community');
 
 Route::view('/mensajes', 'pages.messages.index')->name('messages');
 
+Route::view('/lexa', 'pages.lexa.index')->name('lexa');
+
 Route::view('/profesionales', 'pages.professionals.index')->name('professionals');
 
 Route::view('/articulos', 'pages.articles.index')->name('articles');

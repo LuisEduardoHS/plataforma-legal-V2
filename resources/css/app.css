@@ -7,6 +7,9 @@
 @source "../**/*.vue";
 
 @theme {
+    /* Standard corner radius for Community and future page components. */
+    --radius-ui: 10px;
+
     --font-sans: "DM Sans", sans-serif;;
 
     --color-accent: #9E1F52;
