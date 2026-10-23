@@ -38,7 +38,7 @@
 
 @section('content')
 <main class="flex flex-row min-h-screen items-center justify-center bg-bg dark:bg-bg-dark">
-    <section class="bg-white dark:bg-black flex w-full sm:w-4xl h-164 rounded-lg overflow-clip">
+    <section class="bg-white dark:bg-black flex w-full sm:w-4xl h-184 rounded-lg overflow-clip">
 
         {{-- Banner side --}}
         <div class="sm:basis-1/2 hidden sm:flex relative flex-col justify-center">
@@ -49,16 +49,31 @@
         <div class="sm:basis-1/2 basis-full flex flex-col justify-start py-6 px-9">
             
             <section class="flex flex-col items-end pt-5 mb-16">
-                <h1 class="text-2xl font-bold text-text dark:text-text-dark">¡Bienvenid@ de nuevo!</h1>
-                <h2 class="text-base text-light-text dark:text-light-text-dark">Inicia sesión para continuar</h2>
+                <h1 class="text-2xl font-bold text-text dark:text-text-dark">¡Bienvenid@!</h1>
+                <h2 class="text-base text-light-text dark:text-light-text-dark">Llena los siguientes campos</h2>
             </section>
 
-            <form method="POST" action="{{ route('login') }}">
+            <form method="POST" action="{{ route('register') }}">
                 @csrf
+
+                {{-- Username --}}
+                <div class="flex flex-row gap-4">
+                    <div class="mb-4">
+                        <label class="login-input-label">Nombre de usuario</label>
+                        <input type="text" id="user" name="user" value="{{ old('user') }}" required autofocus class="login-input w-full" />
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="login-input-label">Fecha de nacimiento</label>
+                        <input type="date" id="birth_date" name="birth_date" value="{{ old('birth_date') }}" required autofocus class="login-input w-full" />
+                    </div>
+                </div>
+
+                
 
                 {{-- Email --}}
                 <div class="mb-4">
-                    <label for="email" class="login-input-label">Correo electrónico o Usuario</label>
+                    <label for="email" class="login-input-label">Correo electrónico</label>
                     <input type="text" id="email" name="email" value="{{ old('email') }}" required autofocus class="login-input w-full" />
                 </div>
 
@@ -75,33 +90,25 @@
                     </div>
                 </div>
 
-                {{-- Remember Me --}}
+                {{-- Terms and Conditions --}}
                 <div class="mb-5 mt-6 flex flex-row items-center">
                     <div class="relative flex items-center justify-center shrink-0">
                         <input type="checkbox" id="remember" name="remember" class="peer appearance-none size-5 rounded-md border-2 border-text/15 dark:border-text-dark/15 checked:bg-text dark:checked:bg-text-dark checked:border-text dark:checked:border-text-dark cursor-pointer transition-colors duration-200" />
                         
                         <x-lucide-check class="absolute w-3.5 h-3.5 text-white dark:text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity duration-200" stroke-width="3.5" />
                     </div>
-                    <label for="remember" class="login-remember-label ml-2 self-center cursor-pointer">Mantener mi sesión activa</label>
+                    <label for="remember" class="login-remember-label ml-2 self-center cursor-pointer">He leído y acepto los&nbsp;</label>
+                    <a href="#" class="login-link">Términos y Condiciones</a>
                 </div>
 
                 {{-- Submit Button --}}
                 <button type="submit" class="bg-text/90 dark:bg-text-dark/90 hover:bg-text/85 dark:hover:bg-text-dark/85 transition-colors duration-200 cursor-pointer text-white dark:text-black text-base w-full font-medium py-3 px-4 rounded-xl">
-                    Iniciar sesión
+                    Crear cuenta
                 </button>
             </form>
 
-            {{-- Forgot Password --}}
-            <div class="mt-2 text-end">
-                @if (Route::has('password.request'))
-                    <a href="{{ route('password.request') }}" class="login-link">Olvidé mi contraseña</a>
-                @else
-                    <a href="#" class="login-link">Olvidé mi contraseña</a>
-                @endif
-            </div>
-
             {{-- Alt login --}}
-            <div class="mt-9 text-start">
+            <div class="mt-12 text-start">
                 <span class="text-sm text-light-text dark:text-light-text-dark font-semibold">O ingresa con</span>
                 <div class="mt-2 flex flex-row justify-between">
                     {{-- Google --}}
@@ -124,9 +131,9 @@
             {{-- Register --}}
             <div class="mt-3 text-start">
                 <p class="text-sm text-light-text dark:text-light-text-dark font-semibold">
-                    ¿Aún no tienes cuenta? 
-                    <a href="{{ route('register') }}" class="login-link">
-                        Regístrate ahora
+                    ¿Ya tienes cuenta? 
+                    <a href="{{ route('login') }}" class="login-link">
+                        Inicia sesión ahora
                     </a>
                 </p>
             </div>
