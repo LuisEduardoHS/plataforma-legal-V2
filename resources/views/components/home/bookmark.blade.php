@@ -1,0 +1,2 @@
+@props(['label'])
+<button type="button" class="home-icon home-bookmark" data-bookmark aria-pressed="false" aria-label="Guardar {{ $label }} en esta página" title="Guardar en esta página"><x-lucide-bookmark aria-hidden="true" /></button>
