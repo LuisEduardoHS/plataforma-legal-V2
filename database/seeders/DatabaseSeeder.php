@@ -19,6 +19,8 @@ class DatabaseSeeder extends Seeder
             MunicipalitySeeder::class,
 
             LegalSpecialtySeeder::class,
+            ContentCategorySeeder::class,
+            TagSeeder::class,
         ]);
     }
 }
