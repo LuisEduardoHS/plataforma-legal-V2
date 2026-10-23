@@ -106,7 +106,7 @@ no se asocian como fotos ni se publican.
 
 ## Verificación y BACK-04
 
-Estados preparados: unverified, pending, verified y rejected. Todo perfil nuevo es
+Estados preparados: unverified, pending, verified, rejected y revoked. Todo perfil nuevo es
 unverified, sin verified_at. MySQL exige que verified tenga fecha y que los otros
 estados no la tengan. BACK-03 no ofrece ninguna operación para aprobar o rechazar.
 
@@ -117,12 +117,13 @@ En esta fase no se asegura que el contacto esté comprobado. Modificar datos de 
 solicitud pending también la invalida; BACK-04 deberá aplicar su propio bloqueo,
 versión o instantánea para impedir aprobar datos distintos a los revisados.
 
-BACK-04 debe implementar expedientes y evidencias privadas, historial de decisiones,
-actores y motivos de revisión, permisos específicos, comprobaciones documentales,
-retención, revalidación y decisiones de moderación. El perfil guarda solo el estado
-actual, no sustituye el expediente. Una regex de cédula nunca prueba autenticidad.
-No se implementan consultas a autoridades ni se muestran distintivos verificados
-por la sola existencia de un perfil, un rol o un identificador con formato válido.
+BACK-04 implementa expedientes, evidencias privadas, permisos específicos, decisiones
+e historial mediante VerificationService. Las ediciones materiales invalidan el
+expediente vigente en la misma transacción del perfil; el perfil guarda el estado
+actual y los eventos preservan las decisiones históricas. Consultar verification.md
+para retención, integridad, acceso documental y limitaciones de producción.
+Una regex de cédula nunca prueba autenticidad. No se implementan consultas a
+autoridades ni se verifica por la sola existencia del perfil o de un rol.
 
 ## Validación
 

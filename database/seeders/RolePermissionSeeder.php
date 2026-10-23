@@ -61,7 +61,7 @@ class RolePermissionSeeder extends Seeder
                 ]);
             }
 
-            $role->syncPermissions($permissions);
+            $role->givePermissionTo($permissions);
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

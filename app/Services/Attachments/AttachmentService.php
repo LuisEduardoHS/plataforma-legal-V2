@@ -111,6 +111,9 @@ class AttachmentService
     {
         $this->safely(fn () => DB::transaction(function () use ($actor, $id): void {
             $record = $this->authorized($actor, $id, 'delete', true);
+            if ($this->isVerificationRetained($record)) {
+                throw new AttachmentException;
+            }
             if (in_array($record->status, [AttachmentStatus::PendingDeletion, AttachmentStatus::Deleted], true)) {
                 return;
             }
@@ -126,6 +129,9 @@ class AttachmentService
         try {
             DB::transaction(function () use ($actor, $id): void {
                 $record = $this->authorized($actor, $id, 'delete', true);
+                if ($this->isVerificationRetained($record)) {
+                    throw new AttachmentException;
+                }
                 if ($record->status === AttachmentStatus::Deleted) {
                     return;
                 }
@@ -200,15 +206,37 @@ class AttachmentService
     {
         // If cleanup itself fails, the reservation keeps the exact key for a retry.
         try {
-            $deleted = Storage::disk($record->disk)->delete($record->path);
-            $record->forceFill([
-                'status' => $deleted ? AttachmentStatus::Deleted : AttachmentStatus::PendingDeletion,
-                'deletion_requested_at' => now(),
-                'deleted_at' => $deleted ? now() : null,
-            ])->save();
+            DB::transaction(function () use ($record): void {
+                $current = Attachment::whereKey($record->id)->lockForUpdate()->first();
+                // Never compensate a committed upload or an evidence retained after it.
+                if (! $current || $current->status === AttachmentStatus::Available
+                    || $current->verification_retained_at !== null) {
+                    return;
+                }
+                $deleted = Storage::disk($current->disk)->delete($current->path);
+                $current->forceFill([
+                    'status' => $deleted ? AttachmentStatus::Deleted : AttachmentStatus::PendingDeletion,
+                    'deletion_requested_at' => now(),
+                    'deleted_at' => $deleted ? now() : null,
+                ])->save();
+            });
         } catch (Throwable $error) {
             report($error);
             // A pending_upload reservation also remains recoverable via requestDeletion.
         }
+    }
+
+    private function isVerificationRetained(Attachment $record): bool
+    {
+        if ($record->verification_retained_at !== null) {
+            return true;
+        }
+
+        // A cleared marker must not release a document still bound to a submission.
+        // A locking read sees the latest committed association, not an older RR snapshot.
+        return DB::table('verification_evidences as evidence')
+            ->join('verification_requests as request', 'request.id', '=', 'evidence.verification_request_id')
+            ->where('evidence.attachment_id', $record->id)->whereNotNull('request.submitted_at')
+            ->select('evidence.id')->lockForUpdate()->first() !== null;
     }
 }

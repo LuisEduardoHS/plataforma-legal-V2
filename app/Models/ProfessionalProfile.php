@@ -8,6 +8,7 @@ use App\Enums\ProfileVisibility;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProfessionalProfile extends Model
 {
@@ -41,5 +42,10 @@ class ProfessionalProfile extends Model
     public function specialties(): BelongsToMany
     {
         return $this->belongsToMany(LegalSpecialty::class, 'professional_profile_specialties')->withTimestamps();
+    }
+
+    public function verificationRequests(): HasMany
+    {
+        return $this->hasMany(VerificationRequest::class);
     }
 }

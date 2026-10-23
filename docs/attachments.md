@@ -67,6 +67,9 @@ La eliminación lógica conserva el objeto hasta `purge`. Un fallo de borrado
 mantiene `pending_deletion`; el reintento también funciona si el objeto ya no existe.
 Si el objeto se borra y falla la actualización de MySQL, el estado sigue pendiente
 y el siguiente intento puede completar el registro. No se elimina el historial.
+BACK-04 añade verification_retained_at: los adjuntos presentados como evidencia
+rechazan requestDeletion y purge para preservar el expediente. La retención no se
+libera automáticamente; consultar verification.md y definir su política antes de producción.
 Una descarga que ya abrió su stream puede finalizar aunque después se solicite
 eliminación; se bloquean las solicitudes nuevas.
 

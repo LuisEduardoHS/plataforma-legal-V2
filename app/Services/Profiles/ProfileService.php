@@ -12,6 +12,8 @@ use App\Models\Municipality;
 use App\Models\ProfessionalProfile;
 use App\Models\User;
 use App\Models\UserProfile;
+use App\Services\Verification\VerificationIntegrity;
+use App\Services\Verification\VerificationService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
@@ -50,7 +52,7 @@ class ProfileService
 
     public function saveProfessionalProfile(User $actor, int $userId, array $data): ProfessionalProfile
     {
-        return $this->mutate($actor, $userId, ProfessionalProfile::class, function (ProfessionalProfile $profile) use ($data): void {
+        return $this->mutate($actor, $userId, ProfessionalProfile::class, function (ProfessionalProfile $profile, User $owner, User $current) use ($data): void {
             $rules = $this->commonRules() + [
                 'headline' => ['sometimes', 'nullable', 'string', 'max:180'],
                 'description' => ['sometimes', 'nullable', 'string', 'max:10000'],
@@ -78,8 +80,11 @@ class ProfileService
                 $specialtiesChanged = $currentIds !== $ids;
             }
             $profile->forceFill($valid);
-            $materialFields = ['headline', 'description', 'license_number', 'years_experience', 'municipality_id', 'attention_mode'];
+            $materialFields = VerificationIntegrity::MATERIAL_FIELDS;
             if (! $profile->exists || $profile->isDirty($materialFields) || $specialtiesChanged) {
+                if ($profile->exists) {
+                    app(VerificationService::class)->invalidateForProfileChange($profile, $current);
+                }
                 $profile->forceFill([
                     'verification_status' => ProfessionalVerificationStatus::Unverified,
                     'verified_at' => null,
@@ -162,7 +167,7 @@ class ProfileService
                     $profile = new $model;
                     $profile->forceFill(['user_id' => $userId]);
                 }
-                $operation($profile, $owner);
+                $operation($profile, $owner, $current);
 
                 return $profile->fresh();
             });
