@@ -58,6 +58,10 @@ class VerificationService
                 || DB::table('post_attachments')->where('attachment_id', $attachment->id)->lockForUpdate()->first() !== null) {
                 $this->invalid('Un archivo de Comunidad no puede reutilizarse como evidencia privada.');
             }
+            if ($attachment->messaging_shared_at !== null
+                || DB::table('message_attachments')->where('attachment_id', $attachment->id)->lockForUpdate()->first() !== null) {
+                $this->invalid('Un archivo compartido por mensajería no puede reutilizarse como evidencia privada.');
+            }
             $stream = $this->integrity->verifiedStream($attachment);
             fclose($stream);
             if ($request->evidences()->where('content_sha256', $attachment->sha256)->exists()) {
