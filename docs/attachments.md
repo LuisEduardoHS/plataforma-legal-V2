@@ -60,6 +60,12 @@ Los errores internos se reportan al sistema de logs, nunca al mensaje del consum
 revertir la reserva después de haber escrito el objeto y generar un huérfano.
 Los módulos consumidores deben completar la carga antes de su propia transacción
 para asociar el adjunto; si la asociación falla deben solicitar su eliminación.
+AUDIT-02 extiende este contrato a `purge`: también rechaza cualquier transacción
+externa antes de tocar el almacenamiento. `requestDeletion` sí puede participar en
+la transacción del consumidor; esa intención debe confirmarse antes de llamar a
+`purge` fuera de ella. Un rollback de la intención conserva el objeto. Si el borrado
+físico termina pero falla su actualización SQL, la intención ya confirmada permanece
+pendiente y permite reintentar; nunca se restaura `available` por un rollback externo.
 Las pruebas de carga usan filas exclusivas del usuario de cada prueba y limpieza
 selectiva en la base de pruebas, sin migraciones destructivas.
 

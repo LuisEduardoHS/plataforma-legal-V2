@@ -32,14 +32,14 @@ class MessagingQuery
         if ($participantId !== null) {
             $query->where(fn ($pair) => $pair->where('user_low_id', $participantId)->orWhere('user_high_id', $participantId));
         }
-        $latest = $this->visibleToRow(Message::query())->select('messages.id')->orderByDesc('messages.id')->limit(1);
+        $latest = $this->visibleToRow(Message::query())->select('messages.id')->sharedLock()->orderByDesc('messages.id')->limit(1);
         $unread = $this->visibleToRow(Message::query())->where('messages.status', 'sent')
-            ->whereColumn('messages.sender_id', '<>', 'own.user_id')->whereRaw('messages.id > COALESCE(own.last_read_message_id, 0)')->selectRaw('COUNT(*)');
+            ->whereColumn('messages.sender_id', '<>', 'own.user_id')->whereRaw('messages.id > COALESCE(own.last_read_message_id, 0)')->selectRaw('COUNT(*)')->sharedLock();
 
         return $query->selectSub($latest, 'latest_message_id')->selectSub($unread, 'unread_count')
-            ->with(['otherParticipant:id,name,status', 'otherParticipant.profile:id,user_id,display_name,username,visibility',
-                'latestVisibleMessage' => fn ($message) => $message->with($this->fileRelation())])
-            ->orderByDesc('activity_at')->orderByDesc('id')
+            ->with(['otherParticipant' => fn ($user) => $user->select('id', 'name', 'status')->sharedLock(), 'otherParticipant.profile' => fn ($profile) => $profile->select('id', 'user_id', 'display_name', 'username', 'visibility')->sharedLock(),
+                'latestVisibleMessage' => fn ($message) => $message->with($this->fileRelation())->sharedLock()])
+            ->sharedLock()->orderByDesc('activity_at')->orderByDesc('id')
             ->cursorPaginate($size, ['*'], 'cursor', $this->cursor($cursor, inbox: true))->through(fn ($conversation) => [
                 'id' => $conversation->id, 'activity_at' => $conversation->activity_at->toDateTimeString(),
                 'archived' => $conversation->archived_at !== null, 'unread_count' => (int) $conversation->unread_count,
@@ -72,7 +72,7 @@ class MessagingQuery
     public function participants(User $actor, int $id): array
     {
         return $this->access->conversation($actor, $id, function (User $actor, User $target, Conversation $conversation, ConversationParticipant $own) {
-            $users = User::whereKey([$actor->id, $target->id])->with('profile:id,user_id,display_name,username,visibility')->get();
+            $users = User::whereKey([$actor->id, $target->id])->with(['profile' => fn ($profile) => $profile->select('id', 'user_id', 'display_name', 'username', 'visibility')->sharedLock()])->sharedLock()->get();
 
             return ['participants' => $users->map(fn ($user) => $this->userData($user))->all(),
                 'last_read_message_id' => $own->last_read_message_id, 'last_read_at' => $own->last_read_at?->toDateTimeString()];
@@ -89,7 +89,7 @@ class MessagingQuery
             ->where('own.user_id', $actor->id)->whereNull('own.hidden_at')
             ->where(fn ($pair) => $pair->where('user_low_id', $actor->id)->orWhere('user_high_id', $actor->id))
             ->where('messages.status', 'sent')->where('messages.sender_id', '<>', $actor->id)
-            ->whereRaw('messages.id > COALESCE(own.last_read_message_id, 0)')->count();
+            ->whereRaw('messages.id > COALESCE(own.last_read_message_id, 0)')->sharedLock()->count();
     }
 
     private function visibleToRow(Builder $query): Builder
@@ -97,14 +97,14 @@ class MessagingQuery
         return $query->whereColumn('messages.conversation_id', 'own.conversation_id')
             ->whereRaw('messages.id > COALESCE(own.hidden_through_message_id, 0)')
             ->whereNotExists(fn ($hidden) => $hidden->selectRaw('1')->from('message_user_hides')
-                ->whereColumn('message_id', 'messages.id')->whereColumn('user_id', 'own.user_id'));
+                ->whereColumn('message_id', 'messages.id')->whereColumn('user_id', 'own.user_id')->sharedLock());
     }
 
     private function fileRelation(): array
     {
         return ['attachments' => fn ($files) => $files->where('status', 'available')->where('visibility', 'private')->whereNull('verification_retained_at')
-            ->whereNotExists(fn ($evidence) => $evidence->selectRaw('1')->from('verification_evidences')->whereColumn('attachment_id', 'attachments.id'))
-            ->select('attachments.id', 'user_id', 'mime_type', 'category', 'size_bytes')];
+            ->whereNotExists(fn ($evidence) => $evidence->selectRaw('1')->from('verification_evidences')->whereColumn('attachment_id', 'attachments.id')->sharedLock())
+            ->select('attachments.id', 'user_id', 'mime_type', 'category', 'size_bytes')->sharedLock()];
     }
 
     private function messageData(Message $message): array

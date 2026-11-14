@@ -126,6 +126,12 @@ class AttachmentService
 
     public function purge(User $actor, int $id): void
     {
+        // Physical deletion cannot be rolled back by an enclosing transaction.
+        // requestDeletion may participate in one, but it must commit before purge.
+        if (DB::transactionLevel() !== 0) {
+            throw new AttachmentException;
+        }
+
         try {
             DB::transaction(function () use ($actor, $id): void {
                 $record = $this->authorized($actor, $id, 'delete', true);
@@ -156,7 +162,7 @@ class AttachmentService
     private function actor(User $actor): User
     {
         // Recheck persisted account state, including when the caller holds a stale model.
-        $current = $this->safely(fn () => User::find($actor->getKey()));
+        $current = $this->safely(fn () => User::whereKey($actor->getKey())->sharedLock()->first());
         if (! $current || ! $current->isActive()) {
             throw new AuthorizationException;
         }
@@ -167,7 +173,7 @@ class AttachmentService
     private function authorized(User $actor, int $id, string $ability, bool $lock = false): Attachment
     {
         $current = $this->actor($actor);
-        $query = Attachment::whereKey($id);
+        $query = Attachment::whereKey($id)->sharedLock();
         if ($lock) {
             $query->lockForUpdate();
         }

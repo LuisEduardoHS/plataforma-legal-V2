@@ -108,7 +108,7 @@ class PostService
             'legal_specialty_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'tag_ids' => ['sometimes', 'array', 'max:'.config('community.max_tags')],
             'tag_ids.*' => ['required', 'integer', 'min:1', 'distinct'],
-            'attachment_ids' => ['sometimes', 'array', 'max:'.config('community.max_attachments')],
+            'attachment_ids' => ['sometimes', 'array', 'list', 'max:'.config('community.max_attachments')],
             'attachment_ids.*' => ['required', 'integer', 'min:1', 'distinct'],
         ];
         if (array_diff(array_keys($data), ['content', 'visibility', 'content_category_id', 'legal_specialty_id', 'tag_ids', 'attachment_ids'])) {

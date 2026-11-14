@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Exceptions\ContentLibraryException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -20,10 +21,19 @@ class ContentRevision extends Model
         return ['snapshot' => 'array', 'version' => 'integer'];
     }
 
-    protected static function booted(): void
+    protected function performUpdate(Builder $query)
     {
-        static::updating(fn () => throw new ContentLibraryException);
-        static::deleting(fn () => throw new ContentLibraryException);
+        throw new ContentLibraryException;
+    }
+
+    protected function performDeleteOnModel()
+    {
+        throw new ContentLibraryException;
+    }
+
+    protected function incrementOrDecrement($column, $amount, $extra, $method)
+    {
+        throw new ContentLibraryException;
     }
 
     public function actor(): BelongsTo

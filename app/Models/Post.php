@@ -65,7 +65,7 @@ class Post extends Model
     public function scopePubliclyVisible(Builder $query): Builder
     {
         return $query->where('posts.status', PostStatus::Published->value)
-            ->where('posts.visibility', PostVisibility::Public->value)
-            ->whereHas('author', fn ($author) => $author->where('status', 'active'));
+            ->sharedLock()->where('posts.visibility', PostVisibility::Public->value)
+            ->whereHas('author', fn ($author) => $author->where('status', 'active')->sharedLock());
     }
 }

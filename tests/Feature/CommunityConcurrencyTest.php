@@ -7,9 +7,9 @@ use App\Models\Post;
 use App\Models\User;
 use App\Services\Community\CommunityInteractionService;
 use App\Services\Community\PostService;
-use Illuminate\Contracts\Debug\ExceptionHandler;
-use Illuminate\Database\QueryException;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
@@ -45,8 +45,10 @@ class CommunityConcurrencyTest extends TestCase
             $this->assertSame('plataforma_legal_v2_test', $other->selectOne('SELECT DATABASE() db')->db);
             $other->statement('SET SESSION innodb_lock_wait_timeout = 1');
             $reportedCode = null;
-            app(ExceptionHandler::class)->reportable(function (QueryException $error) use (&$reportedCode): void {
-                $reportedCode = (int) ($error->errorInfo[1] ?? 0);
+            Log::listen(function (MessageLogged $event) use (&$reportedCode): void {
+                if ($event->message === 'database.operation_failed') {
+                    $reportedCode = $event->context['driver_code'];
+                }
             });
             $db->beginTransaction();
             $service->update($owner, $post->id, ['content' => 'Primera edición'], 1);

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -48,21 +49,27 @@ class RolePermissionSeeder extends Seeder
             ],
         ];
 
-        foreach ($rolePermissions as $roleName => $permissions) {
-            $role = Role::firstOrCreate([
-                'name' => $roleName,
-                'guard_name' => 'web',
-            ]);
-
-            foreach ($permissions as $permissionName) {
-                Permission::firstOrCreate([
-                    'name' => $permissionName,
+        DB::transaction(function () use ($rolePermissions): void {
+            foreach ($rolePermissions as $roleName => $permissions) {
+                $role = Role::firstOrCreate([
+                    'name' => $roleName,
                     'guard_name' => 'web',
                 ]);
-            }
 
-            $role->givePermissionTo($permissions);
-        }
+                foreach ($permissions as $permissionName) {
+                    Permission::firstOrCreate([
+                        'name' => $permissionName,
+                        'guard_name' => 'web',
+                    ]);
+                }
+
+                // Bootstrap only newly created roles. Existing grants and revocations
+                // are administrative decisions, never reconciled by routine seeding.
+                if ($role->wasRecentlyCreated) {
+                    $role->givePermissionTo($permissions);
+                }
+            }
+        });
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }

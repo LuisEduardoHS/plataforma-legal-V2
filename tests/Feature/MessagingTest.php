@@ -393,9 +393,10 @@ class MessagingTest extends TestCase
         $this->messages->deleteForEveryone($a, $second->id, 1);
         $this->rejects(AuthorizationException::class, fn () => app(MessagingMediaService::class)->download($a, $conversation->id, $second->id, $file->id));
         app(AttachmentService::class)->requestDeletion($a, $file->id);
-        app(AttachmentService::class)->purge($a, $file->id);
-        Storage::disk('attachments')->assertMissing($file->path);
-        $this->assertSame(AttachmentStatus::Deleted, $file->fresh()->status);
+        // Fixtures are transactional: physical purge must wait for an outer commit.
+        $this->rejects(AttachmentException::class, fn () => app(AttachmentService::class)->purge($a, $file->id));
+        Storage::disk('attachments')->assertExists($file->path);
+        $this->assertSame(AttachmentStatus::PendingDeletion, $file->fresh()->status);
     }
 
     public function test_media_checks_integrity_association_and_live_retention(): void

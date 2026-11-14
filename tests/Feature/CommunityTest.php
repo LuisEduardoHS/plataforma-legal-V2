@@ -287,9 +287,10 @@ class CommunityTest extends TestCase
         Storage::disk('attachments')->assertExists($file->path);
         $this->posts->delete($owner, $second->id, 1);
         $service->requestDeletion($owner, $file->id);
-        $service->purge($owner, $file->id);
-        Storage::disk('attachments')->assertMissing($file->path);
-        $this->assertSame(AttachmentStatus::Deleted, $file->fresh()->status);
+        // Fixtures are transactional: physical purge must wait for an outer commit.
+        $this->rejects(AttachmentException::class, fn () => $service->purge($owner, $file->id));
+        Storage::disk('attachments')->assertExists($file->path);
+        $this->assertSame(AttachmentStatus::PendingDeletion, $file->fresh()->status);
     }
 
     public function test_media_requires_post_visibility_association_and_content_integrity(): void

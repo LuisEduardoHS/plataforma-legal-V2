@@ -106,16 +106,16 @@ class EditorialQuery
 
     private function load(Builder $query): Builder
     {
-        return $query->with($this->relations());
+        return $query->sharedLock()->with($this->relations());
     }
 
     private function relations(): array
     {
-        return ['author:id,name,status', 'author.profile:id,user_id,display_name,username,visibility',
+        return ['author' => fn ($user) => $user->select('id', 'name', 'status')->sharedLock(), 'author.profile' => fn ($profile) => $profile->select('id', 'user_id', 'display_name', 'username', 'visibility')->sharedLock(),
             'category:id,name,slug,is_active', 'tags:id,name,slug,is_active', 'specialties:id,name,slug,is_active',
             'attachments' => fn ($files) => $files->where('status', 'available')->where('visibility', 'private')->whereNull('verification_retained_at')
-                ->whereNotExists(fn ($evidence) => $evidence->selectRaw('1')->from('verification_evidences')->whereColumn('attachment_id', 'attachments.id'))
-                ->select('attachments.id', 'user_id', 'mime_type', 'category', 'size_bytes')];
+                ->whereNotExists(fn ($evidence) => $evidence->selectRaw('1')->from('verification_evidences')->whereColumn('attachment_id', 'attachments.id')->sharedLock())
+                ->select('attachments.id', 'user_id', 'mime_type', 'category', 'size_bytes')->sharedLock()];
     }
 
     private function data(EditorialEntry $entry, bool $detail = false): array

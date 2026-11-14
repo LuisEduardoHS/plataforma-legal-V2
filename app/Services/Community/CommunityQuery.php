@@ -31,7 +31,7 @@ class CommunityQuery
     public function following(User $viewer, array $filters = [], int $size = 20, ?string $cursor = null): CursorPaginator
     {
         $viewer = $this->access->viewer($viewer);
-        $query = Post::publiclyVisible()->whereIn('user_id', DB::table('user_follows')->select('followed_id')->where('follower_id', $viewer->id));
+        $query = Post::publiclyVisible()->whereIn('user_id', DB::table('user_follows')->select('followed_id')->where('follower_id', $viewer->id)->sharedLock());
 
         return $this->page($query, $filters, $size, $cursor);
     }
@@ -40,7 +40,7 @@ class CommunityQuery
     {
         $viewer = $this->access->viewer($viewer);
         $query = Post::where('user_id', $userId)->where('status', PostStatus::Published->value)
-            ->whereHas('author', fn ($author) => $author->where('status', 'active'));
+            ->whereHas('author', fn ($author) => $author->where('status', 'active')->sharedLock());
         if ($viewer?->id !== $userId) {
             $query->where('visibility', PostVisibility::Public->value);
         }
@@ -63,7 +63,7 @@ class CommunityQuery
     public function comments(int $postId, ?User $viewer = null, int $size = 20, ?string $cursor = null): CursorPaginator
     {
         $viewer = $this->access->viewer($viewer);
-        $post = Post::with('author')->find($postId);
+        $post = Post::with(['author' => fn ($author) => $author->sharedLock()])->sharedLock()->find($postId);
         if (! $post || $post->status !== PostStatus::Published) {
             throw new AuthorizationException;
         }
@@ -83,7 +83,7 @@ class CommunityQuery
     public function connections(User $viewer, int $userId, bool $followers = false, int $size = 20, ?string $cursor = null): CursorPaginator
     {
         $viewer = $this->access->viewer($viewer);
-        $target = User::with('profile')->find($userId);
+        $target = User::with(['profile' => fn ($profile) => $profile->sharedLock()])->sharedLock()->find($userId);
         if (! $target || ! $target->isActive()
             || ($viewer->id !== $target->id && $target->profile?->visibility !== ProfileVisibility::Public)) {
             throw new AuthorizationException;
@@ -92,8 +92,8 @@ class CommunityQuery
         $column = $followers ? 'follower_id' : 'followed_id';
         $matching = $followers ? 'followed_id' : 'follower_id';
 
-        return User::where('status', 'active')->whereIn('id', DB::table('user_follows')->select($column)->where($matching, $userId))
-            ->with('profile:id,user_id,display_name,username,visibility')->orderBy('id')
+        return User::where('status', 'active')->whereIn('id', DB::table('user_follows')->select($column)->where($matching, $userId)->sharedLock())
+            ->with(['profile' => fn ($profile) => $profile->select('id', 'user_id', 'display_name', 'username', 'visibility')->sharedLock()])->sharedLock()->orderBy('id')
             ->cursorPaginate($size, ['id', 'name', 'status'], 'cursor', $this->cursor($cursor))
             ->through(fn ($user) => $this->authorData($user));
     }
@@ -125,14 +125,14 @@ class CommunityQuery
 
     private function loaded(Builder $query): Builder
     {
-        return $query->with($this->authorRelations() + [
+        return $query->sharedLock()->with($this->authorRelations() + [
             'category' => fn ($category) => $category->select('id', 'name', 'slug', 'is_active'),
             'specialty' => fn ($specialty) => $specialty->select('id', 'name', 'slug', 'is_active'),
             'tags' => fn ($tags) => $tags->select('tags.id', 'name', 'slug', 'is_active')->orderBy('tags.id'),
             'attachments' => fn ($files) => $files->where('status', 'available')->where('visibility', 'private')
                 ->whereNull('verification_retained_at')
-                ->whereNotExists(fn ($evidence) => $evidence->selectRaw('1')->from('verification_evidences')->whereColumn('attachment_id', 'attachments.id'))
-                ->select('attachments.id', 'user_id', 'mime_type', 'category', 'size_bytes'),
+                ->whereNotExists(fn ($evidence) => $evidence->selectRaw('1')->from('verification_evidences')->whereColumn('attachment_id', 'attachments.id')->sharedLock())
+                ->select('attachments.id', 'user_id', 'mime_type', 'category', 'size_bytes')->sharedLock(),
         ])->withCount([
             'reactions as likes_count' => fn ($reactions) => $reactions->where('type', 'like')->whereHas('user', fn ($user) => $user->where('status', 'active')),
             'comments as comments_count' => fn ($comments) => $comments->visibleInCommunity(),
@@ -142,8 +142,8 @@ class CommunityQuery
     private function authorRelations(): array
     {
         return [
-            'author' => fn ($author) => $author->select('id', 'name', 'status'),
-            'author.profile' => fn ($profile) => $profile->select('id', 'user_id', 'display_name', 'username', 'visibility'),
+            'author' => fn ($author) => $author->select('id', 'name', 'status')->sharedLock(),
+            'author.profile' => fn ($profile) => $profile->select('id', 'user_id', 'display_name', 'username', 'visibility')->sharedLock(),
         ];
     }
 

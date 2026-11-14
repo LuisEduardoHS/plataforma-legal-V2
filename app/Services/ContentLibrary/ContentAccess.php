@@ -18,7 +18,7 @@ class ContentAccess
         if (! $actor) {
             return null;
         }
-        $current = User::find($actor->id);
+        $current = User::whereKey($actor->id)->sharedLock()->first();
         if (! $current || ! $current->isActive()) {
             throw new AuthorizationException;
         }

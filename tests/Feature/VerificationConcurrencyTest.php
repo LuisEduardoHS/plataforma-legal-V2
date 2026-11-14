@@ -16,11 +16,12 @@ use App\Services\Attachments\AttachmentService;
 use App\Services\Profiles\ProfileService;
 use App\Services\Verification\VerificationService;
 use Database\Seeders\VerificationPermissionSeeder;
-use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\PermissionRegistrar;
@@ -121,8 +122,10 @@ class VerificationConcurrencyTest extends TestCase
             $this->assertSame('plataforma_legal_v2_test', $other->selectOne('SELECT DATABASE() AS db')->db);
             $other->statement('SET SESSION innodb_lock_wait_timeout = 1');
             $reportedCode = null;
-            app(ExceptionHandler::class)->reportable(function (QueryException $error) use (&$reportedCode): void {
-                $reportedCode = (int) ($error->errorInfo[1] ?? 0);
+            Log::listen(function (MessageLogged $event) use (&$reportedCode): void {
+                if ($event->message === 'database.operation_failed') {
+                    $reportedCode = $event->context['driver_code'];
+                }
             });
 
             $db->beginTransaction();

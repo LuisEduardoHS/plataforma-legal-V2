@@ -129,7 +129,7 @@ class ProfileService
     public function publicProfessionalProfile(int $userId): array
     {
         $profile = $this->publicProfile($userId, ProfessionalProfile::class);
-        $specialties = $profile->specialties()->active()->ordered()->get(['legal_specialties.id', 'name', 'slug']);
+        $specialties = $profile->specialties()->active()->ordered()->sharedLock()->get(['legal_specialties.id', 'name', 'slug']);
 
         return [
             'id' => $profile->id,
@@ -182,11 +182,13 @@ class ProfileService
 
     private function privateProfile(User $actor, int $userId, string $model): UserProfile|ProfessionalProfile
     {
-        $current = User::find($actor->getKey());
-        $profile = $model::where('user_id', $userId)->first();
+        $users = User::whereKey([$actor->getKey(), $userId])->orderBy('id')->sharedLock()->get()->keyBy('id');
+        $current = $users->get($actor->getKey());
+        $profile = $model::where('user_id', $userId)->sharedLock()->first();
         if (! $current || ! $profile) {
             throw new AuthorizationException;
         }
+        $profile->setRelation('user', $users->get($userId));
         Gate::forUser($current)->authorize('view', $profile);
 
         return $profile;
@@ -194,9 +196,9 @@ class ProfileService
 
     private function publicProfile(int $userId, string $model): UserProfile|ProfessionalProfile
     {
-        $profile = $model::with(['user', 'municipality.state.country'])
+        $profile = $model::with(['user' => fn ($user) => $user->sharedLock(), 'municipality.state.country'])
             ->where('user_id', $userId)->where('visibility', ProfileVisibility::Public->value)
-            ->whereHas('user', fn ($query) => $query->where('status', 'active'))->first();
+            ->whereHas('user', fn ($query) => $query->where('status', 'active')->sharedLock())->sharedLock()->first();
 
         if (! $profile) {
             throw (new ModelNotFoundException)->setModel($model);

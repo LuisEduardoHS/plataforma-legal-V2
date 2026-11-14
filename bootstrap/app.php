@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\DatabaseFailureReporter;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,5 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Covers handled report($error) calls and unhandled QueryExceptions alike.
+        $exceptions->report(function (QueryException $error): void {
+            (new DatabaseFailureReporter)($error);
+        })->stop();
     })->create();

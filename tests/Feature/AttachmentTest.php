@@ -3,20 +3,32 @@
 namespace Tests\Feature;
 
 use App\Enums\AttachmentStatus;
+use App\Enums\EditorialKind;
+use App\Enums\VerificationEvidenceType;
 use App\Exceptions\AttachmentException;
 use App\Models\Attachment;
+use App\Models\LegalSpecialty;
 use App\Models\User;
 use App\Services\Attachments\AttachmentService;
+use App\Services\Community\PostService;
+use App\Services\ContentLibrary\EditorialService;
+use App\Services\Messaging\ConversationService;
+use App\Services\Messaging\MessageService;
+use App\Services\Profiles\ProfileService;
+use App\Services\Verification\VerificationService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class AttachmentTest extends TestCase
@@ -292,6 +304,152 @@ class AttachmentTest extends TestCase
         $this->assertSame(AttachmentStatus::Deleted, $record->fresh()->status);
         $this->assertNotNull($record->fresh()->deleted_at);
         $this->assertSame('consulta.txt', $record->fresh()->original_name);
+    }
+
+    public function test_purge_rejects_external_transactions_before_io_and_rollback_preserves_the_file(): void
+    {
+        $owner = $this->user();
+        $record = $this->service->store($owner, $this->upload());
+        DB::beginTransaction();
+        try {
+            $this->service->requestDeletion($owner, $record->id);
+            try {
+                $this->service->purge($owner, $record->id);
+                $this->fail('Se permitió una purga física dentro de una transacción externa.');
+            } catch (AttachmentException) {
+                Storage::disk('attachments')->assertExists($record->path);
+                $this->assertSame(AttachmentStatus::PendingDeletion, $record->fresh()->status);
+            }
+        } finally {
+            DB::rollBack();
+        }
+        $this->assertSame(AttachmentStatus::Available, $record->fresh()->status);
+        $this->assertSame($record->id, $this->service->metadata($owner, $record->id)['id']);
+        Storage::disk('attachments')->assertExists($record->path);
+
+        DB::beginTransaction();
+        try {
+            $this->service->requestDeletion($owner, $record->id);
+            $this->service->requestDeletion($owner, $record->id);
+            DB::commit();
+        } finally {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+        }
+        DB::beginTransaction();
+        try {
+            try {
+                $this->service->purge($owner, $record->id);
+                $this->fail('Se permitió purgar bajo una transacción externa aun con intención confirmada.');
+            } catch (AttachmentException) {
+                Storage::disk('attachments')->assertExists($record->path);
+            }
+        } finally {
+            DB::rollBack();
+        }
+        $this->service->purge($owner, $record->id);
+        $this->service->purge($owner, $record->id);
+        $this->assertSame(AttachmentStatus::Deleted, $record->fresh()->status);
+        Storage::disk('attachments')->assertMissing($record->path);
+    }
+
+    public function test_real_purge_preserves_all_module_retentions_and_releases_only_deleted_posts_and_messages(): void
+    {
+        $owner = $this->user();
+        $recipient = $this->user();
+        $newPermissions = [];
+        $post = $chat = $article = $profile = $specialty = $request = null;
+        $files = [];
+        try {
+            foreach (['posts.create', 'posts.update.own', 'posts.delete.own', 'articles.create', 'articles.update.own'] as $name) {
+                $permission = Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+                if ($permission->wasRecentlyCreated) {
+                    $newPermissions[] = $permission->id;
+                }
+            }
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+            $owner->givePermissionTo(['posts.create', 'posts.update.own', 'posts.delete.own', 'articles.create', 'articles.update.own']);
+            foreach (range(1, 4) as $index) {
+                $files[] = $this->service->store($owner, $this->upload(content: 'Contenido exclusivo '.$index));
+            }
+            $posts = app(PostService::class);
+            $post = $posts->create($owner, ['content' => 'Borrador', 'attachment_ids' => [$files[0]->id]]);
+            $chat = app(ConversationService::class)->start($owner, $recipient->id);
+            $messages = app(MessageService::class);
+            $message = $messages->send($owner, $chat->id, ['attachment_ids' => [$files[1]->id]]);
+            $editorial = app(EditorialService::class);
+            $article = $editorial->create(EditorialKind::Article, $owner, ['title' => 'Borrador', 'attachment_ids' => [$files[2]->id]]);
+            $specialty = LegalSpecialty::create(['name' => 'Auditoría', 'slug' => (string) Str::uuid()]);
+            $profile = app(ProfileService::class)->saveProfessionalProfile($owner, $owner->id, ['headline' => 'Auditoría', 'license_number' => '12345678', 'specialty_ids' => [$specialty->id]]);
+            $verification = app(VerificationService::class);
+            $request = $verification->createDraft($owner, $profile->id);
+            $verification->addEvidence($owner, $request->id, $files[3]->id, VerificationEvidenceType::ProfessionalLicense);
+            $verification->submit($owner, $request->id);
+
+            foreach ($files as $file) {
+                // Simulate stale pending metadata: references must independently stop physical IO.
+                DB::table('attachments')->where('id', $file->id)->update(['status' => 'pending_deletion']);
+                try {
+                    $this->service->purge($owner, $file->id);
+                    $this->fail('Se purgó un adjunto con retención de módulo.');
+                } catch (AttachmentException) {
+                    $this->assertSame(0, DB::transactionLevel());
+                    Storage::disk('attachments')->assertExists($file->path);
+                    $this->assertSame(AttachmentStatus::PendingDeletion, $file->fresh()->status);
+                }
+            }
+            $posts->delete($owner, $post->id, 1);
+            $messages->deleteForEveryone($owner, $message->id, 1);
+            foreach (array_slice($files, 0, 2) as $file) {
+                $this->service->purge($owner, $file->id);
+                $this->assertSame(AttachmentStatus::Deleted, $file->fresh()->status);
+                Storage::disk('attachments')->assertMissing($file->path);
+            }
+            $editorial->update(EditorialKind::Article, $owner, $article->id, ['attachment_ids' => []], 1);
+            try {
+                $this->service->purge($owner, $files[2]->id);
+                $this->fail('Se ignoró una referencia editorial histórica.');
+            } catch (AttachmentException) {
+                Storage::disk('attachments')->assertExists($files[2]->path);
+            }
+        } finally {
+            if ($request) {
+                DB::table('verification_events')->where('verification_request_id', $request->id)->delete();
+                DB::table('verification_evidences')->where('verification_request_id', $request->id)->delete();
+                DB::table('verification_requests')->where('id', $request->id)->delete();
+            }
+            if ($profile) {
+                DB::table('professional_profile_specialties')->where('professional_profile_id', $profile->id)->delete();
+                DB::table('professional_profiles')->where('id', $profile->id)->delete();
+            }
+            if ($specialty) {
+                DB::table('legal_specialties')->where('id', $specialty->id)->delete();
+            }
+            if ($post) {
+                DB::table('posts')->where('id', $post->id)->delete();
+            }
+            if ($chat) {
+                $ids = DB::table('messages')->where('conversation_id', $chat->id)->pluck('id');
+                DB::table('message_attachments')->whereIn('message_id', $ids)->delete();
+                DB::table('messages')->whereIn('id', $ids)->delete();
+                DB::table('conversation_participants')->where('conversation_id', $chat->id)->delete();
+                DB::table('conversations')->where('id', $chat->id)->delete();
+            }
+            if ($article) {
+                $ids = DB::table('content_revisions')->where('article_id', $article->id)->pluck('id');
+                DB::table('content_revision_attachments')->whereIn('content_revision_id', $ids)->delete();
+                DB::table('content_revisions')->whereIn('id', $ids)->delete();
+                DB::table('article_attachment')->where('article_id', $article->id)->delete();
+                DB::table('articles')->where('id', $article->id)->delete();
+            }
+            DB::table('model_has_permissions')->where('model_type', User::class)->where('model_id', $owner->id)->delete();
+            DB::table('permissions')->whereIn('id', $newPermissions)->delete();
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+            foreach ($files as $file) {
+                Storage::disk('attachments')->delete($file->path);
+            }
+        }
     }
 
     public function test_failed_storage_write_leaves_no_object_and_a_traceable_record(): void

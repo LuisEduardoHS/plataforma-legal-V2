@@ -60,7 +60,7 @@ abstract class EditorialEntry extends Model
 
     public function scopePubliclyVisible(Builder $query): Builder
     {
-        return $query->where('status', EditorialStatus::Published->value)->whereHas('author', fn ($author) => $author->where('status', 'active'));
+        return $query->sharedLock()->where('status', EditorialStatus::Published->value)->whereHas('author', fn ($author) => $author->where('status', 'active')->sharedLock());
     }
 
     private function prefix(): string

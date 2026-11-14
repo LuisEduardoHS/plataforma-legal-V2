@@ -44,10 +44,10 @@ class Comment extends Model
 
     public function scopeVisibleInCommunity(Builder $query): Builder
     {
-        return $query->where('comments.status', CommentStatus::Visible->value)
-            ->whereHas('author', fn ($author) => $author->where('status', 'active'))
+        return $query->sharedLock()->where('comments.status', CommentStatus::Visible->value)
+            ->whereHas('author', fn ($author) => $author->where('status', 'active')->sharedLock())
             ->where(fn ($parents) => $parents->whereNull('parent_id')->orWhereHas('parent', fn ($parent) => $parent
-                ->where('status', CommentStatus::Visible->value)
-                ->whereHas('author', fn ($author) => $author->where('status', 'active'))));
+                ->sharedLock()->where('status', CommentStatus::Visible->value)
+                ->whereHas('author', fn ($author) => $author->where('status', 'active')->sharedLock())));
     }
 }
