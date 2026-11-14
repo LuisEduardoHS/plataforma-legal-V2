@@ -18,15 +18,16 @@
     <nav id="account-dropdown-panel" class="account-panel" x-ref="panel" x-show="open" x-cloak x-transition.opacity.duration.150ms aria-label="Cuenta"
         @keydown.arrow-down.prevent="focusItem(1)" @keydown.arrow-up.prevent="focusItem(-1)"
         @keydown.home.prevent="focusItem('first')" @keydown.end.prevent="focusItem('last')">
+        @auth
         @foreach (['profile' => ['user-round', 'Perfil'], 'saved' => ['bookmark', 'Guardados'], 'settings' => ['settings', 'Configuración'], 'help' => ['life-buoy', 'Ayuda']] as $route => [$icon, $label])
             <a href="{{ route($route) }}" @if (request()->routeIs($route)) aria-current="page" @endif><x-dynamic-component :component="'lucide-' . $icon" aria-hidden="true" /><span>{{ $label }}</span></a>
         @endforeach
         <div class="account-logout">
-            @if (Illuminate\Support\Facades\Route::has('logout'))
-                <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit"><x-lucide-log-out aria-hidden="true" /><span>Cerrar sesión</span></button></form>
-            @else
-                <button type="button" disabled title="El cierre de sesión se habilitará al conectar la autenticación."><x-lucide-log-out aria-hidden="true" /><span>Cerrar sesión</span></button>
-            @endif
+            <form method="POST" action="{{ route('logout') }}" data-turbo="false">@csrf<button type="submit"><x-lucide-log-out aria-hidden="true" /><span>Cerrar sesión</span></button></form>
         </div>
+        @else
+            <a href="{{ route('login') }}"><x-lucide-log-in aria-hidden="true" /><span>Iniciar sesión</span></a>
+            <a href="{{ route('register') }}"><x-lucide-user-plus aria-hidden="true" /><span>Crear cuenta</span></a>
+        @endauth
     </nav>
 </div>

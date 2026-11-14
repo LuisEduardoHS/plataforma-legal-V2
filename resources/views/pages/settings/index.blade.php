@@ -678,7 +678,7 @@
                 </button>
                 
                 {{-- Formulario oficial de Laravel para cerrar sesión seguro --}}
-                <form method="POST" action="{{ route('login') }}" class="flex-1">
+                <form method="POST" action="{{ route('logout') }}" data-turbo="false" class="flex-1">
                     @csrf
                     <button type="submit" class="w-full py-2.5 rounded-xl text-xs font-semibold bg-dark-accent dark:bg-light-accent text-white dark:text-black hover:opacity-90 cursor-pointer transition-opacity">
                         Cerrar sesión
