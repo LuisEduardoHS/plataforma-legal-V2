@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Community\CommentController;
+use App\Http\Controllers\Community\FeedController;
+use App\Http\Controllers\Community\InteractionController;
+use App\Http\Controllers\Community\MediaController;
+use App\Http\Controllers\Community\PostController;
 use App\Http\Controllers\Profiles\ProfessionalDirectoryController;
 use App\Http\Controllers\Profiles\ProfileController;
 use App\Http\Controllers\Profiles\ProfilePhotoController;
@@ -17,8 +22,39 @@ Route::middleware('guest')->group(function () {
     Route::post('/registro', [RegisteredUserController::class, 'store'])->middleware('throttle:auth.register')->name('register.store');
 });
 
-// Public reading remains accessible. Community/articles/help retain their demos.
-Route::view('/comunidad', 'pages.community.index')->name('community');
+// Public reading remains accessible; Articles/help retain their demos.
+Route::get('/comunidad', [FeedController::class, 'index'])->middleware('throttle:community.read')->name('community');
+Route::prefix('comunidad')->name('community.')->where([
+    'post' => '[1-9][0-9]{0,17}', 'comment' => '[1-9][0-9]{0,17}',
+    'user' => '[1-9][0-9]{0,17}', 'attachment' => '[1-9][0-9]{0,17}',
+])->group(function () {
+    Route::middleware('throttle:community.read')->group(function () {
+        Route::get('/publicaciones/{post}', [PostController::class, 'show'])->name('show');
+        Route::get('/publicaciones/{post}/archivos/{attachment}', MediaController::class)->name('media');
+        Route::get('/usuarios/{user}', [FeedController::class, 'user'])->name('user');
+    });
+    Route::middleware('auth')->group(function () {
+        Route::get('/crear', [PostController::class, 'create'])->name('create');
+        Route::get('/publicaciones/{post}/editar', [PostController::class, 'edit'])->name('edit');
+        Route::get('/comentarios/{comment}/editar', [CommentController::class, 'edit'])->name('comments.edit');
+        Route::get('/usuarios/{user}/conexiones', [InteractionController::class, 'connections'])->middleware('throttle:community.read')->name('connections');
+        Route::middleware('throttle:community.write')->group(function () {
+            Route::post('/publicaciones', [PostController::class, 'store'])->middleware('throttle:community.upload')->name('posts.store');
+            Route::put('/publicaciones/{post}', [PostController::class, 'update'])->middleware('throttle:community.upload')->name('posts.update');
+            Route::post('/publicaciones/{post}/publicar', [PostController::class, 'publish'])->name('posts.publish');
+            Route::delete('/publicaciones/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
+            Route::post('/publicaciones/{post}/moderacion', [PostController::class, 'moderate'])->name('posts.moderate');
+            Route::post('/publicaciones/{post}/comentarios', [CommentController::class, 'store'])->name('comments.store');
+            Route::put('/comentarios/{comment}', [CommentController::class, 'update'])->name('comments.update');
+            Route::delete('/comentarios/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+            Route::post('/comentarios/{comment}/moderacion', [CommentController::class, 'moderate'])->name('comments.moderate');
+            Route::put('/publicaciones/{post}/reaccion', [InteractionController::class, 'react'])->name('react');
+            Route::delete('/publicaciones/{post}/reaccion', [InteractionController::class, 'unreact'])->name('unreact');
+            Route::put('/usuarios/{user}/seguir', [InteractionController::class, 'follow'])->name('follow');
+            Route::delete('/usuarios/{user}/seguir', [InteractionController::class, 'unfollow'])->name('unfollow');
+        });
+    });
+});
 Route::get('/profesionales', ProfessionalDirectoryController::class)->middleware('throttle:profiles.read')->name('professionals');
 Route::get('/profesionales/{userId}', [PublicProfileController::class, 'professional'])->whereNumber('userId')->middleware('throttle:profiles.read')->name('professionals.show');
 Route::get('/usuarios/{userId}', [PublicProfileController::class, 'show'])->whereNumber('userId')->middleware('throttle:profiles.read')->name('profiles.show');

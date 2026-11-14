@@ -1,39 +1,6 @@
-@props(['topics', 'questions', 'professionals'])
-<aside class="community-sidebar" aria-label="Actividad de la comunidad">
-    <section aria-labelledby="community-topics-title">
-        <h2 id="community-topics-title">Temas activos</h2>
-        <div class="community-sidebar-card community-surface">
-            @foreach ($topics as $topic)
-                <button type="button" class="community-topic" data-topic="{{ $topic['name'] }}" aria-pressed="false">
-                    <strong>{{ $topic['name'] }}</strong><span>{{ $topic['count'] }} publicaciones</span>
-                </button>
-            @endforeach
-            <button type="button" class="community-see-all" data-reset-filter>Ver todo <x-lucide-arrow-right aria-hidden="true" /></button>
-        </div>
-    </section>
-    <section aria-labelledby="community-questions-title">
-        <h2 id="community-questions-title">Necesitan respuesta</h2>
-        <div class="community-sidebar-card community-surface">
-            @foreach ($questions as $question)
-                <button type="button" class="community-topic" data-post-target="post-{{ $question['post_id'] }}">
-                    <strong>{{ $question['title'] }}</strong><span>{{ $question['replies'] }} {{ $question['replies'] === 1 ? 'respuesta' : 'respuestas' }}</span>
-                </button>
-            @endforeach
-            <button type="button" class="community-see-all" data-show-unanswered>Ver todo <x-lucide-arrow-right aria-hidden="true" /></button>
-        </div>
-    </section>
-    <section aria-labelledby="community-professionals-title">
-        <h2 id="community-professionals-title">Profesionales activos</h2>
-        <div class="community-sidebar-card community-surface">
-            @foreach ($professionals as $professional)
-                <div class="community-professional">
-                    <div class="community-professional-info">
-                        <x-community.avatar />
-                        <div><strong>{{ $professional['name'] }}</strong><span class="community-location" title="{{ $professional['location'] }}">{{ $professional['location'] }}</span><span>{{ $professional['followers'] }} seguidores</span></div>
-                    </div>
-                    <button type="button" class="community-primary" disabled title="Requiere una cuenta conectada" aria-label="Seguir a {{ $professional['name'] }}: requiere una cuenta conectada">Seguir</button>
-                </div>
-            @endforeach
-        </div>
-    </section>
+@props(['categories'])
+<aside class="community-sidebar" aria-label="Explorar la comunidad">
+    <section><h2>Categorías</h2><div class="community-sidebar-card community-surface">@forelse ($categories as $category)<a class="community-topic" href="{{ route('community', ['category_id' => $category->id]) }}"><strong>{{ $category->name }}</strong><span>{{ $category->is_active ? 'Explorar publicaciones' : 'Categoría histórica' }}</span></a>@empty<p class="community-muted">Aún no hay categorías disponibles.</p>@endforelse<a class="community-see-all" href="{{ route('community') }}">Ver todo <x-lucide-arrow-right aria-hidden="true" /></a></div></section>
+    <section><h2>Mi comunidad</h2><div class="community-sidebar-card community-surface">@auth<a class="community-topic" href="{{ route('community.connections', auth()->id()) }}">Mis conexiones</a><a class="community-topic" href="{{ route('community', ['feed' => 'mine']) }}">Mis publicaciones y borradores</a>@else<a class="community-topic" href="{{ route('login') }}">Iniciar sesión para participar</a>@endauth</div></section>
+    <section><h2>Profesionales</h2><div class="community-sidebar-card community-surface"><p class="community-muted">Consulta especialidades y presentaciones públicas.</p><a class="community-see-all" href="{{ route('professionals') }}">Explorar el directorio <x-lucide-arrow-right aria-hidden="true" /></a></div></section>
 </aside>

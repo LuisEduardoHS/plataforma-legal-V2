@@ -23,9 +23,9 @@ class CommunityQuery
 
     public function recent(?User $viewer = null, array $filters = [], int $size = 20, ?string $cursor = null): CursorPaginator
     {
-        $this->access->viewer($viewer);
+        $viewer = $this->access->viewer($viewer);
 
-        return $this->page(Post::publiclyVisible(), $filters, $size, $cursor);
+        return $this->page(Post::publiclyVisible(), $filters, $size, $cursor, $viewer);
     }
 
     public function following(User $viewer, array $filters = [], int $size = 20, ?string $cursor = null): CursorPaginator
@@ -33,7 +33,7 @@ class CommunityQuery
         $viewer = $this->access->viewer($viewer);
         $query = Post::publiclyVisible()->whereIn('user_id', DB::table('user_follows')->select('followed_id')->where('follower_id', $viewer->id)->sharedLock());
 
-        return $this->page($query, $filters, $size, $cursor);
+        return $this->page($query, $filters, $size, $cursor, $viewer);
     }
 
     public function profile(int $userId, ?User $viewer = null, int $size = 20, ?string $cursor = null): CursorPaginator
@@ -45,7 +45,24 @@ class CommunityQuery
             $query->where('visibility', PostVisibility::Public->value);
         }
 
-        return $this->page($query, [], $size, $cursor);
+        return $this->page($query, [], $size, $cursor, $viewer);
+    }
+
+    public function owned(User $viewer, array $filters = [], int $size = 20, ?string $cursor = null): CursorPaginator
+    {
+        $viewer = $this->access->viewer($viewer);
+
+        return $this->page(Post::where('user_id', $viewer->id), $filters, $size, $cursor, $viewer, true);
+    }
+
+    public function moderation(User $viewer, array $filters = [], int $size = 20, ?string $cursor = null): CursorPaginator
+    {
+        $viewer = $this->access->viewer($viewer);
+        if (! $viewer->can('posts.moderate')) {
+            throw new AuthorizationException;
+        }
+
+        return $this->page(Post::query(), $filters, $size, $cursor, $viewer, true);
     }
 
     public function detail(int $id, ?User $viewer = null): array
@@ -57,37 +74,47 @@ class CommunityQuery
         }
         Gate::forUser($viewer)->authorize('view', $post);
 
-        return $this->postData($post);
+        return $this->postData($post, $viewer);
     }
 
-    public function comments(int $postId, ?User $viewer = null, int $size = 20, ?string $cursor = null): CursorPaginator
+    public function comments(int $postId, ?User $viewer = null, int $size = 20, ?string $cursor = null, bool $review = false): CursorPaginator
     {
         $viewer = $this->access->viewer($viewer);
         $post = Post::with(['author' => fn ($author) => $author->sharedLock()])->sharedLock()->find($postId);
-        if (! $post || $post->status !== PostStatus::Published) {
+        if ($review && ! $viewer?->can('comments.moderate')) {
+            throw new AuthorizationException;
+        }
+        if (! $post || (! $review && $post->status !== PostStatus::Published)) {
             throw new AuthorizationException;
         }
         Gate::forUser($viewer)->authorize('view', $post);
         $this->pagination($size);
 
-        return Comment::where('post_id', $postId)->visibleInCommunity()->with($this->authorRelations())
+        $query = Comment::where('post_id', $postId);
+        if (! $review) {
+            $query->visibleInCommunity();
+        }
+
+        return $query->sharedLock()->with($this->authorRelations())
             ->orderBy('id')->cursorPaginate($size, ['comments.*'], 'cursor', $this->cursor($cursor))
             ->through(fn ($comment) => [
                 'id' => $comment->id, 'post_id' => $comment->post_id, 'parent_id' => $comment->parent_id,
                 'author' => $this->authorData($comment->author), 'content' => $comment->content,
                 'version' => $comment->version, 'created_at' => $comment->created_at->toDateTimeString(),
                 'edited_at' => $comment->edited_at?->toDateTimeString(),
+                'status' => $comment->status->value,
+                'can_edit' => $viewer !== null && Gate::forUser($viewer)->allows('interact', $post) && Gate::forUser($viewer)->allows('update', $comment),
+                'can_delete' => $viewer !== null && Gate::forUser($viewer)->allows('delete', $comment),
+                'can_moderate' => $viewer !== null && Gate::forUser($viewer)->allows('moderate', $comment),
+                'can_reply' => $viewer !== null && $viewer->can('comments.create') && $comment->parent_id === null
+                    && $comment->status->value === 'visible' && $comment->author->isActive() && Gate::forUser($viewer)->allows('interact', $post),
             ]);
     }
 
     public function connections(User $viewer, int $userId, bool $followers = false, int $size = 20, ?string $cursor = null): CursorPaginator
     {
         $viewer = $this->access->viewer($viewer);
-        $target = User::with(['profile' => fn ($profile) => $profile->sharedLock()])->sharedLock()->find($userId);
-        if (! $target || ! $target->isActive()
-            || ($viewer->id !== $target->id && $target->profile?->visibility !== ProfileVisibility::Public)) {
-            throw new AuthorizationException;
-        }
+        $this->connectionTarget($viewer, $userId);
         $this->pagination($size);
         $column = $followers ? 'follower_id' : 'followed_id';
         $matching = $followers ? 'followed_id' : 'follower_id';
@@ -98,7 +125,31 @@ class CommunityQuery
             ->through(fn ($user) => $this->authorData($user));
     }
 
-    private function page(Builder $query, array $filters, int $size, ?string $cursor): CursorPaginator
+    public function connectionSummary(User $viewer, int $userId): array
+    {
+        $viewer = $this->access->viewer($viewer);
+        $target = $this->connectionTarget($viewer, $userId);
+
+        return [
+            'author' => $this->authorData($target),
+            'followers' => DB::table('user_follows')->join('users', 'users.id', '=', 'user_follows.follower_id')->where('followed_id', $userId)->where('users.status', 'active')->count(),
+            'following' => DB::table('user_follows')->join('users', 'users.id', '=', 'user_follows.followed_id')->where('follower_id', $userId)->where('users.status', 'active')->count(),
+            'is_following' => DB::table('user_follows')->where(['follower_id' => $viewer->id, 'followed_id' => $userId])->exists(),
+        ];
+    }
+
+    private function connectionTarget(User $viewer, int $userId): User
+    {
+        $target = User::with(['profile' => fn ($profile) => $profile->sharedLock()])->sharedLock()->find($userId);
+        if (! $target || ! $target->isActive()
+            || ($viewer->id !== $target->id && $target->profile?->visibility !== ProfileVisibility::Public)) {
+            throw new AuthorizationException;
+        }
+
+        return $target;
+    }
+
+    private function page(Builder $query, array $filters, int $size, ?string $cursor, ?User $viewer = null, bool $byId = false): CursorPaginator
     {
         if (array_diff(array_keys($filters), ['category_id', 'specialty_id', 'tag_id'])) {
             $this->access->invalid('filters', 'Filtro no permitido.');
@@ -118,9 +169,14 @@ class CommunityQuery
         }
         $this->pagination($size);
 
-        return $this->loaded($query)->orderByDesc('published_at')->orderByDesc('id')
-            ->cursorPaginate($size, ['posts.*'], 'cursor', $this->cursor($cursor, posts: true))
-            ->through(fn ($post) => $this->postData($post));
+        $query = $this->loaded($query);
+        if (! $byId) {
+            $query->orderByDesc('published_at');
+        }
+
+        return $query->orderByDesc('id')
+            ->cursorPaginate($size, ['posts.*'], 'cursor', $this->cursor($cursor, posts: ! $byId))
+            ->through(fn ($post) => $this->postData($post, $viewer));
     }
 
     private function loaded(Builder $query): Builder
@@ -132,7 +188,7 @@ class CommunityQuery
             'attachments' => fn ($files) => $files->where('status', 'available')->where('visibility', 'private')
                 ->whereNull('verification_retained_at')
                 ->whereNotExists(fn ($evidence) => $evidence->selectRaw('1')->from('verification_evidences')->whereColumn('attachment_id', 'attachments.id')->sharedLock())
-                ->select('attachments.id', 'user_id', 'mime_type', 'category', 'size_bytes')->sharedLock(),
+                ->select('attachments.id', 'user_id', 'original_name', 'extension', 'mime_type', 'category', 'size_bytes')->sharedLock(),
         ])->withCount([
             'reactions as likes_count' => fn ($reactions) => $reactions->where('type', 'like')->whereHas('user', fn ($user) => $user->where('status', 'active')),
             'comments as comments_count' => fn ($comments) => $comments->visibleInCommunity(),
@@ -149,16 +205,18 @@ class CommunityQuery
 
     private function authorData(User $author): array
     {
-        $public = $author->profile?->visibility === ProfileVisibility::Public;
+        $public = $author->isActive() && $author->profile?->visibility === ProfileVisibility::Public;
 
         return [
             'id' => $author->id,
             'display_name' => $public ? ($author->profile->display_name ?? $author->name) : 'Usuario',
             'username' => $public ? $author->profile->username : null,
+            'profile_public' => $public,
+            'active' => $author->isActive(),
         ];
     }
 
-    private function postData(Post $post): array
+    private function postData(Post $post, ?User $viewer = null): array
     {
         return [
             'id' => $post->id, 'author' => $this->authorData($post->author), 'content' => $post->content,
@@ -170,8 +228,14 @@ class CommunityQuery
             'attachments' => $post->attachments->filter(fn ($file) => (int) $file->user_id === (int) $post->user_id)->map(fn ($file) => [
                 'id' => $file->id, 'mime_type' => $file->mime_type, 'category' => $file->category,
                 'size_bytes' => $file->size_bytes, 'position' => $file->pivot->position,
+                'name' => $file->original_name, 'extension' => $file->extension,
             ])->values()->all(),
             'likes_count' => $post->likes_count, 'comments_count' => $post->comments_count,
+            'can_edit' => $viewer !== null && Gate::forUser($viewer)->allows('update', $post),
+            'can_delete' => $viewer !== null && Gate::forUser($viewer)->allows('delete', $post),
+            'can_interact' => $viewer !== null && Gate::forUser($viewer)->allows('interact', $post),
+            'can_comment' => $viewer !== null && $viewer->can('comments.create') && Gate::forUser($viewer)->allows('interact', $post),
+            'can_moderate' => $viewer !== null && in_array($post->status, [PostStatus::Published, PostStatus::Hidden], true) && Gate::forUser($viewer)->allows('moderate', $post),
         ];
     }
 

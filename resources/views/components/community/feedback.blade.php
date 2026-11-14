@@ -1,0 +1,2 @@
+@if (session('status'))<p class="community-state community-surface" role="status">{{ session('status') }}</p>@endif
+@if ($errors->any())<div class="community-state community-surface community-form-errors" role="alert"><h2>Revisa el formulario</h2><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul><p>Si seleccionaste archivos, vuelve a elegirlos antes de enviar.</p></div>@endif

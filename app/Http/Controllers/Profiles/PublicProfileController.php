@@ -17,7 +17,7 @@ class PublicProfileController extends Controller
         $userId = $this->publicId($userId);
 
         return $this->read(fn () => view('pages.profile.public', [
-            'profile' => $this->profiles->publicUserProfile($userId), 'professional' => null,
+            'profile' => $this->profiles->publicUserProfile($userId), 'professional' => null, 'publicUserId' => $userId,
         ]));
     }
 
@@ -33,7 +33,7 @@ class PublicProfileController extends Controller
                 $profile = null;
             }
 
-            return view('pages.profile.public', compact('profile', 'professional'));
+            return view('pages.profile.public', ['profile' => $profile, 'professional' => $professional, 'publicUserId' => $userId]);
         });
     }
 

@@ -13,6 +13,8 @@
 /auth.json
 /public/storage
 /storage/*.key
+# Adjuntos privados: las cargas de usuarios nunca se versionan.
+/storage/app/attachments/
 
 # Laravel - Cache y archivos generados
 /bootstrap/cache/*

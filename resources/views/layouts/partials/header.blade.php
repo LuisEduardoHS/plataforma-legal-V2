@@ -47,7 +47,7 @@
     <nav class="lg:flex hidden space-x-2 absolute left-1/2 transform -translate-x-1/2">
         @foreach ($navItems as $item)
             @php
-                $active = request()->routeIs($item['route']);
+                $active = request()->routeIs($item['route']) || ($item['route'] === 'community' && request()->routeIs('community.*'));
             @endphp
             <a href="{{ route($item['route']) }}" 
                @class([
@@ -92,7 +92,7 @@
     <nav class="flex w-full space-x-2 absolute left-1/2 transform -translate-x-1/2">
         @foreach ($navItems as $item)
             @php
-                $active = request()->routeIs($item['route']);
+                $active = request()->routeIs($item['route']) || ($item['route'] === 'community' && request()->routeIs('community.*'));
             @endphp
             <a href="{{ route($item['route']) }}" 
                @class([

@@ -10,6 +10,8 @@
                 <a class="bg-dark-accent text-white rounded-full px-6 py-2 hover:opacity-90 transition-opacity" href="{{ route('profile.edit') }}">{{ $profile ? 'Editar perfil' : 'Completar mi perfil' }}</a>
                 <span>{{ ($profile['visibility'] ?? 'private') === 'public' ? 'Perfil personal público' : 'Perfil personal privado' }}</span>
                 @if (($profile['visibility'] ?? null) === 'public')<a class="underline" href="{{ route('profiles.show', auth()->id()) }}">Ver perfil público</a>@endif
+                <a class="underline" href="{{ route('community.user', auth()->id()) }}">Mis publicaciones en Comunidad</a>
+                <a class="underline" href="{{ route('community.connections', auth()->id()) }}">Mis conexiones</a>
             </div>
             @if (! $profile)<p class="text-sm mt-4">Tu perfil es opcional. Completa los datos que quieras compartir y elige su visibilidad.</p>@endif
             @if ($profile['has_photo'] ?? false)<p class="text-sm mt-4"><a class="underline" href="{{ route('profile.photo') }}" data-turbo="false">Descargar mi fotografía privada</a></p>@endif

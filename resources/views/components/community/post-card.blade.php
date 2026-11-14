@@ -1,31 +1,20 @@
-@props(['post'])
-<article class="community-post community-surface" id="post-{{ $post['id'] }}" aria-labelledby="title-{{ $post['id'] }}" data-post data-replies="{{ $post['replies'] }}" data-date="{{ $post['published_at'] }}" data-category="{{ $post['category'] }}">
-    <div data-post-content>
-        <header class="community-author">
-            <x-community.avatar :initials="$post['initials']" />
-            <div>
-                <div class="community-author-name">{{ $post['author'] }} @if ($post['verified'])<x-lucide-badge-check aria-label="Profesional verificado" role="img" />@endif</div>
-                <div class="community-meta"><span class="community-badge">{{ $post['category'] }}</span><span aria-hidden="true">·</span><span>{{ $post['time'] }}</span></div>
-            </div>
-        </header>
-        <h2 id="title-{{ $post['id'] }}">{{ $post['title'] }}</h2>
-        <p class="community-post-body">{{ $post['body'] }}</p>
-        @if ($post['type'] === 'image')
-            <figure class="community-post-image"><img src="{{ asset('images/community/demo-sketch.svg') }}" alt="Una cara sonriente con un pulgar arriba" width="280" height="266" loading="lazy"></figure>
-        @elseif ($post['type'] === 'document')
-            <div class="community-document"><x-lucide-file-text aria-hidden="true" /><div><strong>Contrato_arrendamiento.pdf</strong><span>PDF · Vista de referencia</span></div></div>
-        @endif
-    </div>
-    <footer class="community-post-footer">
-        <div class="community-post-actions">
-            <button type="button" data-open-post aria-label="Ver {{ $post['replies'] }} respuestas a {{ $post['title'] }}"><x-lucide-message-circle aria-hidden="true" /><span>{{ $post['replies'] }}</span></button>
-            <button type="button" aria-label="Guardar publicación" title="Guardar publicación" aria-pressed="false" data-save-post><x-lucide-bookmark aria-hidden="true" /></button>
-            <button type="button" aria-label="Copiar enlace" title="Copiar enlace" data-share-post><x-lucide-share-2 aria-hidden="true" /></button>
-        </div>
-        <button class="community-detail-link" type="button" data-open-post>Ver publicación <x-lucide-arrow-up-right aria-hidden="true" /></button>
-    </footer>
+@props(['post', 'detail' => false])
+<article class="community-post community-surface" id="post-{{ $post['id'] }}" aria-labelledby="title-{{ $post['id'] }}">
+    <header class="community-author"><x-community.avatar :initials="mb_strtoupper(mb_substr($post['author']['display_name'], 0, 1))" /><div><div class="community-author-name">@if ($post['author']['profile_public'])<a href="{{ route('profiles.show', $post['author']['id']) }}">{{ $post['author']['display_name'] }}</a>@else{{ $post['author']['display_name'] }}@endif</div><div class="community-meta">@if ($post['category'])<span class="community-badge">{{ $post['category']['name'] }}</span>@endif @if ($post['specialty'])<span>{{ $post['specialty']['name'] }}</span>@endif<time datetime="{{ $post['published_at'] ? Illuminate\Support\Carbon::parse($post['published_at'])->toIso8601String() : '' }}">{{ $post['published_at'] ?? 'Borrador sin publicar' }}</time></div></div></header>
+    <h2 id="title-{{ $post['id'] }}" class="community-sr-only">Publicación {{ $post['id'] }} de {{ $post['author']['display_name'] }}</h2>
+    @if ($post['status'] !== 'published' || $post['visibility'] !== 'public')<p class="community-muted">Estado: {{ ['draft' => 'Borrador', 'hidden' => 'Oculta', 'published' => 'Publicada'][$post['status']] ?? $post['status'] }} · {{ $post['visibility'] === 'private' ? 'Privada' : 'Pública' }}</p>@endif
+    <p class="community-post-body">{{ $post['content'] }}</p>
+    @if ($post['tags'])<p class="community-post-tags">@foreach ($post['tags'] as $tag)<a href="{{ route('community', ['tag_id' => $tag['id']]) }}">#{{ $tag['name'] }}</a>@endforeach</p>@endif
+    @foreach ($post['attachments'] as $file)<div class="community-document"><x-lucide-file-text aria-hidden="true" /><div><strong>{{ $file['name'] }}</strong><span>{{ strtoupper($file['extension']) }} · {{ max(1, (int) ceil($file['size_bytes'] / 1024)) }} KiB</span><a href="{{ route('community.media', ['post' => $post['id'], 'attachment' => $file['id']]) }}" data-turbo="false">Descargar archivo</a></div></div>@endforeach
+    <footer class="community-post-footer"><div class="community-post-actions"><a href="{{ route('community.show', $post['id']) }}#comentarios" aria-label="Ver {{ $post['comments_count'] }} comentarios"><x-lucide-message-circle aria-hidden="true" /><span>{{ $post['comments_count'] }}</span></a>
+        @if ($post['can_interact'])<form method="POST" action="{{ route($post['liked'] ? 'community.unreact' : 'community.react', $post['id']) }}">@csrf @method($post['liked'] ? 'DELETE' : 'PUT')<button aria-label="{{ $post['liked'] ? 'Retirar Me gusta' : 'Me gusta' }}" aria-pressed="{{ $post['liked'] ? 'true' : 'false' }}"><x-lucide-thumbs-up aria-hidden="true" /><span>{{ $post['likes_count'] }}</span></button></form>@else<span class="community-muted">{{ $post['likes_count'] }} Me gusta</span>@endif
+        <button type="button" data-share-post="{{ route('community.show', $post['id']) }}" aria-label="Copiar enlace"><x-lucide-share-2 aria-hidden="true" /></button></div><a class="community-detail-link" href="{{ route('community.show', $post['id']) }}">Ver publicación <x-lucide-arrow-up-right aria-hidden="true" /></a></footer>
+    @if ($post['can_follow'])<form method="POST" action="{{ route($post['following'] ? 'community.unfollow' : 'community.follow', $post['author']['id']) }}">@csrf @method($post['following'] ? 'DELETE' : 'PUT')<button class="community-text-link">{{ $post['following'] ? 'Dejar de seguir a esta cuenta' : 'Seguir a esta cuenta' }}</button></form>@endif
     <p class="community-action-status" data-action-status role="status" aria-live="polite"></p>
-    @if ($post['type'] === 'question')
-        <button type="button" class="community-reply" data-open-post><x-lucide-message-circle aria-hidden="true" /> Ver conversación</button>
-    @endif
+    @if ($detail && ($post['can_edit'] || $post['can_delete'] || $post['can_moderate']))<details class="community-manage"><summary>Administrar publicación</summary><div class="community-form-actions">
+        @if ($post['can_edit'])<a class="community-secondary" href="{{ route('community.edit', $post['id']) }}">Editar publicación</a>@endif
+        @if ($post['can_edit'] && $post['status'] === 'draft' && ($post['author']['id'] !== auth()->id() || auth()->user()->can('posts.create')))<form method="POST" action="{{ route('community.posts.publish', $post['id']) }}">@csrf<input type="hidden" name="version" value="{{ $post['version'] }}"><button class="community-primary">Publicar borrador</button></form>@endif
+        @if ($post['can_delete'])<form method="POST" action="{{ route('community.posts.destroy', $post['id']) }}">@csrf @method('DELETE')<input type="hidden" name="version" value="{{ $post['version'] }}"><button class="community-secondary">Eliminar publicación</button></form>@endif
+        @if ($post['can_moderate'])<form method="POST" action="{{ route('community.posts.moderate', $post['id']) }}">@csrf<input type="hidden" name="version" value="{{ $post['version'] }}"><input type="hidden" name="action" value="{{ $post['status'] === 'hidden' ? 'show' : 'hide' }}"><button class="community-secondary">{{ $post['status'] === 'hidden' ? 'Volver a mostrar' : 'Ocultar publicación' }}</button></form>@endif
+    </div></details>@endif
 </article>

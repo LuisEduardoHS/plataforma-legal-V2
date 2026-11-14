@@ -34,5 +34,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('profiles.read', fn (Request $request) => Limit::perMinute(90)->by(hash('sha256', $request->ip())));
         RateLimiter::for('profiles.write', fn (Request $request) => Limit::perMinute(20)->by((string) $request->user()?->id));
         RateLimiter::for('profiles.photo', fn (Request $request) => Limit::perMinute(5)->by((string) $request->user()?->id));
+        RateLimiter::for('community.read', fn (Request $request) => Limit::perMinute(120)->by(hash('sha256', $request->ip())));
+        RateLimiter::for('community.write', fn (Request $request) => Limit::perMinute(60)->by((string) $request->user()?->id));
+        RateLimiter::for('community.upload', fn (Request $request) => Limit::perMinute(10)->by((string) $request->user()?->id));
     }
 }
