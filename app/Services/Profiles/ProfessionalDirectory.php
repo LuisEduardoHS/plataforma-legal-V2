@@ -59,6 +59,7 @@ class ProfessionalDirectory
 
                 return [
                     'id' => $profile->id,
+                    'user_id' => $profile->user_id,
                     'name' => $name,
                     'initials' => mb_strtoupper(mb_substr($name, 0, 1)),
                     'headline' => $profile->headline,

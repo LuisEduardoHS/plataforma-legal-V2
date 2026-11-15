@@ -40,5 +40,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('content.read', fn (Request $request) => Limit::perMinute(120)->by(hash('sha256', $request->ip())));
         RateLimiter::for('content.write', fn (Request $request) => Limit::perMinute(60)->by((string) $request->user()?->id));
         RateLimiter::for('content.upload', fn (Request $request) => Limit::perMinute(10)->by((string) $request->user()?->id));
+        RateLimiter::for('messaging.read', fn (Request $request) => Limit::perMinute(90)->by((string) $request->user()?->id));
+        RateLimiter::for('messaging.write', fn (Request $request) => Limit::perMinute(60)->by((string) $request->user()?->id));
+        RateLimiter::for('messaging.start', fn (Request $request) => Limit::perMinute(15)->by((string) $request->user()?->id));
+        RateLimiter::for('messaging.upload', fn (Request $request) => Limit::perMinute(10)->by((string) $request->user()?->id));
+        RateLimiter::for('messaging.files', fn (Request $request) => Limit::perMinute(30)->by((string) $request->user()?->id));
     }
 }

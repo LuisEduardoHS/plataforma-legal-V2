@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Cursor;
@@ -17,6 +18,37 @@ use Illuminate\Support\Facades\Validator;
 class MessagingQuery
 {
     public function __construct(private MessagingAccess $access) {}
+
+    public function state(User $actor, int $id): array
+    {
+        return $this->access->conversation($actor, $id, function (User $actor, User $target, Conversation $conversation, ConversationParticipant $own) {
+            $target->load(['profile' => fn ($profile) => $profile->sharedLock()]);
+            $canSend = true;
+            try {
+                $this->access->unblocked($actor, $target);
+            } catch (AuthorizationException) {
+                $canSend = false;
+            }
+
+            return ['id' => $conversation->id, 'participant' => $this->userData($target),
+                'profile_public' => $target->isActive() && $target->profile?->visibility === ProfileVisibility::Public,
+                'can_send' => $canSend, 'archived' => $own->archived_at !== null,
+                'blocked_by_me' => DB::table('user_blocks')->where('blocker_id', $actor->id)->where('blocked_id', $target->id)->sharedLock()->exists(),
+                'last_read_message_id' => $own->last_read_message_id];
+        });
+    }
+
+    public function message(User $actor, int $conversationId, int $messageId): array
+    {
+        return $this->access->conversation($actor, $conversationId, function (User $actor, User $target, Conversation $conversation, ConversationParticipant $own) use ($messageId) {
+            $message = $this->access->visible($conversation->id, $own)->whereKey($messageId)->with($this->fileRelation())->sharedLock()->first();
+            if (! $message) {
+                throw new AuthorizationException;
+            }
+
+            return $this->messageData($message);
+        });
+    }
 
     public function inbox(User $actor, bool $archived = false, int $size = 20, ?string $cursor = null, ?int $participantId = null): CursorPaginator
     {
@@ -104,7 +136,7 @@ class MessagingQuery
     {
         return ['attachments' => fn ($files) => $files->where('status', 'available')->where('visibility', 'private')->whereNull('verification_retained_at')
             ->whereNotExists(fn ($evidence) => $evidence->selectRaw('1')->from('verification_evidences')->whereColumn('attachment_id', 'attachments.id')->sharedLock())
-            ->select('attachments.id', 'user_id', 'mime_type', 'category', 'size_bytes')->sharedLock()];
+            ->select('attachments.id', 'user_id', 'original_name', 'extension', 'mime_type', 'category', 'size_bytes')->sharedLock()];
     }
 
     private function messageData(Message $message): array
@@ -116,13 +148,14 @@ class MessagingQuery
             'version' => $message->version, 'sent_at' => $message->sent_at->toDateTimeString(),
             'edited_at' => $message->edited_at?->toDateTimeString(), 'deleted_at' => $message->deleted_at?->toDateTimeString(),
             'attachments' => $deleted ? [] : $message->attachments->filter(fn ($file) => (int) $file->user_id === (int) $message->sender_id)->map(fn ($file) => [
-                'id' => $file->id, 'mime_type' => $file->mime_type, 'category' => $file->category, 'size_bytes' => $file->size_bytes, 'position' => $file->pivot->position,
+                'id' => $file->id, 'name' => $file->original_name, 'extension' => $file->extension,
+                'mime_type' => $file->mime_type, 'category' => $file->category, 'size_bytes' => $file->size_bytes, 'position' => $file->pivot->position,
             ])->values()->all()];
     }
 
     private function userData(User $user): array
     {
-        $public = $user->profile?->visibility === ProfileVisibility::Public;
+        $public = $user->isActive() && $user->profile?->visibility === ProfileVisibility::Public;
 
         return ['id' => $user->id, 'display_name' => $public ? ($user->profile->display_name ?? $user->name) : 'Usuario', 'username' => $public ? $user->profile->username : null];
     }

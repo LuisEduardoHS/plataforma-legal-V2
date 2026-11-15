@@ -10,6 +10,10 @@ use App\Http\Controllers\Community\PostController;
 use App\Http\Controllers\ContentLibrary\EditorialController;
 use App\Http\Controllers\ContentLibrary\HomeContentController;
 use App\Http\Controllers\ContentLibrary\SavedController;
+use App\Http\Controllers\Messaging\AttachmentController as MessagingAttachmentController;
+use App\Http\Controllers\Messaging\ConversationController as MessagingConversationController;
+use App\Http\Controllers\Messaging\InboxController;
+use App\Http\Controllers\Messaging\MessageController;
 use App\Http\Controllers\Profiles\ProfessionalDirectoryController;
 use App\Http\Controllers\Profiles\ProfileController;
 use App\Http\Controllers\Profiles\ProfilePhotoController;
@@ -81,7 +85,32 @@ Route::view('/ayuda', 'pages.help.index')->name('help');
 
 Route::middleware('auth')->group(function () {
     Route::get('/inicio', HomeContentController::class)->name('home');
-    Route::view('/mensajes', 'pages.messages.index')->name('messages');
+    Route::get('/mensajes', [InboxController::class, 'index'])->middleware('throttle:messaging.read')->block(60, 10)->name('messages');
+    Route::prefix('mensajes')->name('messages.')->where([
+        'conversation' => '[1-9][0-9]{0,17}', 'message' => '[1-9][0-9]{0,17}',
+        'recipient' => '[1-9][0-9]{0,17}', 'attachment' => '[1-9][0-9]{0,17}',
+    ])->group(function () {
+        Route::post('/conversaciones/{recipient}', [MessagingConversationController::class, 'start'])->middleware('throttle:messaging.start')->block(60, 10)->name('start');
+        Route::middleware('throttle:messaging.read')->group(function () {
+            Route::get('/{conversation}', [InboxController::class, 'show'])->block(60, 10)->name('show');
+            Route::get('/{conversation}/actualizaciones', [InboxController::class, 'updates'])->block(60, 10)->name('updates');
+            Route::get('/{conversation}/mensajes/{message}/editar', [MessageController::class, 'edit'])->block(60, 10)->name('edit');
+        });
+        Route::get('/{conversation}/mensajes/{message}/archivos/{attachment}', [MessagingAttachmentController::class, 'download'])->middleware('throttle:messaging.files')->block(60, 10)->name('download');
+        Route::post('/{conversation}/adjuntos', [MessagingAttachmentController::class, 'store'])->middleware('throttle:messaging.upload')->block(60, 10)->name('upload');
+        Route::middleware('throttle:messaging.write')->group(function () {
+            Route::post('/{conversation}/mensajes', [MessageController::class, 'store'])->block(60, 10)->name('send');
+            Route::put('/{conversation}/mensajes/{message}', [MessageController::class, 'update'])->block(60, 10)->name('update');
+            Route::delete('/{conversation}/mensajes/{message}', [MessageController::class, 'destroy'])->block(60, 10)->name('destroy');
+            Route::post('/{conversation}/mensajes/{message}/ocultar', [MessageController::class, 'hide'])->block(60, 10)->name('message.hide');
+            Route::post('/{conversation}/lectura', [MessagingConversationController::class, 'read'])->block(60, 10)->name('read');
+            Route::post('/{conversation}/archivo', [MessagingConversationController::class, 'archive'])->block(60, 10)->name('archive');
+            Route::post('/{conversation}/ocultar', [MessagingConversationController::class, 'hide'])->block(60, 10)->name('hide');
+            Route::put('/{conversation}/bloqueo', [MessagingConversationController::class, 'block'])->block(60, 10)->name('block');
+            Route::delete('/{conversation}/bloqueo', [MessagingConversationController::class, 'block'])->block(60, 10)->name('unblock');
+            Route::delete('/{conversation}/adjuntos/{attachment}', [MessagingAttachmentController::class, 'remove'])->block(60, 10)->name('upload.remove');
+        });
+    });
     Route::view('/lexa', 'pages.lexa.index')->name('lexa');
     Route::get('/guardados', [SavedController::class, 'index'])->middleware('throttle:content.read')->name('saved');
     Route::put('/guardados/{type}/{target}', [SavedController::class, 'store'])->where(['type' => 'post|article|resource', 'target' => '[1-9][0-9]{0,17}'])->middleware('throttle:content.write')->name('saved.store');

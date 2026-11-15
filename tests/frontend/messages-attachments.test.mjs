@@ -1,41 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateAttachment, createAttachment, releaseAttachment } from '../../resources/js/messages/attachments.js';
-
-const file = (name, type, size = 1024) => ({ name, type, size, lastModified: 1 });
-test('accepts supported formats and an OS without MIME metadata', () => {
-    for (const [name, type] of [
-        ['foto.JPG', 'image/jpeg'], ['foto.png', 'image/png'], ['foto.webp', 'image/webp'],
-        ['archivo.pdf', 'application/pdf'],
-        ['archivo.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-        ['clip.mp4', 'video/mp4'], ['clip.webm', 'video/webm'], ['foto.png', ''],
-    ]) assert.equal(validateAttachment(file(name, type), []), null, name);
+import { validateAttachment, formatBytes, createAttachment, releaseAttachment } from '../../resources/js/messages/attachments.js';
+const rules = { maxCount:4, maxBytes:{image:10*1024**2,document:20*1024**2,video:100*1024**2,other:20*1024**2}, types:{
+    'image/jpeg':{category:'image',extensions:['jpg','jpeg']},'image/png':{category:'image',extensions:['png']},'image/gif':{category:'image',extensions:['gif']},'image/webp':{category:'image',extensions:['webp']},
+    'application/pdf':{category:'document',extensions:['pdf']},'text/plain':{category:'document',extensions:['txt']},'audio/mpeg':{category:'other',extensions:['mp3']},'video/mp4':{category:'video',extensions:['mp4']},'video/webm':{category:'video',extensions:['webm']},
+} };
+const file = (name,type,size=1024) => ({name,type,size,lastModified:1});
+test('messaging accepts actual domain formats including GIF TXT and MP3', () => {
+    for(const [name,type] of [['a.JPG','image/jpeg'],['a.png','image/png'],['a.gif','image/gif'],['a.webp','image/webp'],['a.pdf','application/pdf'],['a.txt','text/plain'],['a.mp3','audio/mpeg'],['a.mp4','video/mp4'],['a.webm','video/webm'],['a.png','']]) assert.equal(validateAttachment(file(name,type),[],rules),null);
 });
-test('rejects mismatched MIME, unsupported formats and empty files', () => {
-    assert.ok(validateAttachment(file('foto.png', 'text/html'), []));
-    assert.ok(validateAttachment(file('archivo.exe', ''), []));
-    assert.ok(validateAttachment(file('foto.png', 'image/png', 0), []));
+test('messaging rejects demo-only DOCX, SVG, MIME mismatches and empty files', () => {
+    for(const f of [file('a.docx',''),file('a.svg','image/svg+xml'),file('a.png','text/html'),file('a.txt','text/plain',0)]) assert.ok(validateAttachment(f,[],rules));
 });
-test('enforces per-file boundaries', () => {
-    for (const [name, type, max] of [['foto.png', 'image/png', 10], ['archivo.pdf', 'application/pdf', 20], ['clip.mp4', 'video/mp4', 50]]) {
-        assert.equal(validateAttachment(file(name, type, max * 1024 ** 2), []), null);
-        assert.ok(validateAttachment(file(name, type, max * 1024 ** 2 + 1), []));
+test('messaging follows server category byte limits rather than demo video limits', () => {
+    for(const [name,type,size] of [['a.png','image/png',10],['a.pdf','application/pdf',20],['a.mp4','video/mp4',100],['a.mp3','audio/mpeg',20]]) {
+        assert.equal(validateAttachment(file(name,type,size*1024**2),[],rules),null);
+        assert.ok(validateAttachment(file(name,type,size*1024**2+1),[],rules));
     }
 });
-test('enforces attachment count, total size and duplicates', () => {
-    const image = file('foto.png', 'image/png');
-    assert.ok(validateAttachment(image, [image]));
-    assert.ok(validateAttachment(image, Array.from({ length: 4 }, (_, n) => file(n + '.png', 'image/png'))));
-    assert.ok(validateAttachment(image, [file('a.mp4', 'video/mp4', 40 * 1024 ** 2), file('b.mp4', 'video/mp4', 40 * 1024 ** 2)]));
+test('messaging counts existing prepared files and rejects duplicate selections', () => {
+    const f=file('a.png','image/png');assert.ok(validateAttachment(f,[f],rules));
+    assert.ok(validateAttachment(f,[{},{},{},{}],rules));
+    assert.equal(validateAttachment(f,[{},{},{}],rules),null);
 });
-test('creates a usable local URL and revokes it on release', async () => {
-    const selected = new File(['example'], 'archivo.pdf', { type: 'application/pdf' });
-    const item = createAttachment(selected);
-    assert.equal(item.kind, 'document');
-    assert.equal(item.local, true);
-    assert.equal(await (await fetch(item.url)).text(), 'example');
-    releaseAttachment(item);
-    await assert.rejects(fetch(item.url));
-    // Supplied backend/example URLs must never be revoked.
-    releaseAttachment({ local: false, url: '/demo/messages/contrato-ejemplo.pdf' });
+test('file metadata uses readable units without creating local preview URLs', () => {
+    assert.equal(formatBytes(1024),'1 KB'); assert.equal(formatBytes(1024**2),'1.0 MB');
+});
+
+test('legacy LEXA attachment exports remain usable without connecting its demo', async () => {
+    const item = createAttachment(new File(['example'], 'lexa.pdf', {type:'application/pdf'}));
+    assert.equal(item.kind,'document'); assert.equal(await (await fetch(item.url)).text(),'example');
+    releaseAttachment(item); await assert.rejects(fetch(item.url));
 });

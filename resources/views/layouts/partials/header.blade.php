@@ -48,7 +48,8 @@
         @foreach ($navItems as $item)
             @php
                 $active = request()->routeIs($item['route']) || ($item['route'] === 'community' && request()->routeIs('community.*'))
-                    || ($item['route'] === 'articles' && request()->routeIs('articles.*', 'resources', 'resources.*'));
+                    || ($item['route'] === 'articles' && request()->routeIs('articles.*', 'resources', 'resources.*'))
+                    || ($item['route'] === 'messages' && request()->routeIs('messages.*'));
             @endphp
             <a href="{{ route($item['route']) }}" 
                @class([
@@ -94,7 +95,8 @@
         @foreach ($navItems as $item)
             @php
                 $active = request()->routeIs($item['route']) || ($item['route'] === 'community' && request()->routeIs('community.*'))
-                    || ($item['route'] === 'articles' && request()->routeIs('articles.*', 'resources', 'resources.*'));
+                    || ($item['route'] === 'articles' && request()->routeIs('articles.*', 'resources', 'resources.*'))
+                    || ($item['route'] === 'messages' && request()->routeIs('messages.*'));
             @endphp
             <a href="{{ route($item['route']) }}" 
                @class([

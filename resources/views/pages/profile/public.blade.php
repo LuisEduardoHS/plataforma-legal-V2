@@ -11,6 +11,7 @@
     <div class="max-w-[1080px] mx-auto px-4 sm:px-6 pt-6 space-y-5">
         <a class="inline-block underline" href="{{ route('professionals') }}">← Directorio de profesionales</a>
         <x-profiles.card :name="$name" :username="$profile['username'] ?? null" :biography="$profile['biography'] ?? null" :location="$place" :website="$profile['website'] ?? null" />
+        <x-messages.start :recipient="$publicUserId" />
         @if ($profile)<nav class="flex flex-wrap gap-4" aria-label="Actividad pública"><a class="underline" href="{{ route('community.user', $publicUserId) }}">Publicaciones en Comunidad</a><a class="underline" href="{{ route('community.connections', $publicUserId) }}">Conexiones y seguimiento</a></nav>@endif
         @if ($professional)
             <section class="bg-white dark:bg-surface-dark rounded-2xl p-6 border border-gray-100/50 dark:border-border-dark/50 space-y-4">

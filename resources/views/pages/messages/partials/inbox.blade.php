@@ -1,0 +1,8 @@
+@forelse ($inbox as $chat)
+    <a class="messages-conversation" href="{{ route('messages.show', ['conversation' => $chat['id']] + $filters) }}" aria-current="{{ ($context['id'] ?? null) === $chat['id'] ? 'true' : 'false' }}">
+        <span class="messages-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($chat['participant']['display_name'], 0, 1)) }}</span>
+        <span class="messages-conversation-copy"><span class="messages-conversation-title"><strong>{{ $chat['participant']['display_name'] }}</strong></span><span class="messages-last">{{ $chat['last_message'] ? ($chat['last_message']['status'] === 'deleted' ? 'Mensaje eliminado' : Illuminate\Support\Str::limit($chat['last_message']['content'] ?: 'Archivo compartido', 100)) : 'Conversación sin mensajes' }}</span></span>
+        <span class="messages-conversation-meta"><time datetime="{{ Illuminate\Support\Carbon::parse($chat['activity_at'])->toIso8601String() }}" title="{{ $chat['activity_at'] }}">{{ Illuminate\Support\Carbon::parse($chat['activity_at'])->format('H:i') }}</time>@if ($chat['unread_count'])<span class="messages-unread" aria-label="{{ $chat['unread_count'] }} {{ $chat['unread_count'] === 1 ? 'mensaje no leído' : 'mensajes no leídos' }}">{{ $chat['unread_count'] }}</span>@endif</span>
+    </a>
+@empty<p class="messages-list-empty">No tienes conversaciones {{ $archived ? 'archivadas' : 'activas' }} disponibles.</p>@endforelse
+<nav class="messages-pagination" aria-label="Paginación de conversaciones">@if ($inbox->previousPageUrl())<a href="{{ $inbox->previousPageUrl() }}">Anterior</a>@endif @if ($inbox->nextPageUrl())<a href="{{ $inbox->nextPageUrl() }}">Siguiente</a>@endif</nav>

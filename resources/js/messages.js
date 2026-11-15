@@ -1,326 +1,194 @@
-import { onPage, navigate } from './ui/navigation.js';
-import { validateAttachment, createAttachment, formatBytes, releaseAttachment } from './messages/attachments';
-
+import { onPage } from './ui/page.js';
+import { validateAttachment, formatBytes } from './messages/attachments.js';
+import { createSendAttempt } from './messages/attempt.js';
+import { createPoller } from './messages/polling.js';
 
 onPage('[data-messaging]', (root, { listen, onCleanup }) => {
-    const $ = (selector, scope = root) => scope.querySelector(selector);
-    const $$ = (selector, scope = root) => [...scope.querySelectorAll(selector)];
-    const clone = (name) => $('[data-' + name + '-template]').content.firstElementChild.cloneNode(true);
-    const data = JSON.parse($('[data-messaging-data]').textContent);
-    const conversations = data.conversations.map((conversation) => ({ ...conversation, draft: '', draftAttachments: [] }));
+    const $ = (selector) => root.querySelector(selector);
     const history = $('[data-history]');
-    const input = $('[data-draft]');
+    const form = $('[data-composer]');
     const info = $('[data-information]');
-    const infoDialog = $('[data-info-dialog]');
-    const previewDialog = $('[data-preview-dialog]');
-    const desktop = matchMedia('(min-width: 1200px)');
-    const narrow = matchMedia('(max-width: 639px)');
-    const time = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit' });
-    const day = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
-    let current = conversations[0] || null;
-    let filter = 'all';
-    let expandedFiles = false;
-    let infoTrigger;
-    let previewTrigger;
-    let originalOverflow = '';
-    let sequence = 0;
-    const buttons = new Map();
-    const state = data.state || 'ready';
-
-    function setStatus(text) { $('[data-message-status]').textContent = text; }
-    function attachable() { return current && state === 'ready'; }
-    function lastPreview(conversation) {
-        const last = conversation.messages.at(-1);
-        return last?.text || last?.attachments?.at(-1)?.name || 'Inicia una conversación';
-    }
-    for (const conversation of conversations) {
-        const button = clone('conversation');
-        button.dataset.conversationId = conversation.id;
-        $('[data-list-name]', button).textContent = conversation.contact.name;
-        $('[data-list-initials]', button).textContent = conversation.contact.initials;
-        $('[data-list-verified]', button).toggleAttribute('hidden', !conversation.contact.verified);
-        $('[data-conversation-list]').append(button);
-        buttons.set(conversation.id, button);
-    }
-    function renderList() {
-        const query = $('[data-search]').value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
-        let count = 0;
-        for (const conversation of conversations) {
-            const button = buttons.get(conversation.id);
-            const name = conversation.contact.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
-            button.hidden = !name.includes(query) || (filter === 'unread' && conversation.unread_count === 0);
-            if (!button.hidden) count++;
-            button.setAttribute('aria-current', conversation === current ? 'true' : 'false');
-            $('[data-list-last]', button).textContent = lastPreview(conversation);
-            const last = conversation.messages.at(-1);
-            $('[data-list-time]', button).textContent = last ? time.format(new Date(last.created_at)) : '';
-            if (last) $('[data-list-time]', button).dateTime = last.created_at;
-            $('[data-list-unread]', button).textContent = conversation.unread_count;
-            $('[data-list-unread]', button).hidden = !conversation.unread_count;
-            $('[data-list-unread]', button).setAttribute('aria-label', conversation.unread_count + ' mensajes no leídos');
-        }
-        $('[data-list-empty]').hidden = count > 0 || state !== 'ready';
-        $('[data-list-status]').textContent = state === 'ready' ? count + (count === 1 ? ' conversación' : ' conversaciones') : '';
-        $$('[data-list-filter]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.listFilter === filter)));
-    }
-
-    function fileButton(file) {
-        const button = clone('file');
-        button.dataset.fileId = file.id;
-        $('[data-file-name]', button).textContent = file.name;
-        $('[data-file-meta]', button).textContent = file.name.split('.').pop().toUpperCase() + ' · ' + formatBytes(file.size);
-        if (file.kind === 'video') $('[data-file-icon]', button).replaceWith(clone('video'));
-        if (file.kind === 'image') {
-            const image = document.createElement('img');
-            image.src = file.url;
-            image.alt = '';
-            image.loading = 'lazy';
-            $('[data-file-icon]', button).replaceWith(image);
-        }
-        return button;
-    }
-    function allFiles() {
-        return current ? current.messages.flatMap((message) => message.attachments || []) : [];
-    }
-    function renderInfo() {
-        $$('[data-contact-name]').forEach((element) => { element.textContent = current?.contact.name || 'Selecciona una conversación'; });
-        $$('[data-contact-initials]').forEach((element) => { element.textContent = current?.contact.initials || ''; });
-        $$('[data-contact-verified]').forEach((element) => element.toggleAttribute('hidden', !current?.contact.verified));
-        $$('[data-contact-specialty]').forEach((element) => {
-            element.textContent = current?.contact.specialty || '';
-            element.hidden = !current?.contact.specialty;
-        });
-        $('[data-open-info]').disabled = !current;
-        const files = allFiles();
-        $('[data-shared-files]').replaceChildren(...(expandedFiles ? files : files.slice(0, 3)).map(fileButton));
-        $('[data-shared-empty]').hidden = files.length > 0;
-        const more = $('[data-all-files]');
-        more.hidden = files.length <= 3;
-        more.setAttribute('aria-expanded', String(expandedFiles));
-        more.firstChild.textContent = expandedFiles ? 'Ver menos ' : 'Ver todos ';
-        const profile = $('[data-profile]');
-        // Only use an explicitly supplied, same-origin profile URL; never infer a contact route.
-        let profileUrl = null;
-        if (current?.contact.profile_url) {
-            try {
-                const url = new URL(current.contact.profile_url, location.origin);
-                if (url.origin === location.origin && ['http:', 'https:'].includes(url.protocol)) profileUrl = url.href;
-            } catch { /* No connected profile URL. */ }
-        }
-        profile.disabled = !profileUrl;
-        if (profileUrl) profile.dataset.url = profileUrl; else delete profile.dataset.url;
-    }
-    function appendMessage(message) {
-        const bubble = clone('message');
-        const own = message.sender_id === data.current_user.id;
-        bubble.classList.toggle('is-own', own);
-        bubble.setAttribute('aria-label', (own ? 'Tú' : current.contact.name) + ', ' + time.format(new Date(message.created_at)));
-        $('[data-message-text]', bubble).textContent = message.text;
-        $('[data-message-text]', bubble).hidden = !message.text;
-        $('[data-message-time]', bubble).textContent = time.format(new Date(message.created_at));
-        $('[data-message-time]', bubble).dateTime = message.created_at;
-        $('[data-message-state]', bubble).textContent = message.local ? 'Solo aquí' : own && message.read_at ? 'Leído' : '';
-        for (const file of message.attachments || []) {
-            $('[data-message-files]', bubble).append(fileButton(file));
-        }
-        history.append(bubble);
-    }
-    function scrollToEnd() {
-        requestAnimationFrame(() => { history.scrollTop = history.scrollHeight; });
-    }
-    function renderHistory() {
-        history.replaceChildren();
-        if (state === 'loading') { history.append(clone('skeleton')); return; }
-        if (state === 'error' || !current) {
-            const empty = document.createElement('p');
-            empty.className = 'messages-empty-chat';
-            empty.textContent = state === 'error' ? 'No pudimos cargar tus conversaciones. Inténtalo de nuevo más tarde.' : 'Selecciona una conversación para comenzar.';
-            history.append(empty);
-            return;
-        }
-        let lastDay = '';
-        for (const message of current.messages) {
-            const date = day.format(new Date(message.created_at));
-            if (date !== lastDay) {
-                const divider = document.createElement('p');
-                divider.className = 'messages-date';
-                divider.textContent = date;
-                history.append(divider);
-                lastDay = date;
-            }
-            appendMessage(message);
-        }
-        if (!current.messages.length) {
-            const empty = document.createElement('p');
-            empty.className = 'messages-empty-chat';
-            empty.textContent = 'Esta conversación está por comenzar.';
-            history.append(empty);
-        }
-        scrollToEnd();
-    }
-    function resizeDraft() {
-        input.style.height = 'auto';
-        input.style.height = Math.min(input.scrollHeight, 128) + 'px';
-    }
-    function updateSend() {
-        $('[data-send]').disabled = !attachable() || (!input.value.trim() && !current.draftAttachments.length);
-    }
-    function renderDraft() {
-        input.disabled = !attachable();
-        $('[data-attach]').disabled = !attachable();
-        input.value = current?.draft || '';
-        $('[data-draft-files]').replaceChildren();
-        for (const file of current?.draftAttachments || []) {
-            const item = document.createElement('li');
-            item.append(fileButton(file));
-            const remove = clone('remove');
-            remove.dataset.removeFile = file.id;
-            remove.setAttribute('aria-label', 'Retirar ' + file.name);
-            item.append(remove);
-            $('[data-draft-files]').append(item);
-        }
-        $('[data-file-error]').hidden = true;
-        resizeDraft();
-        updateSend();
-    }
-    function selectConversation(id, trigger) {
-        const next = conversations.find((item) => item.id === id);
-        if (!next) return;
-        current = next;
-        current.unread_count = 0; // Local visual read state only.
-        expandedFiles = false;
-        root.dataset.view = 'chat';
-        renderList(); renderInfo(); renderHistory(); renderDraft();
-        if (trigger && narrow.matches) $('#messages-contact-name').focus({ preventScroll: true });
-    }
-    function send() {
-        if (!attachable() || $('[data-send]').disabled) return;
-        const message = {
-            id: 'local-' + (++sequence), sender_id: data.current_user.id, text: input.value.trim(),
-            created_at: new Date().toISOString(), read_at: null, attachments: current.draftAttachments, local: true,
-        };
-        current.messages.push(message);
-        current.draft = '';
-        current.draftAttachments = [];
-        renderHistory(); renderDraft(); renderList(); renderInfo();
-        input.focus({ preventScroll: true });
-        setStatus('Mensaje añadido solo a esta página.');
-    }
-
-    function closeInfo() { if (infoDialog.open) infoDialog.close(); }
-    infoDialog.addEventListener('close', () => {
-        $('.messages-layout').append(info);
-        document.body.style.overflow = originalOverflow;
-        infoTrigger?.focus({ preventScroll: true });
-    });
-    function openInfo(trigger) {
-        if (!current) return;
-        if (desktop.matches) { $('#messages-info-title').focus({ preventScroll: true }); return; }
-        infoTrigger = trigger;
-        originalOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        infoDialog.append(info);
-        infoDialog.showModal();
-    }
-    listen(desktop, 'change', () => { if (desktop.matches) closeInfo(); });
-    function findFile(id) {
-        return [...allFiles(), ...(current?.draftAttachments || [])].find((file) => file.id === id);
-    }
-    function openFile(file, trigger) {
-        if (!file) return;
-        previewTrigger = trigger;
-        const content = $('[data-file-preview]');
-        content.replaceChildren();
-        $('#messages-preview-title').textContent = file.name;
-        if (file.kind === 'image' || file.kind === 'video') {
-            const media = document.createElement(file.kind === 'image' ? 'img' : 'video');
-            media.src = file.url;
-            if (file.kind === 'image') media.alt = file.name;
-            else { media.controls = true; media.preload = 'metadata'; }
-            content.append(media);
-        }
-        const link = clone('download');
-        link.href = file.url;
-        link.target = '_blank';
-        link.rel = 'noopener';
-        content.append(link);
-        previewDialog.showModal();
-    }
-    previewDialog.addEventListener('close', () => {
-        $('[data-file-preview]').replaceChildren();
-        previewTrigger?.focus({ preventScroll: true });
-    });
-    root.addEventListener('click', (event) => {
-        const target = event.target.closest('button');
-        if (!target) return;
-        if (target.matches('[data-conversation-id]')) selectConversation(target.dataset.conversationId, target);
-        if (target.matches('[data-list-filter]')) { filter = target.dataset.listFilter; renderList(); }
-        if (target.matches('[data-back]')) {
-            root.dataset.view = 'list';
-            const selectedButton = buttons.get(current?.id);
-            (selectedButton && !selectedButton.hidden ? selectedButton : $('[data-search]')).focus({ preventScroll: true });
-        }
-        if (target.matches('[data-open-info]')) openInfo(target);
-        if (target.matches('[data-close-info]')) closeInfo();
-        if (target.matches('[data-all-files]')) { expandedFiles = !expandedFiles; renderInfo(); $('[data-all-files]').focus(); }
-        if (target.matches('[data-profile]') && target.dataset.url) navigate(target.dataset.url);
-        if (target.matches('[data-file-id]')) openFile(findFile(target.dataset.fileId), target);
-        if (target.matches('[data-close-preview]')) previewDialog.close();
-        if (target.matches('[data-remove-file]')) {
-            const index = current.draftAttachments.findIndex((file) => file.id === target.dataset.removeFile);
-            if (index >= 0) {
-                releaseAttachment(current.draftAttachments[index]);
-                current.draftAttachments.splice(index, 1);
-                renderDraft();
-                $('[data-attach]').focus();
-                setStatus('Archivo retirado del borrador.');
-            }
-        }
-    });
-    $('[data-search]').addEventListener('input', renderList);
-    input.addEventListener('input', () => { if (current) current.draft = input.value; resizeDraft(); updateSend(); });
-    input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(); }
-    });
-    $('[data-composer]').addEventListener('submit', (event) => { event.preventDefault(); send(); });
-    $('[data-attach]').addEventListener('change', (event) => {
-        if (!attachable()) return;
-        const errors = [];
-        for (const file of event.target.files) {
-            const error = validateAttachment(file, current.draftAttachments);
-            if (error) errors.push(file.name + ': ' + error);
-            else current.draftAttachments.push(createAttachment(file));
-        }
-        renderDraft();
-        const error = $('[data-file-error]');
-        error.textContent = errors.join(' ');
-        error.hidden = !errors.length;
-        event.target.value = '';
-        setStatus(current.draftAttachments.length + ' archivos en el borrador.');
-    });
-    onCleanup( (event) => {
-        if (!event.persisted) conversations.forEach((conversation) => {
-            [...conversation.draftAttachments, ...conversation.messages.flatMap((message) => message.attachments || [])].forEach(releaseAttachment);
-        });
-    });
-    function viewport() {
-        root.style.setProperty('--messages-viewport', (window.visualViewport?.height || window.innerHeight) + 'px');
-    }
+    const dialog = $('[data-info-dialog]');
+    const desktop = matchMedia('(min-width:1200px)');
+    const requests = new AbortController();
+    const attempt = createSendAttempt();
+    let sending = false;
+    let uploading = false;
+    let uploadAmbiguous = false;
+    let refreshing = false;
+    let canSend = root.dataset.canSend === 'true';
+    let opener;
+    const viewport = () => root.style.setProperty('--messages-viewport', `${window.visualViewport?.height || innerHeight}px`);
     listen(window.visualViewport, 'resize', viewport);
     listen(window, 'resize', viewport);
     viewport();
-    $('#messages-contact-name').tabIndex = -1;
-    $('#messages-info-title').tabIndex = -1;
-    renderList(); renderInfo(); renderHistory(); renderDraft();
-    const linkedConversation = location.hash.slice(1);
-    if (state === 'ready' && conversations.some((item) => item.id === linkedConversation)) selectConversation(linkedConversation, true);
-    if (state === 'loading') {
-        $('[data-conversation-list]').replaceChildren(clone('skeleton'));
-        $('[data-search]').disabled = true;
+    if (!form) return;
+    const input = $('[data-draft]');
+    const uploadForm = $('[data-upload-form]');
+    const status = $('[data-send-status]');
+    const pollStatus = $('[data-poll-status]');
+    const rules = JSON.parse($('[data-file-rules]').textContent);
+    const say = (message) => { status.textContent = message; };
+    const atEnd = () => history.scrollHeight - history.scrollTop - history.clientHeight < 80;
+    function controls() {
+        input.readOnly = !!attempt.current() || uploadAmbiguous;
+        input.disabled = !canSend;
+        form.querySelector('[data-send]').disabled = !canSend || sending || uploading || uploadAmbiguous;
+        form.querySelector('[data-send]').setAttribute('aria-label', attempt.current() ? 'Reintentar el mismo envío' : 'Enviar mensaje');
+        form.querySelectorAll('[name="attachment_ids[]"]').forEach(item => { item.disabled = !canSend || !!attempt.current() || sending || uploading || uploadAmbiguous; });
+        uploadForm.querySelectorAll('input,button').forEach(item => { if (item.type !== 'hidden') item.disabled = !canSend || !!attempt.current() || sending || uploading || uploadAmbiguous; });
+        root.querySelectorAll('[data-prepared-id] button').forEach(item => { item.disabled = !!attempt.current() || sending || uploading || uploadAmbiguous; });
     }
-    if (state === 'error') {
+    function fragment(html) {
+        const template = document.createElement('template');
+        template.innerHTML = html; // Same-origin Blade fragments, with escaped DTO fields.
+        return template.content;
+    }
+    function revoke() {
+        canSend = false;
+        history.replaceChildren();
         $('[data-conversation-list]').replaceChildren();
-        $('[data-list-empty]').hidden = false;
-        $('[data-list-empty]').textContent = 'Las conversaciones no están disponibles por el momento.';
+        $('[data-information-body]')?.replaceChildren();
+        pollStatus.textContent = 'La conversación o sesión ya no está disponible. Vuelve a iniciar sesión.';
+        controls();
+        poller.stop();
     }
+    const errorText = (statusCode) => statusCode === 401 || statusCode === 419 ? 'Tu sesión venció. Recarga la página e inicia sesión.'
+        : statusCode === 404 || statusCode === 403 ? 'Esta operación ya no está disponible por acceso, bloqueo o estado de cuenta.'
+        : statusCode === 429 ? 'Espera un momento antes de volver a intentarlo.'
+        : statusCode === 422 ? 'Revisa el texto y los archivos. Conserva el identificador y el contenido original del envío; recarga para revisar un identificador ya utilizado.'
+        : 'No pudimos confirmar la operación. Reintenta el mismo envío.';
+    async function post(target, body) {
+        const response = await fetch(target, { method: 'POST', body, credentials: 'same-origin', signal: requests.signal,
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403 || response.status === 404) revoke();
+            const error = new Error(errorText(response.status)); error.status = response.status; throw error;
+        }
+        return data;
+    }
+    async function update() {
+        if (refreshing || requests.signal.aborted) return;
+        refreshing = true;
+        try {
+            const response = await fetch(root.dataset.pollUrl, { credentials: 'same-origin', signal: requests.signal, headers: { Accept: 'application/json' } });
+            if (!response.ok) {
+                if ([401,403,404].includes(response.status)) revoke();
+                else pollStatus.textContent = 'La actualización no está disponible. Se reintentará mientras esta conversación esté activa.';
+                return;
+            }
+            const data = await response.json();
+            if (typeof data.history_html !== 'string' || typeof data.can_send !== 'boolean') throw new Error('Invalid response');
+            const bottom = atEnd();
+            if (!history.contains(document.activeElement) && !history.querySelector('details[open]')) {
+                history.replaceChildren(fragment(data.history_html));
+                if (bottom) history.scrollTop = history.scrollHeight;
+            }
+            const inbox = $('[data-conversation-list]');
+            if (!inbox.contains(document.activeElement)) inbox.replaceChildren(fragment(data.inbox_html));
+            const information = $('[data-information-body]');
+            if (!information.contains(document.activeElement) && !information.querySelector('details[open]')) information.replaceChildren(fragment(data.information_html));
+            canSend = data.can_send;
+            controls();
+            pollStatus.textContent = canSend ? '' : 'El envío y la edición no están disponibles. El historial accesible se conserva.';
+        } catch (error) {
+            if (error.name !== 'AbortError') pollStatus.textContent = 'Sin actualización por el momento. Se reintentará al recuperar la conexión.';
+        } finally { refreshing = false; }
+    }
+    const poller = createPoller({ run: update, active: () => root.dataset.historical !== 'true' && document.visibilityState === 'visible' && document.hasFocus() && atEnd() && !history.contains(document.activeElement) && !history.querySelector('details[open]') });
+    poller.start();
+    listen(document, 'visibilitychange', () => { if (document.visibilityState === 'visible') poller.wake(); });
+    listen(window, 'focus', () => poller.wake());
+    onCleanup(() => { poller.stop(); requests.abort(); if (dialog?.open) dialog.close(); });
+    // A browser history cache can preserve a document without disposing the
+    // shared page controller. Do not restore stale private chat content.
+    listen(window, 'pagehide', event => {
+        if (event.persisted) { poller.stop(); requests.abort(); root.replaceChildren(); }
+    });
+    listen(window, 'pageshow', event => { if (event.persisted) window.location.reload(); });
+    listen(form, 'submit', async event => {
+        event.preventDefault();
+        if (sending || uploading || uploadAmbiguous || !canSend) return;
+        const data = attempt.begin({ token: form.elements.client_token.value, content: input.value,
+            ids: [...form.querySelectorAll('[name="attachment_ids[]"]:checked')].map(item => item.value) });
+        const body = new FormData(form);
+        body.set('client_token', data.token); body.set('content', data.content); body.delete('attachment_ids[]');
+        data.ids.forEach(id => body.append('attachment_ids[]', id));
+        sending = true; controls(); say('Enviando…');
+        try {
+            const result = await post(form.action, body);
+            form.elements.client_token.value = attempt.acknowledge(result);
+            input.value = '';
+            data.ids.forEach(id => {
+                root.querySelectorAll('[data-prepared-id]').forEach(item => { if (item.dataset.preparedId === id) item.remove(); });
+                form.querySelectorAll('[name="attachment_ids[]"]').forEach(item => { if (item.value === id) item.closest('label').remove(); });
+            });
+            say('Mensaje guardado.');
+            if (root.dataset.historical === 'true') { window.location.assign(result.redirect); return; }
+            history.scrollTop = history.scrollHeight;
+            await update();
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            if (error.status === 422) attempt.rejected();
+            say(error instanceof TypeError ? 'No se pudo confirmar el envío. Pulsa Reintentar; se conservarán el identificador, texto y archivos originales.' : error.message === 'Invalid acknowledgement' ? 'No se pudo confirmar el envío. Reintenta la misma operación.' : error.message);
+        } finally { sending = false; controls(); }
+    });
+    listen(input, 'input', () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight,128)}px`; });
+    listen(uploadForm, 'submit', async event => {
+        event.preventDefault();
+        if (uploading || sending || attempt.current() || uploadAmbiguous || !canSend) return;
+        const files = [...uploadForm.querySelector('[data-attach]').files];
+        const staged = [...root.querySelectorAll('[data-prepared-id]')].map(() => ({ size: 0 }));
+        const errors = [];
+        for (const file of files) { const error = validateAttachment(file, staged, rules); if (error) errors.push(error); else staged.push(file); }
+        const errorBox = $('[data-file-error]'); errorBox.textContent = errors.join(' '); errorBox.hidden = !errors.length;
+        if (errors.length) return;
+        const body = new FormData(uploadForm);
+        uploading = true; controls(); say('Adjuntando archivos…');
+        try {
+            const data = await post(uploadForm.action, body);
+            if (!Array.isArray(data?.attachments)) throw new Error('Invalid response');
+            for (const file of data.attachments) {
+                const row = document.createElement('div'); row.className = 'messages-prepared-file'; row.dataset.preparedId = String(file.id);
+                const text = document.createElement('span'); text.textContent = `${file.name} · ${formatBytes(file.size_bytes)}`;
+                const remove = document.createElement('form'); remove.method = 'POST'; remove.action = file.remove_url;
+                for (const [name,value] of [['_token',form.querySelector('[name="_token"]').value],['_method','DELETE']]) { const field = document.createElement('input'); field.type = 'hidden'; field.name = name; field.value = value; remove.append(field); }
+                const button = document.createElement('button'); button.className = 'messages-action'; button.textContent = 'Retirar del borrador'; remove.append(button); row.append(text,remove); $('[data-composer-attachments]').append(row);
+                const label = document.createElement('label'); label.className = 'messages-file-choice'; const field = document.createElement('input'); field.type = 'checkbox'; field.name = 'attachment_ids[]'; field.value = file.id; field.checked = true; label.append(field,document.createTextNode(` Enviar ${file.name}`)); $('[data-send-attachments]').append(label);
+            }
+            uploadForm.reset(); uploadForm.closest('details').open = false; say('Archivos listos para enviar.');
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            if (error.status !== 422 && error.status !== 429) uploadAmbiguous = true;
+            say('No se pudo confirmar la carga. Recarga para recuperar los archivos preparados antes de volver a adjuntar.');
+        } finally { uploading = false; controls(); }
+    });
+    listen(root, 'submit', async event => {
+        const remove = event.target.closest('[data-prepared-id] form');
+        if (!remove) return;
+        event.preventDefault();
+        if (attempt.current() || sending || uploading || uploadAmbiguous) return;
+        const row = remove.closest('[data-prepared-id]');
+        const id = row.dataset.preparedId;
+        uploading = true; controls();
+        try {
+            await post(remove.action,new FormData(remove)); row.remove();
+            form.querySelectorAll('[name="attachment_ids[]"]').forEach(item => { if (item.value === id) item.closest('label').remove(); });
+            say('Archivo retirado del borrador.');
+        } catch (error) { if (error.name !== 'AbortError') say('No se pudo confirmar la retirada. Recarga para consultar el borrador.'); }
+        finally { uploading = false; controls(); }
+    });
+    listen(root, 'click', event => {
+        if (event.target.closest('[data-open-info]')) {
+            if (desktop.matches) { info.querySelector('h2').focus(); return; }
+            opener = event.target.closest('button'); dialog.append(info); dialog.showModal();
+        }
+        if (event.target.closest('[data-close-info]')) dialog.close();
+    });
+    listen(dialog, 'close', () => { root.querySelector('.messages-layout')?.append(info); opener?.focus(); });
+    listen(desktop, 'change', () => { if (desktop.matches && dialog.open) dialog.close(); });
+    history.scrollTop = history.scrollHeight;
+    info.querySelector('h2').tabIndex = -1;
+    controls();
 });

@@ -6,4 +6,5 @@
     <div class="professional-meta"><span><x-lucide-map-pin aria-hidden="true" />{{ $profile['location'] }}</span><x-profiles.verification :status="$profile['verification_status']" /></div>
     <div class="professional-modality"><x-lucide-monitor-check aria-hidden="true" /><span>{{ ['in_person' => 'Presencial', 'remote' => 'En línea', 'hybrid' => 'Presencial y en línea'][$profile['attention_mode']] ?? 'Modalidad no indicada' }}</span></div>
     <a href="{{ $profile['url'] }}" class="professional-view">Conocer perfil<span class="professionals-sr"> de {{ $profile['name'] }}</span><x-lucide-arrow-up-right aria-hidden="true" /></a>
+    <x-messages.start :recipient="$profile['user_id']" />
 </article>
