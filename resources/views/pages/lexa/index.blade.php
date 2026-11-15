@@ -25,7 +25,7 @@
                     <div class="lexa-thread" data-thread role="region" aria-label="Conversación con LEXA" tabindex="0" hidden></div>
                     <div class="lexa-entry">
                         <x-lexa.composer :modes="$lexa['modes']" />
-                        <p class="lexa-disclaimer">La orientación informativa no sustituye la asesoría profesional.</p>
+                        <p class="lexa-disclaimer">Demostración local: respuestas de ejemplo, sin historial persistente. La orientación informativa no sustituye la asesoría profesional.</p>
                         <div class="lexa-suggestions" data-suggestions>
                             <p>También puedes comenzar con:</p>
                             <div>

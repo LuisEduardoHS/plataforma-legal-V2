@@ -2,6 +2,7 @@ import { onPage } from './ui/page.js';
 import { validateAttachment, formatBytes } from './messages/attachments.js';
 import { createSendAttempt } from './messages/attempt.js';
 import { createPoller } from './messages/polling.js';
+import { localizeMessageTimes } from './messages/dates.js';
 
 onPage('[data-messaging]', (root, { listen, onCleanup }) => {
     const $ = (selector) => root.querySelector(selector);
@@ -22,6 +23,7 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
     listen(window.visualViewport, 'resize', viewport);
     listen(window, 'resize', viewport);
     viewport();
+    localizeMessageTimes(root);
     if (!form) return;
     const input = $('[data-draft]');
     const uploadForm = $('[data-upload-form]');
@@ -89,6 +91,7 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
             if (!inbox.contains(document.activeElement)) inbox.replaceChildren(fragment(data.inbox_html));
             const information = $('[data-information-body]');
             if (!information.contains(document.activeElement) && !information.querySelector('details[open]')) information.replaceChildren(fragment(data.information_html));
+            localizeMessageTimes(root);
             canSend = data.can_send;
             controls();
             pollStatus.textContent = canSend ? '' : 'El envío y la edición no están disponibles. El historial accesible se conserva.';

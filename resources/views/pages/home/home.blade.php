@@ -4,9 +4,7 @@
     @vite(['resources/css/home.css', 'resources/css/articles.css'])
 @endsection
 @section('content')
-    @php($dashboard = $dashboard ?? require resource_path('views/pages/home/demo.php'))
     <section class="home-dashboard" data-home data-resources-url="{{ route('articles') }}" aria-label="Inicio">
-        <script type="application/json" data-home-data>{!! Illuminate\Support\Js::encode($dashboard) !!}</script>
         <p class="home-error" data-home-error role="alert" hidden></p>
         <div class="home-grid">
             <div class="home-main">
@@ -25,12 +23,15 @@
                         </form>
                         <div class="home-starters" aria-label="Ideas para comenzar">@foreach (['Mi finiquito' => 'Quiero entender qué información reunir sobre mi finiquito.', 'Un contrato' => 'Quiero preparar las preguntas para revisar un contrato.', 'Mi renta' => 'Tengo una duda sobre mi contrato de renta.'] as $label => $prompt)<button type="button" data-home-prompt="{{ $prompt }}">{{ $label }}</button>@endforeach</div>
 
-                    <p class="home-disclaimer">Orientación informativa; no sustituye la asesoría profesional.</p>
+                    <p class="home-disclaimer">Demostración local de LEXA: respuestas de ejemplo, sin historial persistente. Orientación informativa; no sustituye la asesoría profesional.</p>
                 </section>
                 <section aria-labelledby="home-pending-title">
-                    <div class="home-section-heading"><h2 id="home-pending-title">Continuar</h2><span class="home-count" data-pending-count>{{ count($dashboard['continue']) }}</span></div>
-                    <div class="home-continue-grid">@foreach ($dashboard['continue'] as $item)<x-home.continuation :item="$item" />@endforeach</div>
-                    <p class="home-muted" data-pending-empty hidden>No tienes asuntos por retomar en esta vista.</p>
+                    <div class="home-section-heading"><h2 id="home-pending-title">Continuar</h2></div>
+                    <div class="home-continue-grid">
+                        @foreach (['messages' => ['Conversaciones', 'Consulta tus mensajes privados.'], 'community' => ['Publicaciones y borradores', 'Retoma tu contenido en Comunidad.'], 'saved' => ['Mis guardados', 'Vuelve a tu biblioteca personal.']] as $route => [$title, $description])
+                            <article class="home-card home-continuation"><h3>{{ $title }}</h3><p class="home-meta">{{ $description }}</p><a class="home-action" href="{{ route($route, $route === 'community' ? ['feed' => 'mine'] : []) }}">Abrir {{ mb_strtolower($title) }}</a></article>
+                        @endforeach
+                    </div>
                 </section>
                 <section aria-labelledby="home-recommended-title">
                     <div class="home-section-heading"><h2 id="home-recommended-title">Para ti</h2><a href="{{ route('articles') }}">Explorar recursos <x-lucide-arrow-right aria-hidden="true" /></a></div>
@@ -44,16 +45,16 @@
                                 <div class="home-reading-heading"><span class="home-type"><x-lucide-book-open aria-hidden="true" />Biblioteca legal</span></div><h3>No hay artículos publicados</h3><a class="home-action" href="{{ route('articles') }}">Explorar la biblioteca</a>
                             @endif
                         </article>
-                        <article class="home-card home-professional" aria-label="Profesional recomendado">
-                            <h3>Profesional</h3>
-                            <div class="home-professional-identity"><span class="home-avatar" aria-hidden="true">AM</span><div><h4>{{ $dashboard['professional']['name'] }}</h4><p>{{ $dashboard['professional']['specialty'] }}</p></div></div>
-                            <a href="{{ route('professionals') }}#perfil-ana-martinez" class="home-action">Conocer perfil</a>
+                        <article class="home-card home-professional" aria-label="Directorio profesional">
+                            <h3>Profesionales</h3>
+                            <p class="home-muted">Explora presentaciones públicas y sus estados de verificación en el directorio.</p>
+                            <a href="{{ route('professionals') }}" class="home-action">Explorar profesionales</a>
                         </article>
                     </div>
                 </section>
                 <section class="home-community-peek" aria-labelledby="home-community-title">
                     <div class="home-section-heading"><h2 id="home-community-title">En la comunidad</h2><a href="{{ route('community') }}">Ver todo <x-lucide-arrow-right aria-hidden="true" /></a></div>
-                    <div class="home-feed">@foreach ($dashboard['feed'] as $post)<x-home.post :post="$post" />@endforeach</div>
+                    <div class="home-feed">@forelse ($feed as $post)<x-home.post :post="$post" />@empty<div class="home-card"><p class="home-muted">No hay publicaciones públicas disponibles.</p><a class="home-action" href="{{ route('community') }}">Explorar Comunidad</a></div>@endforelse</div>
                 </section>
             </div>
             <aside class="home-sidebar" aria-label="Accesos rápidos">

@@ -31,12 +31,23 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->dontFlash(['license_number']);
+        // Render SQL failures before route-specific errors, including validation
+        // and session middleware. Keep programming exceptions on Laravel's path.
+        $exceptions->render(function (QueryException $error, Request $request) {
+            $message = $request->routeIs('profile*', 'professionals*')
+                ? 'Los perfiles no están disponibles temporalmente.'
+                : 'El servicio no está disponible temporalmente. Inténtalo nuevamente.';
+
+            return ($request->expectsJson() ? response()->json(['message' => $message], 503)
+                : response($message, 503)->header('Content-Type', 'text/plain; charset=UTF-8'))
+                ->header('Cache-Control', 'private, no-store');
+        });
         $exceptions->render(function (Throwable $error, Request $request) {
             if (! $request->routeIs('messages', 'messages.*')) {
                 return null;
             }
             $status = null;
-            if ($error instanceof QueryException || $error instanceof MessagingException || $error instanceof AttachmentException || $error instanceof LockTimeoutException) {
+            if ($error instanceof MessagingException || $error instanceof AttachmentException || $error instanceof LockTimeoutException) {
                 $status = 503;
                 $message = 'No pudimos completar la operación de Mensajes. Inténtalo nuevamente con el mismo envío.';
             } elseif ($error instanceof AuthorizationException || ($error instanceof HttpExceptionInterface && $error->getStatusCode() === 403)) {
@@ -59,7 +70,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
             $status = null;
-            if ($error instanceof QueryException || $error instanceof ContentLibraryException || $error instanceof AttachmentException || $error instanceof CommunityException) {
+            if ($error instanceof ContentLibraryException || $error instanceof AttachmentException || $error instanceof CommunityException) {
                 $status = 503;
                 $message = 'La biblioteca no está disponible temporalmente. Inténtalo nuevamente.';
             } elseif ($error instanceof AuthorizationException || ($error instanceof HttpExceptionInterface && $error->getStatusCode() === 403)) {
@@ -82,7 +93,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
             $status = null;
-            if ($error instanceof QueryException || $error instanceof CommunityException || $error instanceof AttachmentException) {
+            if ($error instanceof CommunityException || $error instanceof AttachmentException) {
                 $status = 503;
                 $message = 'No pudimos completar la operación de Comunidad. Inténtalo nuevamente.';
             } elseif ($error instanceof AuthorizationException
@@ -101,16 +112,6 @@ return Application::configure(basePath: dirname(__DIR__))
             return ($request->expectsJson() ? response()->json(['message' => $message], $status)
                 : response()->view('pages.community.error', compact('status', 'message'), $status))
                 ->header('Cache-Control', 'private, no-store');
-        });
-        $exceptions->render(function (QueryException $error, Request $request) {
-            // Includes validation/catalog queries and the persisted-account check.
-            if ($request->routeIs('profile*', 'professionals*')) {
-                $message = 'Los perfiles no están disponibles temporalmente.';
-
-                return $request->expectsJson()
-                    ? response()->json(['message' => $message], 503)
-                    : response($message, 503)->header('Content-Type', 'text/plain; charset=UTF-8');
-            }
         });
         // Covers handled report($error) calls and unhandled QueryExceptions alike.
         $exceptions->report(function (QueryException $error): void {

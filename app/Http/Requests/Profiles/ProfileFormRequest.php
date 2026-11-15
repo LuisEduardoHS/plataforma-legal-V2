@@ -8,6 +8,19 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 
 abstract class ProfileFormRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->routeIs('profile.professional.update') && $this->boolean('update_specialties') && ! $this->exists('specialty_ids')) {
+            $this->merge(['specialty_ids' => []]);
+        }
+    }
+
+    protected function passedValidation(): void
+    {
+        // Laravel flashes the original request when domain validation fails.
+        $this->container->make('request')->merge($this->safe()->only(['specialty_ids', 'update_specialties']));
+    }
+
     public function authorize(): bool
     {
         return $this->user()?->isActive() ?? false;
@@ -38,6 +51,9 @@ abstract class ProfileFormRequest extends FormRequest
         }
         if (is_array($this->input('specialty_ids'))) {
             $old['specialty_ids'] = array_slice(array_filter($this->input('specialty_ids'), fn ($id) => is_scalar($id)), 0, 20);
+        }
+        if ($this->exists('update_specialties') && ! $validator->errors()->has('update_specialties')) {
+            $old['update_specialties'] = $this->boolean('update_specialties');
         }
         throw new HttpResponseException(redirect()->to($this->getRedirectUrl())->withErrors($validator)->withInput($old));
     }

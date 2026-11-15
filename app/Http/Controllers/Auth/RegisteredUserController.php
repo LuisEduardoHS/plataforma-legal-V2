@@ -38,8 +38,7 @@ class RegisteredUserController extends Controller
             if ((int) ($error->errorInfo[1] ?? 0) === 1062) {
                 throw ValidationException::withMessages(['email' => 'Este correo electrónico ya está registrado.']);
             }
-            report($error);
-            abort(503, 'El registro no está disponible temporalmente.');
+            throw $error;
         }
 
         event(new Registered($user));

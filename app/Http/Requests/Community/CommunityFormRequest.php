@@ -8,6 +8,17 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 
 abstract class CommunityFormRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->routeIs('community.posts.store', 'community.posts.update')) {
+            foreach (['replace_tags' => 'tag_ids', 'replace_attachments' => 'attachment_ids'] as $flag => $field) {
+                if ($this->boolean($flag) && ! $this->exists($field)) {
+                    $this->merge([$field => []]);
+                }
+            }
+        }
+    }
+
     public function authorize(): bool
     {
         return $this->user()?->isActive() ?? false;
@@ -27,6 +38,7 @@ abstract class CommunityFormRequest extends FormRequest
     {
         $this->attributes->set('community.input_validated', true);
         $this->container->make('request')->attributes->set('community.input_validated', true);
+        $this->container->make('request')->merge($this->safe()->only(['tag_ids', 'attachment_ids', 'replace_tags', 'replace_attachments']));
     }
 
     protected function failedValidation(Validator $validator): void
@@ -37,7 +49,11 @@ abstract class CommunityFormRequest extends FormRequest
         $old = [];
         foreach (array_keys($this->rules()) as $key) {
             $value = $this->input($key);
-            if ($key === 'version' && $value !== null) {
+            if (in_array($key, ['replace_tags', 'replace_attachments'], true) && $value !== null && ! $validator->errors()->has($key)) {
+                $old[$key] = $this->boolean($key) ? '1' : '0';
+            } elseif ($key === 'parent_id' && $value !== null && ! $validator->errors()->has($key)) {
+                $old[$key] = (string) (int) $value;
+            } elseif ($key === 'version' && $value !== null) {
                 // Version validation succeeded; preserve its original numeric value.
                 $old[$key] = (string) (int) $value;
             } elseif (is_string($value)) {

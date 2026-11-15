@@ -92,7 +92,8 @@ class ProfileController extends Controller
         try {
             $this->profiles->saveProfessionalProfile($request->user(), $request->user()->id, $data);
         } catch (ProfileException|VerificationException $error) {
-            return back()->withErrors(['profile' => $error->getMessage()]);
+            return back()->withErrors(['profile' => $error->getMessage()])
+                ->withInput($request->safe()->except('license_number'));
         }
 
         return to_route('profile')->with('status', 'Tu perfil profesional se guardó. Los cambios materiales requieren una nueva verificación.');

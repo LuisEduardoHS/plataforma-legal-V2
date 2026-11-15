@@ -4,7 +4,6 @@ import { writeHandoff } from './ui/handoff.js';
 
 onPage('[data-home]', (root) => {
     const $ = (selector) => root.querySelector(selector);
-    const data = JSON.parse($('[data-home-data]').textContent);
     const question = $('[data-home-question]');
     function forward(target, value, url) {
         try {
@@ -39,18 +38,6 @@ onPage('[data-home]', (root) => {
             forward('community', { text: '' }, event.target.closest('[data-home-share]').href);
             return;
         }
-        const continuation = event.target.closest('[data-continue]');
-        if (continuation) {
-            const item = data.continue.find((item) => item.id === continuation.dataset.continue);
-            if (item?.kind === 'lexa') {
-                event.preventDefault();
-                forward('lexa', { sessionId: item.session }, continuation.href);
-            }
-            if (item?.kind === 'draft') {
-                event.preventDefault();
-                forward('community', { text: item.draft, category: 'Arrendamiento' }, continuation.href);
-            }
-        }
         if (event.target.closest('[data-add-context]')) { event.preventDefault(); toLexa(true); }
         const button = event.target.closest('button');
         if (!button) return;
@@ -61,14 +48,5 @@ onPage('[data-home]', (root) => {
             question.focus();
             $('[data-home-status]').textContent = 'Sugerencia añadida. Puedes editarla antes de continuar.';
         }
-        if (button.matches('[data-dismiss-pending]')) {
-            button.closest('[data-pending-item]').remove();
-            const count = root.querySelectorAll('[data-pending-item]').length;
-            $('[data-pending-count]').textContent = count;
-            $('[data-pending-empty]').hidden = count > 0;
-            $('[data-home-status]').textContent = 'Recordatorio ocultado en esta página.';
-            (root.querySelector('[data-dismiss-pending]') || $('#home-pending-title')).focus();
-        }
     });
-    $('#home-pending-title').tabIndex = -1;
 });

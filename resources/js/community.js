@@ -3,6 +3,8 @@ import { takeHandoff } from './ui/handoff.js';
 import { validateCommunityFiles } from './community/files.js';
 
 onPage('[data-community]', (root, { listen, onCleanup }) => {
+    const errors = root.querySelector('[data-community-errors]');
+    if (errors && (document.activeElement === document.body || document.activeElement?.id === 'main-content')) errors.focus();
     const dialog = root.querySelector('[data-create-dialog]');
     let opener;
     const overflow = document.body.style.overflow;
