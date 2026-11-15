@@ -7,6 +7,9 @@ use App\Http\Controllers\Community\FeedController;
 use App\Http\Controllers\Community\InteractionController;
 use App\Http\Controllers\Community\MediaController;
 use App\Http\Controllers\Community\PostController;
+use App\Http\Controllers\ContentLibrary\EditorialController;
+use App\Http\Controllers\ContentLibrary\HomeContentController;
+use App\Http\Controllers\ContentLibrary\SavedController;
 use App\Http\Controllers\Profiles\ProfessionalDirectoryController;
 use App\Http\Controllers\Profiles\ProfileController;
 use App\Http\Controllers\Profiles\ProfilePhotoController;
@@ -22,7 +25,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/registro', [RegisteredUserController::class, 'store'])->middleware('throttle:auth.register')->name('register.store');
 });
 
-// Public reading remains accessible; Articles/help retain their demos.
+// Public reading remains accessible; help retains its static guides.
 Route::get('/comunidad', [FeedController::class, 'index'])->middleware('throttle:community.read')->name('community');
 Route::prefix('comunidad')->name('community.')->where([
     'post' => '[1-9][0-9]{0,17}', 'comment' => '[1-9][0-9]{0,17}',
@@ -58,14 +61,31 @@ Route::prefix('comunidad')->name('community.')->where([
 Route::get('/profesionales', ProfessionalDirectoryController::class)->middleware('throttle:profiles.read')->name('professionals');
 Route::get('/profesionales/{userId}', [PublicProfileController::class, 'professional'])->whereNumber('userId')->middleware('throttle:profiles.read')->name('professionals.show');
 Route::get('/usuarios/{userId}', [PublicProfileController::class, 'show'])->whereNumber('userId')->middleware('throttle:profiles.read')->name('profiles.show');
-Route::view('/articulos', 'pages.articles.index')->name('articles');
+foreach (['articles' => ['articulos', 'article'], 'resources' => ['recursos', 'resource']] as $name => [$path, $kind]) {
+    Route::get('/'.$path, [EditorialController::class, 'index'])->defaults('kind', $kind)->middleware('throttle:content.read')->name($name);
+    Route::prefix($path)->name($name.'.')->where(['entry' => '[1-9][0-9]{0,17}', 'attachment' => '[1-9][0-9]{0,17}'])->group(function () use ($kind) {
+        Route::middleware('auth')->group(function () use ($kind) {
+            Route::get('/gestion', [EditorialController::class, 'workspace'])->defaults('kind', $kind)->middleware('throttle:content.read')->name('workspace');
+            Route::get('/crear', [EditorialController::class, 'create'])->defaults('kind', $kind)->middleware('throttle:content.read')->name('create');
+            Route::get('/{entry}/editar', [EditorialController::class, 'edit'])->defaults('kind', $kind)->middleware('throttle:content.read')->name('edit');
+            Route::get('/{entry}/historial', [EditorialController::class, 'history'])->defaults('kind', $kind)->middleware('throttle:content.read')->name('history');
+            Route::post('/', [EditorialController::class, 'store'])->defaults('kind', $kind)->middleware('throttle:content.upload')->name('store');
+            Route::put('/{entry}', [EditorialController::class, 'update'])->defaults('kind', $kind)->middleware('throttle:content.upload')->name('update');
+            Route::post('/{entry}/estado', [EditorialController::class, 'transition'])->defaults('kind', $kind)->middleware('throttle:content.write')->name('transition');
+        });
+        Route::get('/{entry}', [EditorialController::class, 'show'])->defaults('kind', $kind)->middleware('throttle:content.read')->name('show');
+        Route::get('/{entry}/archivos/{attachment}', [EditorialController::class, 'media'])->defaults('kind', $kind)->middleware('throttle:content.read')->name('media');
+    });
+}
 Route::view('/ayuda', 'pages.help.index')->name('help');
 
 Route::middleware('auth')->group(function () {
-    Route::view('/inicio', 'pages.home.home')->name('home');
+    Route::get('/inicio', HomeContentController::class)->name('home');
     Route::view('/mensajes', 'pages.messages.index')->name('messages');
     Route::view('/lexa', 'pages.lexa.index')->name('lexa');
-    Route::view('/guardados', 'pages.saved.index')->name('saved');
+    Route::get('/guardados', [SavedController::class, 'index'])->middleware('throttle:content.read')->name('saved');
+    Route::put('/guardados/{type}/{target}', [SavedController::class, 'store'])->where(['type' => 'post|article|resource', 'target' => '[1-9][0-9]{0,17}'])->middleware('throttle:content.write')->name('saved.store');
+    Route::delete('/guardados/{type}/{target}', [SavedController::class, 'destroy'])->where(['type' => 'post|article|resource', 'target' => '[1-9][0-9]{0,17}'])->middleware('throttle:content.write')->name('saved.destroy');
     Route::get('/perfil', [ProfileController::class, 'show'])->name('profile');
     Route::get('/perfil/editar', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/perfil/profesional/editar', [ProfileController::class, 'editProfessional'])->name('profile.professional.edit');

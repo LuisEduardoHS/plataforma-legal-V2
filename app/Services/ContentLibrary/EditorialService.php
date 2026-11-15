@@ -72,14 +72,7 @@ class EditorialService
                 return $entry;
             }
             $this->access->version($entry, $expectedVersion);
-            $allowed = match ($entry->status) {
-                Status::Draft => [Status::Published, Status::Archived, Status::Deleted],
-                Status::Published => [Status::Draft, Status::Hidden, Status::Archived, Status::Deleted],
-                Status::Hidden => [Status::Published, Status::Deleted],
-                Status::Archived => [Status::Draft, Status::Deleted],
-                Status::Deleted => [],
-            };
-            if (! in_array($target, $allowed, true)) {
+            if (! in_array($target, $entry->status->targets(), true)) {
                 $this->access->invalid('status', 'La transición no está permitida.');
             }
             if ($target === Status::Hidden || ($entry->status === Status::Hidden && $target !== Status::Deleted)) {

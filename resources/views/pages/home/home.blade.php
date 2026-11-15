@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Inicio | Plataforma Legal')
 @section('page-assets')
-    @vite(['resources/css/home.css'])
+    @vite(['resources/css/home.css', 'resources/css/articles.css'])
 @endsection
 @section('content')
     @php($dashboard = $dashboard ?? require resource_path('views/pages/home/demo.php'))
@@ -36,9 +36,13 @@
                     <div class="home-section-heading"><h2 id="home-recommended-title">Para ti</h2><a href="{{ route('articles') }}">Explorar recursos <x-lucide-arrow-right aria-hidden="true" /></a></div>
                     <div class="home-recommend-grid">
                         <article class="home-card home-reading">
-                            <div class="home-reading-heading"><span class="home-type"><x-lucide-book-open aria-hidden="true" />Artículo · {{ $dashboard['article']['duration'] }}</span><x-home.bookmark :label="$dashboard['article']['title']" /></div>
-                            <h3>{{ $dashboard['article']['title'] }}</h3>
-                            <div class="home-reading-footer"><span>{{ $dashboard['article']['category'] }}</span><button type="button" data-open-article>Leer artículo <x-lucide-arrow-right aria-hidden="true" /></button></div>
+                            @if ($reading)
+                                <div class="home-reading-heading"><span class="home-type"><x-lucide-book-open aria-hidden="true" />Artículo publicado</span><x-content.save type="article" :id="$reading['id']" :saved="$reading['saved']" /></div>
+                                <h3>{{ $reading['title'] }}</h3>
+                                <div class="home-reading-footer"><span>{{ $reading['category']['name'] ?? 'Sin categoría' }}</span><a href="{{ route('articles.show', $reading['id']) }}">Leer artículo <x-lucide-arrow-right aria-hidden="true" /></a></div>
+                            @else
+                                <div class="home-reading-heading"><span class="home-type"><x-lucide-book-open aria-hidden="true" />Biblioteca legal</span></div><h3>No hay artículos publicados</h3><a class="home-action" href="{{ route('articles') }}">Explorar la biblioteca</a>
+                            @endif
                         </article>
                         <article class="home-card home-professional" aria-label="Profesional recomendado">
                             <h3>Profesional</h3>
@@ -65,7 +69,6 @@
                 <section class="home-card home-share-note"><x-lucide-messages-square aria-hidden="true" /><h2>Comparte con la comunidad</h2><a href="{{ route('community') }}" class="home-action" data-home-share>Crear publicación</a></section>
             </aside>
         </div>
-        <dialog class="home-dialog" data-home-dialog aria-labelledby="home-detail-title"><header><h2 id="home-detail-title"></h2><button type="button" class="home-icon" data-close-dialog aria-label="Cerrar detalle"><x-lucide-x aria-hidden="true" /></button></header><div data-home-detail></div></dialog>
         <p class="home-sr" data-home-status role="status" aria-live="polite"></p>
     </section>
 @endsection

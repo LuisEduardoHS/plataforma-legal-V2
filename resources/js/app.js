@@ -7,6 +7,8 @@ import './messages';
 import './lexa';
 import './professionals';
 import './personal';
+import './saved/library';
+import './editorial';
 
 window.Alpine = Alpine;
 Alpine.start();

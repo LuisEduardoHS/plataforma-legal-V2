@@ -14,6 +14,18 @@ class SavedItemService
 {
     public function __construct(private ContentAccess $access, private CommunityAccess $community) {}
 
+    // Only decorate targets already authorized by the domain read query. This
+    // method never supplies content or authorizes access to a target.
+    public function savedIds(?User $actor, SavedContentType $type, array $ids): array
+    {
+        if (! $actor || $ids === []) {
+            return [];
+        }
+
+        return $this->access->actor($actor, fn (User $current) => SavedItem::where('user_id', $current->id)
+            ->whereIn($type->key(), $ids)->sharedLock()->pluck($type->key())->all());
+    }
+
     public function save(User $actor, SavedContentType $type, int $id): SavedItem
     {
         $save = function (User $actor, $target) use ($type) {

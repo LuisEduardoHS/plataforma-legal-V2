@@ -2,6 +2,7 @@
 
 use App\Exceptions\AttachmentException;
 use App\Exceptions\CommunityException;
+use App\Exceptions\ContentLibraryException;
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Support\DatabaseFailureReporter;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -28,6 +29,29 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->dontFlash(['license_number']);
+        $exceptions->render(function (Throwable $error, Request $request) {
+            if (! $request->routeIs('articles', 'articles.*', 'resources', 'resources.*', 'saved', 'saved.*', 'home')) {
+                return null;
+            }
+            $status = null;
+            if ($error instanceof QueryException || $error instanceof ContentLibraryException || $error instanceof AttachmentException || $error instanceof CommunityException) {
+                $status = 503;
+                $message = 'La biblioteca no está disponible temporalmente. Inténtalo nuevamente.';
+            } elseif ($error instanceof AuthorizationException || ($error instanceof HttpExceptionInterface && $error->getStatusCode() === 403)) {
+                $status = $request->routeIs('articles.show', 'resources.show', 'articles.media', 'resources.media', 'articles.history', 'resources.history', 'saved.store') ? 404 : 403;
+                $message = 'El contenido no está disponible o no tienes permiso para esta operación.';
+            } elseif ($error instanceof ValidationException && ($request->isMethodSafe() || isset($error->errors()['version']))) {
+                $status = isset($error->errors()['version']) && $request->attributes->get('content.input_validated') ? 409 : 422;
+                $message = $status === 409 ? 'El contenido cambió. Tus cambios no se guardaron. Abre la versión actual antes de editar.' : 'Revisa los datos, filtros o el cursor. Abre de nuevo el formulario si su versión no es válida.';
+            }
+            if ($status === null) {
+                return null;
+            }
+
+            return ($request->expectsJson() ? response()->json(['message' => $message], $status)
+                : response()->view('pages.articles.error', compact('status', 'message'), $status))
+                ->header('Cache-Control', 'private, no-store');
+        });
         $exceptions->render(function (Throwable $error, Request $request) {
             if (! $request->routeIs('community', 'community.*')) {
                 return null;

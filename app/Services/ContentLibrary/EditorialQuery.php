@@ -22,10 +22,10 @@ class EditorialQuery
 
     public function recent(EditorialKind $kind, ?User $viewer = null, array $filters = [], int $size = 20, ?string $cursor = null): CursorPaginator
     {
-        $this->access->viewer($viewer);
+        $viewer = $this->access->viewer($viewer);
         $model = $kind->model();
 
-        return $this->page($kind, $model::publiclyVisible(), $filters, $size, $cursor, 'published_at');
+        return $this->page($kind, $model::publiclyVisible(), $filters, $size, $cursor, 'published_at', $viewer);
     }
 
     public function workspace(EditorialKind $kind, User $actor, bool $all = false, ?EditorialStatus $status = null, int $size = 20, ?string $cursor = null): CursorPaginator
@@ -43,7 +43,7 @@ class EditorialQuery
             $query->where('status', $status->value);
         }
 
-        return $this->page($kind, $query, [], $size, $cursor, 'updated_at');
+        return $this->page($kind, $query, [], $size, $cursor, 'updated_at', $actor);
     }
 
     public function detail(EditorialKind $kind, int $id, ?User $viewer = null): array
@@ -52,7 +52,7 @@ class EditorialQuery
             Gate::forUser($actor)->authorize('view', $entry);
             $entry->load($this->relations());
 
-            return $this->data($entry, detail: true);
+            return $this->data($entry, $actor, detail: true);
         });
     }
 
@@ -70,7 +70,7 @@ class EditorialQuery
         }, withDeleted: true);
     }
 
-    private function page(EditorialKind $kind, Builder $query, array $filters, int $size, ?string $cursor, string $date): CursorPaginator
+    private function page(EditorialKind $kind, Builder $query, array $filters, int $size, ?string $cursor, string $date, ?User $viewer): CursorPaginator
     {
         $rules = ['author_id' => ['sometimes', 'integer', 'min:1'],
             'category_id' => ['sometimes', 'integer', Rule::exists('content_categories', 'id')],
@@ -101,7 +101,7 @@ class EditorialQuery
         $this->size($size);
 
         return $this->load($query)->orderByDesc($date)->orderByDesc('id')
-            ->cursorPaginate($size, ['*'], 'cursor', $this->cursor($cursor, $date))->through(fn ($entry) => $this->data($entry));
+            ->cursorPaginate($size, ['*'], 'cursor', $this->cursor($cursor, $date))->through(fn ($entry) => $this->data($entry, $viewer));
     }
 
     private function load(Builder $query): Builder
@@ -115,13 +115,26 @@ class EditorialQuery
             'category:id,name,slug,is_active', 'tags:id,name,slug,is_active', 'specialties:id,name,slug,is_active',
             'attachments' => fn ($files) => $files->where('status', 'available')->where('visibility', 'private')->whereNull('verification_retained_at')
                 ->whereNotExists(fn ($evidence) => $evidence->selectRaw('1')->from('verification_evidences')->whereColumn('attachment_id', 'attachments.id')->sharedLock())
-                ->select('attachments.id', 'user_id', 'mime_type', 'category', 'size_bytes')->sharedLock()];
+                ->select('attachments.id', 'user_id', 'original_name', 'extension', 'mime_type', 'category', 'size_bytes')->sharedLock()];
     }
 
-    private function data(EditorialEntry $entry, bool $detail = false): array
+    private function data(EditorialEntry $entry, ?User $viewer = null, bool $detail = false): array
     {
         $public = $entry->author->profile?->visibility === ProfileVisibility::Public;
+        $update = $viewer && Gate::forUser($viewer)->allows('update', $entry);
+        $publish = $viewer && Gate::forUser($viewer)->allows('publish', $entry);
+        $moderate = $viewer && Gate::forUser($viewer)->allows('moderate', $entry);
+        $targets = array_map(fn (EditorialStatus $status) => $status->value, $entry->status->targets());
+        $transitions = array_values(array_filter($targets, fn ($target) => $update
+            && ($target !== 'hidden' || $moderate)
+            && ($entry->status !== EditorialStatus::Hidden || $target === 'deleted' || $moderate)
+            && ($target !== 'published' || $publish)
+            && (! ($entry->status === EditorialStatus::Published && $target === 'draft') || $publish)));
         $data = ['id' => $entry->id, 'type' => $entry->kind()->value, 'title' => $entry->title, 'slug' => $entry->slug,
+            'can_edit' => $update && ($entry->status !== EditorialStatus::Published || $publish),
+            'can_audit' => $viewer && Gate::forUser($viewer)->allows('audit', $entry),
+            'transitions' => $transitions,
+            'can_save' => $viewer !== null && $entry->status === EditorialStatus::Published && $entry->author->isActive(),
             'status' => $entry->status->value, 'version' => $entry->version,
             'published_at' => $entry->published_at?->toDateTimeString(), 'updated_at' => $entry->updated_at->toDateTimeString(),
             'editorial_updated_at' => $entry->editorial_updated_at?->toDateTimeString(),
@@ -130,7 +143,8 @@ class EditorialQuery
             'tags' => $entry->tags->map(fn ($item) => $item->only(['id', 'name', 'slug', 'is_active']))->all(),
             'specialties' => $entry->specialties->map(fn ($item) => $item->only(['id', 'name', 'slug', 'is_active']))->all(),
             'attachments' => $entry->attachments->filter(fn ($file) => (int) $file->user_id === (int) $entry->user_id)->map(fn ($file) => [
-                'id' => $file->id, 'mime_type' => $file->mime_type, 'category' => $file->category, 'size_bytes' => $file->size_bytes, 'position' => $file->pivot->position,
+                'id' => $file->id, 'name' => $file->original_name, 'extension' => $file->extension,
+                'mime_type' => $file->mime_type, 'category' => $file->category, 'size_bytes' => $file->size_bytes, 'position' => $file->pivot->position,
             ])->values()->all()];
         if ($entry->kind() === EditorialKind::Article) {
             $data['summary'] = $entry->summary;

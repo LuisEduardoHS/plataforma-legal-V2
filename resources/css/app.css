@@ -121,3 +121,14 @@
 }
 .home-sidebar:hover, .community-sidebar:hover { scrollbar-color: var(--color-accent) transparent; }
 .home-sidebar::-webkit-scrollbar-thumb:hover, .community-sidebar::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }
+
+/* Shared real bookmark forms, including Community and Home. */
+.content-save-control { position:relative; }
+.content-save-control .resource-save, a.resource-save { display:grid; place-items:center; width:44px; height:44px; min-width:44px; border:0; border-radius:var(--radius-ui); background:transparent; color:var(--color-light-text); cursor:pointer; }
+.content-save-control .resource-save svg, a.resource-save svg { width:18px; height:18px; }
+.content-save-control .resource-save.is-saved { color:var(--color-accent); }
+.content-save-control .resource-save.is-saved svg { fill:currentColor; fill-opacity:.18; }
+.content-save-control .resource-save:disabled { opacity:.6; cursor:wait; }
+.content-save-message { position:absolute; z-index:5; right:0; top:100%; width:min(240px,70vw); padding:12px; background:var(--color-bg); color:var(--color-text); border:1px solid var(--color-accent); border-radius:var(--radius-ui); font-size:12px; line-height:1.5; box-shadow:0 4px 12px #0002; }
+.content-save-message[hidden] { display:none; }
+@media(prefers-color-scheme:dark) { .content-save-control .resource-save.is-saved { color:var(--color-accent-text-dark); } .content-save-message { background:var(--color-surface-dark); color:var(--color-text-dark); } }

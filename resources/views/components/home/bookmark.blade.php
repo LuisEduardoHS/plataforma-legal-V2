@@ -1,2 +1,2 @@
 @props(['label'])
-<button type="button" class="home-icon home-bookmark" data-bookmark aria-pressed="false" aria-label="Guardar: {{ $label }}" title="Guardar"><x-lucide-bookmark aria-hidden="true" /></button>
+<a class="home-icon" href="{{ route('community') }}" aria-label="Explorar publicaciones de Comunidad" title="Explorar Comunidad"><x-lucide-arrow-up-right aria-hidden="true" /></a>
