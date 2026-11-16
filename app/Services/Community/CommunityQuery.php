@@ -200,12 +200,14 @@ class CommunityQuery
         return [
             'author' => fn ($author) => $author->select('id', 'name', 'status')->sharedLock(),
             'author.profile' => fn ($profile) => $profile->select('id', 'user_id', 'display_name', 'username', 'visibility')->sharedLock(),
+            'author.professionalProfile' => fn ($profile) => $profile->select('id', 'user_id', 'verification_status', 'visibility')->where('visibility', 'public')->sharedLock(),
         ];
     }
 
     private function authorData(User $author): array
     {
         $public = $author->isActive() && $author->profile?->visibility === ProfileVisibility::Public;
+        $professional = $author->relationLoaded('professionalProfile') ? $author->professionalProfile : null;
 
         return [
             'id' => $author->id,
@@ -213,6 +215,8 @@ class CommunityQuery
             'username' => $public ? $author->profile->username : null,
             'profile_public' => $public,
             'active' => $author->isActive(),
+            'professional_public' => $author->isActive() && $professional !== null,
+            'professional_verified' => $author->isActive() && $professional?->verification_status->value === 'verified',
         ];
     }
 

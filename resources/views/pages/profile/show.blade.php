@@ -18,6 +18,8 @@
         </x-profiles.card>
         <section class="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-xs border border-gray-100/50 dark:border-border-dark/50 space-y-4">
             <h2 class="text-lg font-bold">Información profesional</h2>
+            <a class="inline-block underline" href="{{ route('verification') }}">Mi verificación profesional</a>
+            @if (auth()->user()->can('verification.review'))<a class="inline-block underline ml-4" href="{{ route('verification.review.index') }}">Bandeja de revisión profesional</a>@endif
             @if ($professional)
                 <h3 class="font-semibold">{{ $professional['headline'] ?? 'Perfil profesional' }}</h3>
                 <x-profiles.verification :status="$professional['verification_status']" />

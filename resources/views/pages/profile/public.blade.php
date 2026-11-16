@@ -17,6 +17,7 @@
             <section class="bg-white dark:bg-surface-dark rounded-2xl p-6 border border-gray-100/50 dark:border-border-dark/50 space-y-4">
                 <h2 class="text-xl font-bold break-words">{{ $professional['headline'] ?? 'Presentación profesional' }}</h2>
                 <x-profiles.verification :status="$professional['verification_status']" />
+                <p class="text-xs">La insignia representa una revisión documental interna. No es una consulta oficial automática ni una garantía de calidad de los servicios.</p>
                 <p class="whitespace-pre-line break-words text-sm">{{ $professional['description'] }}</p>
                 <h3 class="font-semibold">Especialidades</h3><p>{{ implode(' · ', array_column($professional['specialties'], 'name')) ?: 'Sin especialidades indicadas' }}</p>
                 <dl class="grid sm:grid-cols-2 gap-4"><div><dt class="font-semibold">Experiencia</dt><dd>{{ $professional['years_experience'] !== null ? $professional['years_experience'].' años' : 'Sin indicar' }}</dd></div><div><dt class="font-semibold">Modalidad</dt><dd>{{ $modes[$professional['attention_mode']] ?? 'Sin indicar' }}</dd></div></dl>

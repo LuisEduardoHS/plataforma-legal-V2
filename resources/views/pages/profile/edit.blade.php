@@ -9,7 +9,7 @@
         <a href="{{ route('profile') }}" class="underline">← Volver a mi perfil</a>
         <h1 class="text-2xl font-bold">{{ $isProfessional ? 'Presentación profesional' : 'Editar mi perfil' }}</h1>
         @if ($errors->any())<div role="alert" class="profile-panel"><h2 class="font-semibold">Revisa el formulario</h2><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-        @if ($isProfessional)<p class="text-sm">Crear este perfil no acredita credenciales ni concede permisos. Los cambios de presentación, cédula, experiencia, modalidad, ubicación o especialidades invalidan la verificación existente. La solicitud de verificación estará disponible en otra etapa.</p>@endif
+        @if ($isProfessional)<p class="text-sm">Crear este perfil no acredita credenciales ni concede permisos. Los cambios de presentación, cédula, experiencia, modalidad, ubicación o especialidades invalidan la verificación existente. <a class="underline" href="{{ route('verification') }}">Consultar mi verificación y solicitudes</a>.</p>@endif
         <form method="GET" class="profile-panel" action="{{ route($isProfessional ? 'profile.professional.edit' : 'profile.edit') }}">
             <h2 class="font-semibold">Ubicación</h2>
             <p class="text-sm">Elige el estado y carga sus municipios antes de editar. Cargar el catálogo vuelve a abrir el formulario sin guardar los cambios.</p>

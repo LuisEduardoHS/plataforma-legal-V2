@@ -18,6 +18,7 @@ use App\Http\Controllers\Profiles\ProfessionalDirectoryController;
 use App\Http\Controllers\Profiles\ProfileController;
 use App\Http\Controllers\Profiles\ProfilePhotoController;
 use App\Http\Controllers\Profiles\PublicProfileController;
+use App\Http\Controllers\Verification\VerificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('landing');
@@ -84,6 +85,23 @@ foreach (['articles' => ['articulos', 'article'], 'resources' => ['recursos', 'r
 Route::view('/ayuda', 'pages.help.index')->name('help');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/verificacion', [VerificationController::class, 'index'])->middleware('throttle:verification.read')->name('verification');
+    Route::prefix('verificacion/solicitudes')->name('verification.')->where(['dossier' => '[1-9][0-9]{0,17}', 'evidence' => '[1-9][0-9]{0,17}'])->group(function () {
+        Route::post('/', [VerificationController::class, 'store'])->middleware('throttle:verification.write')->name('store');
+        Route::get('/{dossier}', [VerificationController::class, 'show'])->middleware('throttle:verification.read')->name('show');
+        Route::post('/{dossier}/evidencias', [VerificationController::class, 'upload'])->middleware('throttle:verification.upload')->name('evidence.store');
+        Route::delete('/{dossier}/evidencias/{evidence}', [VerificationController::class, 'remove'])->middleware('throttle:verification.write')->name('evidence.destroy');
+        Route::post('/{dossier}/presentar', [VerificationController::class, 'submit'])->middleware('throttle:verification.write')->name('submit');
+        Route::get('/{dossier}/evidencias/{evidence}/descargar', [VerificationController::class, 'download'])->middleware('throttle:verification.files')->name('download');
+        Route::get('/{dossier}/historial', [VerificationController::class, 'history'])->middleware('throttle:verification.read')->name('history');
+    });
+    Route::prefix('revision-profesional')->name('verification.')->where(['dossier' => '[1-9][0-9]{0,17}'])->group(function () {
+        Route::get('/', [VerificationController::class, 'queue'])->middleware('throttle:verification.read')->name('review.index');
+        Route::get('/{dossier}', [VerificationController::class, 'review'])->middleware('throttle:verification.read')->name('review.show');
+        foreach (['approve' => 'aprobar', 'reject' => 'rechazar', 'revoke' => 'revocar'] as $decision => $path) {
+            Route::post('/{dossier}/'.$path, [VerificationController::class, 'decide'])->defaults('decision', $decision)->middleware('throttle:verification.write')->name($decision);
+        }
+    });
     Route::get('/inicio', HomeContentController::class)->name('home');
     Route::get('/mensajes', [InboxController::class, 'index'])->middleware('throttle:messaging.read')->block(60, 10)->name('messages');
     Route::prefix('mensajes')->name('messages.')->where([

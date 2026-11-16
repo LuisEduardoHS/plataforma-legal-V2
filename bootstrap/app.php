@@ -4,6 +4,7 @@ use App\Exceptions\AttachmentException;
 use App\Exceptions\CommunityException;
 use App\Exceptions\ContentLibraryException;
 use App\Exceptions\MessagingException;
+use App\Exceptions\VerificationException;
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Support\DatabaseFailureReporter;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -40,6 +41,32 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return ($request->expectsJson() ? response()->json(['message' => $message], 503)
                 : response($message, 503)->header('Content-Type', 'text/plain; charset=UTF-8'))
+                ->header('Cache-Control', 'private, no-store');
+        });
+        $exceptions->render(function (Throwable $error, Request $request) {
+            if (! $request->routeIs('verification', 'verification.*')) {
+                return null;
+            }
+            $status = null;
+            if ($error instanceof VerificationException || $error instanceof AttachmentException || $error instanceof LockTimeoutException) {
+                $status = 503;
+                $message = 'La verificación no está disponible temporalmente. Consulta el estado actual antes de reintentar.';
+            } elseif ($error instanceof AuthorizationException || ($error instanceof HttpExceptionInterface && in_array($error->getStatusCode(), [403, 404], true))) {
+                $status = $request->route('dossier') ? 404 : 403;
+                $message = 'El expediente o la operación no están disponibles para tu cuenta.';
+            } elseif ($error instanceof HttpExceptionInterface && $error->getStatusCode() === 409) {
+                $status = 409;
+                $message = 'El expediente cambió. Tus cambios no se guardaron. Abre su estado actual antes de volver a enviar.';
+            } elseif ($error instanceof ValidationException && $request->isMethodSafe()) {
+                $status = 422;
+                $message = 'Revisa los filtros o los datos del formulario.';
+            }
+            if ($status === null) {
+                return null;
+            }
+
+            return ($request->expectsJson() ? response()->json(['message' => $message], $status)
+                : response()->view('pages.verification.error', compact('status', 'message'), $status))
                 ->header('Cache-Control', 'private, no-store');
         });
         $exceptions->render(function (Throwable $error, Request $request) {
