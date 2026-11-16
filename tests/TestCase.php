@@ -2,11 +2,21 @@
 
 namespace Tests;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\DB;
 
 abstract class TestCase extends BaseTestCase
 {
+    public function be(Authenticatable $user, $guard = null)
+    {
+        // actingAs normally skips SessionGuard::login, including its native stamp.
+        $driver = $guard ?? config('auth.defaults.guard');
+        $this->withSession(['password_hash_'.$driver => $this->app['auth']->guard($driver)->hashPasswordForCookie($user->getAuthPassword())]);
+
+        return parent::be($user, $guard);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

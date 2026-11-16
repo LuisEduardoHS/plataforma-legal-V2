@@ -27,6 +27,7 @@
                 @enderror
                 @csrf
 
+                <p class="mb-4 text-sm"><a class="underline" href="{{ route('password.request') }}">¿Olvidaste tu contraseña?</a></p>
                 {{-- Email --}}
                 <div class="mb-4">
                     <label for="email" class="login-input-label">Correo electrónico</label>

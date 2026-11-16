@@ -13,6 +13,7 @@ use App\Services\Community\CommunityPresentation;
 use App\Services\Community\CommunityQuery;
 use App\Services\Community\PostService;
 use App\Services\Community\PostSubmission;
+use App\Services\Operations\ModerationOperations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -91,9 +92,9 @@ class PostController extends CommunityController
         return $this->saved($request, route('community', ['feed' => 'mine']), 'La publicación fue eliminada.');
     }
 
-    public function moderate(VersionRequest $request, int $post)
+    public function moderate(VersionRequest $request, int $post, ModerationOperations $moderation)
     {
-        $result = $this->posts->moderate($request->user(), $post, $request->validated('action') === 'hide', $request->integer('version'));
+        $result = $moderation->apply($request->user(), 'post', $post, $request->validated('action') === 'hide', $request->integer('version'), $request->validated('reason'));
 
         return $this->saved($request, route('community.show', $post), 'Se actualizó la moderación.', ['id' => $post, 'version' => $result->version]);
     }

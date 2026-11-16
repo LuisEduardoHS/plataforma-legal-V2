@@ -22,6 +22,8 @@
         @foreach (['profile' => ['user-round', 'Perfil'], 'saved' => ['bookmark', 'Guardados'], 'settings' => ['settings', 'Configuración'], 'help' => ['life-buoy', 'Ayuda']] as $route => [$icon, $label])
             <a href="{{ route($route) }}" @if (request()->routeIs($route)) aria-current="page" @endif><x-dynamic-component :component="'lucide-' . $icon" aria-hidden="true" /><span>{{ $label }}</span></a>
         @endforeach
+        @if (app(\App\Services\Operations\OperationsAccess::class)->enter(auth()->user()))<a href="{{ route('operations.index') }}"><x-lucide-shield aria-hidden="true" /><span>Operaciones</span></a>@endif
+        @can('verification.review')<a href="{{ route('verification.review.index') }}"><x-lucide-badge-check aria-hidden="true" /><span>Revisión profesional</span></a>@endcan
         <div class="account-logout">
             <form method="POST" action="{{ route('logout') }}" data-turbo="false">@csrf<button type="submit"><x-lucide-log-out aria-hidden="true" /><span>Cerrar sesión</span></button></form>
         </div>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\PasswordRecoveryController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Community\CommentController;
 use App\Http\Controllers\Community\FeedController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Messaging\AttachmentController as MessagingAttachmentCo
 use App\Http\Controllers\Messaging\ConversationController as MessagingConversationController;
 use App\Http\Controllers\Messaging\InboxController;
 use App\Http\Controllers\Messaging\MessageController;
+use App\Http\Controllers\Operations\OperationsController;
 use App\Http\Controllers\Profiles\ProfessionalDirectoryController;
 use App\Http\Controllers\Profiles\ProfileController;
 use App\Http\Controllers\Profiles\ProfilePhotoController;
@@ -23,12 +25,16 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('landing');
 
+Route::get('/recuperar-contrasena', [PasswordRecoveryController::class, 'create'])->middleware('throttle:auth.recovery.read')->name('password.request');
+Route::post('/recuperar-contrasena', [PasswordRecoveryController::class, 'store'])->middleware('throttle:auth.recovery')->name('password.email');
 Route::middleware('guest')->group(function () {
     Route::get('/iniciar-sesion', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/iniciar-sesion', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:auth.login')->name('login.store');
     Route::get('/registro', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('/registro', [RegisteredUserController::class, 'store'])->middleware('throttle:auth.register')->name('register.store');
 });
+Route::get('/restablecer-contrasena', [PasswordRecoveryController::class, 'edit'])->middleware('throttle:auth.recovery.read')->name('password.reset');
+Route::post('/restablecer-contrasena', [PasswordRecoveryController::class, 'update'])->middleware('throttle:auth.recovery')->name('password.update');
 
 // Public reading remains accessible; help retains its static guides.
 Route::get('/comunidad', [FeedController::class, 'index'])->middleware('throttle:community.read')->name('community');
@@ -85,6 +91,17 @@ foreach (['articles' => ['articulos', 'article'], 'resources' => ['recursos', 'r
 Route::view('/ayuda', 'pages.help.index')->name('help');
 
 Route::middleware('auth')->group(function () {
+    Route::prefix('operaciones')->name('operations.')->where(['account' => '[1-9][0-9]{0,17}'])->controller(OperationsController::class)->group(function () {
+        Route::middleware('throttle:operations.read')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/usuarios', 'users')->name('users');
+            Route::get('/usuarios/{account}', 'user')->name('user');
+            Route::get('/auditoria', 'audit')->name('audit');
+            Route::get('/moderacion', 'moderation')->name('moderation');
+        });
+        Route::post('/usuarios/{account}/estado', 'state')->middleware('throttle:operations.write')->name('state');
+        Route::post('/usuarios/{account}/permisos', 'permission')->middleware('throttle:operations.write')->name('permission');
+    });
     Route::get('/verificacion', [VerificationController::class, 'index'])->middleware('throttle:verification.read')->name('verification');
     Route::prefix('verificacion/solicitudes')->name('verification.')->where(['dossier' => '[1-9][0-9]{0,17}', 'evidence' => '[1-9][0-9]{0,17}'])->group(function () {
         Route::post('/', [VerificationController::class, 'store'])->middleware('throttle:verification.write')->name('store');

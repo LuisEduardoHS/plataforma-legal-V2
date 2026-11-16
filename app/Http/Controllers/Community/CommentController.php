@@ -6,6 +6,7 @@ use App\Http\Requests\Community\CommentRequest;
 use App\Http\Requests\Community\VersionRequest;
 use App\Models\Comment;
 use App\Services\Community\CommunityInteractionService;
+use App\Services\Operations\ModerationOperations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -45,9 +46,9 @@ class CommentController extends CommunityController
         return $this->saved($request, route('community'), 'El comentario fue eliminado.');
     }
 
-    public function moderate(VersionRequest $request, int $comment)
+    public function moderate(VersionRequest $request, int $comment, ModerationOperations $moderation)
     {
-        $result = $this->interactions->moderateComment($request->user(), $comment, $request->validated('action') === 'hide', $request->integer('version'));
+        $result = $moderation->apply($request->user(), 'comment', $comment, $request->validated('action') === 'hide', $request->integer('version'), $request->validated('reason'));
 
         return $this->saved($request, route('community.show', ['post' => $result->post_id, 'review' => 1]), 'Se actualizó la moderación del comentario.', ['id' => $result->id, 'version' => $result->version]);
     }

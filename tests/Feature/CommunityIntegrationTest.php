@@ -236,10 +236,10 @@ class CommunityIntegrationTest extends TestCase
         $owner = $this->member();
         $moderator = $this->member('moderator');
         $post = $this->published($owner);
-        $this->actingAs($owner)->postJson('/comunidad/publicaciones/'.$post->id.'/moderacion', ['version' => 2, 'action' => 'hide'])->assertForbidden();
-        $this->actingAs($moderator)->postJson('/comunidad/publicaciones/'.$post->id.'/moderacion', ['version' => 2, 'action' => 'hide'])->assertOk()->assertJsonPath('version', 3);
-        $this->postJson('/comunidad/publicaciones/'.$post->id.'/moderacion', ['version' => 2, 'action' => 'show'])->assertConflict();
-        $this->postJson('/comunidad/publicaciones/'.$post->id.'/moderacion', ['version' => 3, 'action' => 'show'])->assertOk();
+        $this->actingAs($owner)->postJson('/comunidad/publicaciones/'.$post->id.'/moderacion', ['reason' => 'Decisión sintética de moderación.', 'version' => 2, 'action' => 'hide'])->assertForbidden();
+        $this->actingAs($moderator)->postJson('/comunidad/publicaciones/'.$post->id.'/moderacion', ['reason' => 'Decisión sintética de moderación.', 'version' => 2, 'action' => 'hide'])->assertOk()->assertJsonPath('version', 3);
+        $this->postJson('/comunidad/publicaciones/'.$post->id.'/moderacion', ['reason' => 'Decisión sintética de moderación.', 'version' => 2, 'action' => 'show'])->assertConflict();
+        $this->postJson('/comunidad/publicaciones/'.$post->id.'/moderacion', ['reason' => 'Decisión sintética de moderación.', 'version' => 3, 'action' => 'show'])->assertOk();
         $this->assertSame(PostStatus::Published, $post->fresh()->status);
     }
 
@@ -270,11 +270,11 @@ class CommunityIntegrationTest extends TestCase
         $post = $this->published($owner);
         $root = $this->interactions->comment($owner, $post->id, ['content' => 'Raíz oculta']);
         $this->interactions->comment($other, $post->id, ['content' => 'Respuesta oculta', 'parent_id' => $root->id]);
-        $this->actingAs($moderator)->postJson('/comunidad/comentarios/'.$root->id.'/moderacion', ['version' => 1, 'action' => 'hide'])->assertOk();
+        $this->actingAs($moderator)->postJson('/comunidad/comentarios/'.$root->id.'/moderacion', ['reason' => 'Decisión sintética de moderación.', 'version' => 1, 'action' => 'hide'])->assertOk();
         $this->actingAs($other)->get('/comunidad/publicaciones/'.$post->id)->assertDontSee('Raíz oculta')->assertDontSee('Respuesta oculta');
         $this->get('/comunidad/publicaciones/'.$post->id.'?review=1')->assertNotFound();
         $this->actingAs($moderator)->get('/comunidad/publicaciones/'.$post->id.'?review=1')->assertOk()->assertSee('Raíz oculta')->assertSee('Respuesta oculta');
-        $this->postJson('/comunidad/comentarios/'.$root->id.'/moderacion', ['version' => 2, 'action' => 'show'])->assertOk();
+        $this->postJson('/comunidad/comentarios/'.$root->id.'/moderacion', ['reason' => 'Decisión sintética de moderación.', 'version' => 2, 'action' => 'show'])->assertOk();
         $this->get('/comunidad/publicaciones/'.$post->id)->assertSee('Respuesta oculta');
     }
 

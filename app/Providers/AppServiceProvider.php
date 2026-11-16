@@ -29,6 +29,15 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(UserProfile::class, ProfilePolicy::class);
         Gate::policy(ProfessionalProfile::class, ProfilePolicy::class);
 
+        RateLimiter::for('operations.read', fn (Request $request) => Limit::perMinute(90)->by((string) $request->user()?->id));
+        RateLimiter::for('operations.write', fn (Request $request) => Limit::perMinute(20)->by((string) $request->user()?->id));
+
+        RateLimiter::for('auth.recovery.read', fn (Request $request) => Limit::perMinute(60)->by(hash('sha256', $request->ip())));
+        RateLimiter::for('auth.recovery', fn (Request $request) => [
+            Limit::perMinute(15)->by('ip:'.hash('sha256', $request->ip())),
+            Limit::perMinute(5)->by('identity:'.hash('sha256', (is_string($request->input('email')) ? mb_strtolower(trim($request->input('email'))) : '').'|'.$request->ip())),
+        ]);
+
         RateLimiter::for('verification.read', fn (Request $request) => Limit::perMinute(90)->by((string) $request->user()?->id));
         RateLimiter::for('verification.write', fn (Request $request) => Limit::perMinute(20)->by((string) $request->user()?->id));
         RateLimiter::for('verification.upload', fn (Request $request) => Limit::perMinute(5)->by((string) $request->user()?->id));

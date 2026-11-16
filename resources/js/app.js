@@ -9,6 +9,7 @@ import './professionals';
 import './personal';
 import './saved/library';
 import './editorial';
+import './password-reset';
 
 window.Alpine = Alpine;
 Alpine.start();

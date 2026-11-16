@@ -4,10 +4,12 @@ use App\Exceptions\AttachmentException;
 use App\Exceptions\CommunityException;
 use App\Exceptions\ContentLibraryException;
 use App\Exceptions\MessagingException;
+use App\Exceptions\PasswordRecoveryUnavailable;
 use App\Exceptions\VerificationException;
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Support\DatabaseFailureReporter;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
@@ -15,6 +17,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -31,7 +34,26 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn () => route('home'));
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->dontFlash(['license_number']);
+        $exceptions->render(function (Throwable $error, Request $request) {
+            if (! $request->routeIs('operations.*')) {
+                return null;
+            }
+            $status = match (true) {
+                $error instanceof AuthorizationException => 403,
+                $error instanceof HttpExceptionInterface && in_array($error->getStatusCode(), [403, 404, 409], true) => $error->getStatusCode(),
+                $error instanceof ValidationException && $request->isMethodSafe() => 422,
+                default => null,
+            };
+            if ($status === null) {
+                return null;
+            }
+            $message = $status === 409 ? 'La cuenta o sus concesiones cambiaron. Consulta su estado actual antes de reintentar.'
+                : ($status === 422 ? 'Revisa los filtros de consulta.' : 'La operación no está disponible para tu cuenta.');
+
+            return ($request->expectsJson() ? response()->json(['message' => $message], $status)
+                : response()->view('pages.operations.error', compact('message', 'status'), $status))->header('Cache-Control', 'private, no-store');
+        });
+        $exceptions->dontFlash(['license_number', 'token']);
         // Render SQL failures before route-specific errors, including validation
         // and session middleware. Keep programming exceptions on Laravel's path.
         $exceptions->render(function (QueryException $error, Request $request) {
@@ -42,6 +64,23 @@ return Application::configure(basePath: dirname(__DIR__))
             return ($request->expectsJson() ? response()->json(['message' => $message], 503)
                 : response($message, 503)->header('Content-Type', 'text/plain; charset=UTF-8'))
                 ->header('Cache-Control', 'private, no-store');
+        });
+        $exceptions->render(function (Throwable $error, Request $request) {
+            if (! $request->routeIs('password.*') || $error instanceof ValidationException
+                || $error instanceof AuthenticationException) {
+                return null;
+            }
+            $status = $error instanceof HttpExceptionInterface ? $error->getStatusCode() : ($error instanceof PasswordRecoveryUnavailable ? 503 : 500);
+            $message = match ($status) {
+                419 => 'La sesión del formulario caducó. Abre el formulario nuevamente.',
+                429 => 'Se alcanzó el límite de intentos. Espera antes de volver a solicitarlo.',
+                default => 'La recuperación no está disponible temporalmente. Inténtalo más tarde.',
+            };
+            $headers = $error instanceof HttpExceptionInterface ? $error->getHeaders() : [];
+
+            return ($request->expectsJson() ? response()->json(['message' => $message], $status, $headers)
+                : response($message, $status, $headers)->header('Content-Type', 'text/plain; charset=UTF-8'))
+                ->header('Cache-Control', 'private, no-store')->header('Referrer-Policy', 'no-referrer');
         });
         $exceptions->render(function (Throwable $error, Request $request) {
             if (! $request->routeIs('verification', 'verification.*')) {
@@ -144,4 +183,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->report(function (QueryException $error): void {
             (new DatabaseFailureReporter)($error);
         })->stop();
+        $exceptions->report(function (Throwable $error) {
+            if (request()->routeIs('password.*')) {
+                Log::error('password_recovery.request_failed', ['exception_class' => get_class($error)]);
+
+                return false;
+            }
+
+            return null;
+        });
     })->create();

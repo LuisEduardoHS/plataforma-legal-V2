@@ -3,6 +3,9 @@
 @section('content')
 <div class="min-h-screen bg-bg dark:bg-bg-dark font-sans pb-24 text-text dark:text-text-dark">
     <div class="w-full max-w-[1080px] mx-auto px-4 sm:px-6 pt-6 space-y-5">
+        @if (app(\App\Services\Operations\OperationsAccess::class)->enter(auth()->user()))
+            <a class="inline-block min-h-11 py-3 underline text-dark-accent dark:text-accent-text-dark" href="{{ route('operations.index') }}">Acceder a Operaciones</a>
+        @endif
         @if (session('status'))<p class="rounded-xl bg-white dark:bg-surface-dark p-4" role="status">{{ session('status') }}</p>@endif
         @if ($errors->any())<div class="rounded-xl bg-white dark:bg-surface-dark p-4" role="alert"><p>No se completó la operación.</p><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
         <x-profiles.card :name="$profile['name'] ?? auth()->user()->name" :username="$profile['username'] ?? null" :biography="$profile['biography'] ?? null" :location="$profile['location'] ?? null" :website="$profile['website'] ?? null">
