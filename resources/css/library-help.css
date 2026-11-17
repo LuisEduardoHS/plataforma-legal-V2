@@ -5,6 +5,7 @@
     padding: 32px 24px 64px; font-family: var(--font-sans), sans-serif; font-size: 15px; line-height: 1.55;
 }
 .personal-page [hidden] { display: none !important; }
+.help-availability { display: inline-block; margin-bottom: 10px; padding: 4px 9px; border-radius: var(--radius-ui); background: var(--personal-soft); color: var(--personal-link); font-size: 12px; font-weight: 600; }
 .personal-wrap { max-width: 1180px; margin: auto; }
 .personal-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 26px 28px; margin-bottom: 24px; border-radius: var(--radius-ui); background: linear-gradient(110deg,color-mix(in srgb,var(--color-dark-accent) 7%,var(--personal-surface)),color-mix(in srgb,var(--color-light-accent) 3%,var(--personal-surface))); }
 .personal-eyebrow { color: var(--personal-link); font-size: 11px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; }

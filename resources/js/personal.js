@@ -2,6 +2,7 @@ import { onPage } from './ui/page.js';
 import { normalize } from './saved/store.js';
 
 onPage('[data-help]', (root) => {
+    root.querySelector('[data-help-tools]').hidden = false;
     const search = root.querySelector('[data-help-search]');
     const questions = [...root.querySelectorAll('[data-help-question]')];
     let category = 'all';
