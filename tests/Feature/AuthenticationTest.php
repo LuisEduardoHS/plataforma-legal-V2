@@ -236,7 +236,7 @@ class AuthenticationTest extends TestCase
         $this->get(route('register'))->assertRedirect(route('home'));
         $this->post(route('register.store'), $this->registration())->assertRedirect(route('home'));
         $this->assertSame(1, User::count());
-        $this->get(route('landing'))->assertOk()->assertSee('href="'.route('home').'"', escape: false)
+        $this->get(route('landing'))->assertRedirect(route('home'))->assertHeader('Cache-Control', 'no-store, private')
             ->assertDontSee('/dashboard');
     }
 

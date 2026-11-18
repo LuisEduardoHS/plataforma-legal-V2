@@ -11,6 +11,7 @@ use App\Http\Controllers\Community\PostController;
 use App\Http\Controllers\ContentLibrary\EditorialController;
 use App\Http\Controllers\ContentLibrary\HomeContentController;
 use App\Http\Controllers\ContentLibrary\SavedController;
+use App\Http\Controllers\LandingController;
 use App\Http\Controllers\Messaging\AttachmentController as MessagingAttachmentController;
 use App\Http\Controllers\Messaging\ConversationController as MessagingConversationController;
 use App\Http\Controllers\Messaging\InboxController;
@@ -23,7 +24,7 @@ use App\Http\Controllers\Profiles\PublicProfileController;
 use App\Http\Controllers\Verification\VerificationController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('landing');
+Route::get('/', LandingController::class)->name('landing');
 
 Route::get('/recuperar-contrasena', [PasswordRecoveryController::class, 'create'])->middleware('throttle:auth.recovery.read')->name('password.request');
 Route::post('/recuperar-contrasena', [PasswordRecoveryController::class, 'store'])->middleware('throttle:auth.recovery')->name('password.email');
