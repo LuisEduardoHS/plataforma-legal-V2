@@ -135,7 +135,8 @@ class ProfileLocationIntegrationTest extends TestCase
         }
         if ($professional) {
             $this->assertSame(1, $xpath->query('//input[@name="specialty_ids[]" and @value="'.$specialty->id.'" and @checked]')->length);
-            $this->assertSame(1, $xpath->query('//input[@name="update_specialties" and @checked]')->length);
+            $this->assertSame('1', $xpath->evaluate('string(//form[@id="profile-edit-form"]//button[@name="update_specialties"][1]/@value)'));
+            $this->assertStringContainsString('En el último envío elegiste aplicar la selección', $xpath->document->textContent);
             $this->assertSame(1, $xpath->query('//input[@name="contact_visible" and @type="checkbox" and @checked]')->length);
             $this->assertSame(0, $xpath->query('//input[@name="license_number" and string-length(@value)>0]')->length);
             $data['license_number'] = '';
@@ -341,7 +342,8 @@ class ProfileLocationIntegrationTest extends TestCase
         $this->assertSame((string) $city->id, $xpath->evaluate('string(//select[@id="municipality_id"]/option[@selected]/@value)'));
         $this->assertSame('Presentación sin perder', trim($xpath->evaluate('string(//textarea[@name="description"])')));
         $this->assertSame(1, $xpath->query('//input[@name="specialty_ids[]" and @checked]')->length);
-        $this->assertSame(1, $xpath->query('//input[@name="update_specialties" and @checked]')->length);
+        $this->assertSame('1', $xpath->evaluate('string(//form[@id="profile-edit-form"]//button[@name="update_specialties"][1]/@value)'));
+        $this->assertStringContainsString('En el último envío elegiste aplicar la selección', $xpath->document->textContent);
         $this->assertSame(0, $xpath->query('//input[@name="license_number" and string-length(@value)>0]')->length);
     }
 

@@ -21,8 +21,9 @@
             <button data-location-load type="submit" class="profile-button-secondary">Cargar municipios y recargar</button>
             <p id="profile-location-status" data-location-status role="status" aria-live="polite" aria-atomic="true" class="text-sm"></p>
         </form>
-        <form id="profile-edit-form" data-profile-edit-form method="POST" action="{{ route($isProfessional ? 'profile.professional.update' : 'profile.update') }}" class="profile-panel space-y-5">
-            @csrf @method('PUT')
+        <form id="profile-edit-form" data-profile-edit-form @if ($isProfessional) data-professional-edit @endif method="POST" action="{{ route($isProfessional ? 'profile.professional.prepare' : 'profile.update') }}" class="profile-panel space-y-5" @if ($isProfessional) data-turbo="false" @endif>
+            @csrf
+            @if ($isProfessional)<input type="hidden" name="profile_version" value="{{ old('profile_version', $editorVersion) }}">@else @method('PUT') @endif
             @if (! $isProfessional)
                 <x-profiles.field name="display_name" label="Nombre público (opcional)" :value="$profile['display_name'] ?? null" maxlength="150" autocomplete="nickname" />
                 <p class="text-sm">Si lo dejas vacío, se mostrará el nombre de tu cuenta cuando hagas público este perfil.</p>
@@ -36,9 +37,10 @@
                 <div class="profile-field"><label for="attention_mode">Modalidad de atención</label><select id="attention_mode" name="attention_mode"><option value="">Sin indicar</option>@foreach (['in_person' => 'Presencial', 'remote' => 'En línea', 'hybrid' => 'Presencial y en línea'] as $key => $label)<option value="{{ $key }}" @selected(old('attention_mode', $profile['attention_mode'] ?? '') === $key)>{{ $label }}</option>@endforeach</select></div>
                 <fieldset><legend class="font-semibold">Especialidades</legend>
                     @if (! empty($profile['specialties']))<p class="text-sm mt-2">Registradas: {{ implode(' · ', $profile['specialties']) }}. Las especialidades desactivadas no se muestran públicamente.</p>@endif
+                    @if (! empty($profile['inactive_specialties']))<p class="text-sm mt-2">Inactivas registradas: {{ implode(' · ', $profile['inactive_specialties']) }}. Guardar otros datos las conserva; aplicar la selección activa requerirá confirmar su retirada.</p>@endif
                     <div class="grid sm:grid-cols-2 gap-3 mt-3">@foreach ($specialties as $specialty)<label class="flex items-start gap-2"><input type="checkbox" name="specialty_ids[]" value="{{ $specialty->id }}" @checked(in_array($specialty->id, old('specialty_ids', $profile['specialty_ids'] ?? [])))>{{ $specialty->name }}</label>@endforeach</div>
-                    <label class="flex items-start gap-2 mt-4"><input type="checkbox" name="update_specialties" value="1" @checked(old('update_specialties'))>Aplicar esta selección de especialidades</label>
-                    <p class="text-sm mt-2">Marca la opción para reemplazar las especialidades registradas, incluidas las desactivadas. Una selección vacía las quitará todas.</p>
+                    <p class="text-sm mt-2" id="specialties-intention">Elige «Guardar datos y aplicar selección» para reemplazar las especialidades registradas. Una selección vacía las quitará todas. Si hay asociaciones inactivas, se pedirá confirmación antes de retirarlas. «Guardar otros datos y conservar especialidades» no modifica ninguna asociación.</p>
+                    @if ($errors->any() && old('update_specialties') !== null)<p class="text-sm">En el último envío elegiste {{ old('update_specialties') ? 'aplicar la selección' : 'conservar las especialidades registradas' }}.</p>@endif
                 </fieldset>
                 <p class="text-sm">{{ ($profile['license_registered'] ?? false) ? 'Cédula registrada. Su número permanece oculto.' : 'No has registrado una cédula.' }}</p>
                 <x-profiles.field name="license_number" label="Registrar o reemplazar cédula (privada)" type="password" inputmode="numeric" minlength="5" maxlength="12" pattern="[0-9]{5,12}" autocomplete="new-password" />
@@ -52,8 +54,29 @@
             <x-profiles.field name="website" label="Sitio web" type="url" :value="$profile['website'] ?? null" maxlength="2048" placeholder="https://" />
             <div class="profile-field"><label for="visibility">Visibilidad de este perfil</label><select id="visibility" name="visibility" required><option value="private" @selected(old('visibility', $profile['visibility'] ?? 'private') === 'private')>Privado</option><option value="public" @selected(old('visibility', $profile['visibility'] ?? 'private') === 'public')>Público</option></select></div>
             <p class="text-sm">La visibilidad personal y la profesional son independientes. El correo de tu cuenta, la cédula y los documentos nunca se publican.</p>
-            <button class="profile-button">Guardar {{ $isProfessional ? 'presentación profesional' : 'perfil' }}</button>
+            @if ($isProfessional)
+                <p data-professional-feedback role="status" aria-live="polite" class="text-sm"></p>
+                @php($preserveSpecialties = $errors->any() && old('update_specialties') !== null && ! filter_var(old('update_specialties'), FILTER_VALIDATE_BOOLEAN))
+                <div class="flex flex-wrap gap-3">
+                    @if ($preserveSpecialties)<button class="profile-button" name="update_specialties" value="0" aria-describedby="specialties-intention">Guardar otros datos y conservar especialidades</button>@endif
+                    <button class="profile-button" name="update_specialties" value="1" aria-describedby="specialties-intention">Guardar datos y aplicar selección</button>
+                    @unless ($preserveSpecialties)<button class="profile-button-secondary" name="update_specialties" value="0" aria-describedby="specialties-intention">Guardar otros datos y conservar especialidades</button>@endunless
+                </div>
+            @else<button class="profile-button">Guardar perfil</button>@endif
         </form>
+        @if ($isProfessional)
+            <div data-professional-confirmation hidden>
+                <button type="button" data-dialog-open class="profile-button-secondary">Revisar confirmación pendiente</button>
+                <dialog id="professional-material-dialog" class="professional-dialog profile-panel" aria-labelledby="professional-material-title" aria-describedby="professional-material-description">
+                    <h2 id="professional-material-title" class="text-xl font-bold">Revisa el efecto de guardar</h2>
+                    <p id="professional-material-description" data-professional-description></p>
+                    <p>Todavía no se ha guardado nada. Una nueva revisión no garantiza aprobación ni un plazo.</p>
+                    <ul data-professional-categories class="list-disc pl-5 my-4"></ul>
+                    <button type="button" data-dialog-close data-dialog-initial class="profile-button-secondary">Cancelar y seguir editando</button>
+                    <form data-professional-final method="POST" action="{{ route('profile.professional.update') }}" data-turbo="false">@csrf @method('PUT')<input type="hidden" name="pending_change" value=""><input type="hidden" name="confirm_material" value="1"><button class="profile-button">Confirmar y guardar estos cambios</button></form>
+                </dialog>
+            </div>
+        @endif
         @if (! $isProfessional)
             <section class="profile-panel space-y-4"><h2 class="text-lg font-semibold">Fotografía privada</h2><p class="text-sm">Puedes cargar una imagen JPG, PNG, GIF o WebP de hasta 10 MiB y descargarla desde tu perfil. La publicación de fotografías todavía no está disponible; se muestra una inicial en los perfiles públicos.</p>
                 <form method="POST" action="{{ route('profile.photo.store') }}" enctype="multipart/form-data" class="space-y-4">@csrf<x-profiles.field name="photo" label="Seleccionar fotografía" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required /><button class="profile-button">Guardar fotografía privada</button></form>

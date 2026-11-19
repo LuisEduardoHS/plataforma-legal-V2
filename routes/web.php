@@ -156,6 +156,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/perfil/profesional/editar', [ProfileController::class, 'editProfessional'])->name('profile.professional.edit');
     Route::put('/perfil', [ProfileController::class, 'update'])->middleware('throttle:profiles.write')->name('profile.update');
     Route::put('/perfil/profesional', [ProfileController::class, 'updateProfessional'])->middleware('throttle:profiles.write')->name('profile.professional.update');
+    Route::post('/perfil/profesional/revisar', [ProfileController::class, 'prepareProfessional'])->middleware('throttle:profiles.write')->name('profile.professional.prepare');
     Route::get('/perfil/fotografia', [ProfilePhotoController::class, 'show'])->middleware('throttle:profiles.read')->name('profile.photo');
     Route::post('/perfil/fotografia', [ProfilePhotoController::class, 'store'])->middleware('throttle:profiles.photo')->name('profile.photo.store');
     Route::delete('/perfil/fotografia', [ProfilePhotoController::class, 'destroy'])->middleware('throttle:profiles.write')->name('profile.photo.destroy');

@@ -236,6 +236,7 @@
 @media (max-width:767px) { .professionals-intro { gap:16px; margin-bottom:24px; } .professionals-guide { padding:0; background:transparent; } .professionals-guide > svg,.professionals-guide p { display:none; } .professionals-guide h2 { font-size:13px; margin-bottom:0; } .professionals-guide a { margin-top:0; min-height:40px; } }
 
 /* Real directory filters and profile forms retain the existing surfaces/palette. */
+.profile-editor { overflow-wrap: anywhere; }
 .professionals-location-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-top: 16px; }
 .professionals-location-filters label { display: grid; gap: 6px; flex: 1 1 180px; min-width: 0; }
 .professionals-location-filters select { width: 100%; min-height: 44px; border: 1px solid var(--professionals-hover); border-radius: var(--radius-ui); padding: 8px; background: var(--professionals-surface); color: inherit; }

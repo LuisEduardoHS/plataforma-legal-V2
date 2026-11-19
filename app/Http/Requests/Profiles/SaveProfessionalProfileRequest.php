@@ -4,9 +4,24 @@ namespace App\Http\Requests\Profiles;
 
 class SaveProfessionalProfileRequest extends ProfileFormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        parent::prepareForValidation();
+
+        // The review POST must flash an explicit empty selection when validation redirects.
+        if ($this->routeIs('profile.professional.prepare') && $this->boolean('update_specialties') && ! $this->exists('specialty_ids')) {
+            $this->merge(['specialty_ids' => []]);
+        }
+    }
+
     public function rules(): array
     {
+        if ($this->routeIs('profile.professional.update') && $this->exists('pending_change')) {
+            return ['pending_change' => ['required', 'string', 'max:262144'], 'confirm_material' => ['required', 'accepted']];
+        }
+
         return $this->commonRules() + [
+            'profile_version' => [$this->routeIs('profile.professional.prepare') ? 'required' : 'sometimes', 'string', 'regex:/\A[a-f0-9]{64}\z/'],
             'headline' => ['sometimes', 'nullable', 'string', 'max:180'],
             'description' => ['sometimes', 'nullable', 'string', 'max:10000'],
             'license_number' => ['sometimes', 'nullable', 'string', 'regex:/\A[0-9]{5,12}\z/'],

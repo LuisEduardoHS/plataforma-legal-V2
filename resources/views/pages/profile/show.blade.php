@@ -21,6 +21,12 @@
         </x-profiles.card>
         <section class="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-xs border border-gray-100/50 dark:border-border-dark/50 space-y-4">
             <h2 class="text-lg font-bold">Información profesional</h2>
+            <div class="space-y-3 break-words" data-professional-hub data-professional-state="{{ $journey['state'] }}">
+                <p class="font-semibold">{{ $journey['label'] }}</p>
+                @if ($journey['missing'])<p>Para presentar una solicitud, completa:</p><ul class="list-disc pl-5">@foreach ($journey['missing'] as $missing)<li>{{ $missing }}</li>@endforeach</ul>@endif
+                <a class="inline-block min-h-11 py-3 underline" href="{{ route($journey['route'], $journey['id'] ? [$journey['id']] : []) }}">{{ $journey['next'] }}</a>
+                @if (in_array($journey['state'], ['ready', 'draft', 'incomplete']))<p class="text-sm">El expediente necesita además evidencia privada de la cédula. Puedes preparar un borrador antes de completar los requisitos. La revisión es humana, sin plazo ni aprobación garantizados.</p>@endif
+            </div>
             <a class="inline-block underline" href="{{ route('verification') }}">Mi verificación profesional</a>
             @if (auth()->user()->can('verification.review'))<a class="inline-block underline ml-4" href="{{ route('verification.review.index') }}">Bandeja de revisión profesional</a>@endif
             @if ($professional)
@@ -33,7 +39,8 @@
             @else
                 <p class="text-sm">Si ofreces servicios jurídicos, puedes completar una presentación profesional. Esto no te otorga una verificación ni permisos adicionales.</p>
             @endif
-            <a class="inline-block text-dark-accent dark:text-accent-text-dark underline" href="{{ route('profile.professional.edit') }}">{{ $professional ? 'Editar información profesional' : 'Crear presentación profesional' }}</a>
+            @if ($professional)<a class="inline-block text-dark-accent dark:text-accent-text-dark underline" href="{{ route('profile.professional.edit') }}">Editar información profesional</a>@endif
+            <p class="text-sm">La presentación profesional es independiente del perfil personal. Su visibilidad no depende de la verificación. El contacto solo se publica cuando lo autorizas; la cédula y las evidencias permanecen privadas. La insignia vigente representa revisión humana interna, no validación oficial automática ni garantía de calidad profesional.</p>
         </section>
     </div>
 </div>

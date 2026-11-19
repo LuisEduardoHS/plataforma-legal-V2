@@ -1,8 +1,10 @@
 import { onPage } from './ui/page.js';
 import { normalize } from './saved/store.js';
 import { setupProfileLocation } from './profiles/location.js';
+import { setupProfessionalEditor } from './profiles/professional.js';
 
 onPage('[data-profile-location]', setupProfileLocation);
+onPage('[data-profile-location]', setupProfessionalEditor);
 
 onPage('[data-help]', (root) => {
     root.querySelector('[data-help-tools]').hidden = false;

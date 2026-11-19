@@ -163,9 +163,14 @@ class IntegrationAuditFixesTest extends TestCase
         $historic->update(['is_active' => false]);
         $payload = ['visibility' => 'private', 'contact_visible' => '0', 'update_specialties' => '1', 'headline' => 'Original'];
         $payload += $stage === 'form' ? ['years_experience' => 81] : ['license_number' => '01234567'];
+        $this->actingAs($actor);
         if ($stage === 'service') {
             $payload['headline'] = 'Cambio que debe revertirse';
             Event::listen('eloquent.updating: '.ProfessionalProfile::class, fn () => throw new QueryException('mysql', 'UPDATE synthetic_profile_failure', [], new \PDOException('synthetic failure')));
+            $payload['profile_version'] = $this->get('/perfil/profesional/editar')->assertOk()->viewData('editorVersion');
+            $this->withCredentials()->withCookie(config('session.cookie'), session()->getId());
+            $pending = $this->postJson(route('profile.professional.prepare'), $payload)->assertOk()->json('pending_change');
+            $payload = ['pending_change' => $pending, 'confirm_material' => '1'];
         }
         $this->actingAs($actor)->from('/perfil/profesional/editar')->put('/perfil/profesional', $payload)
             ->assertRedirect('/perfil/profesional/editar')->assertSessionHasErrors()
@@ -174,14 +179,20 @@ class IntegrationAuditFixesTest extends TestCase
         Event::forget('eloquent.updating: '.ProfessionalProfile::class);
         $this->assertSame('Original', $profile->fresh()->headline);
         $this->assertSame($ids, $profile->fresh()->specialties->pluck('id')->all());
-        $html = $this->get('/perfil/profesional/editar')->assertOk()->assertSee('Aplicar esta selección')->getContent();
+        $html = $this->get('/perfil/profesional/editar')->assertOk()->assertSee('Guardar datos y aplicar selección')->getContent();
         $this->assertSame(0, $this->dom($html)->query('//input[@name="specialty_ids[]" and @checked]')->length);
         // Absence of apply intention preserves historical relationships.
         $this->put('/perfil/profesional', ['visibility' => 'private', 'contact_visible' => '0', 'headline' => 'Sin cambio de especialidades'])->assertRedirect('/perfil');
         $this->assertSame($ids, $profile->fresh()->specialties->pluck('id')->all());
     }
 
-    public function test_professional_domain_validation_flashes_the_normalized_original_request(): void
+    public static function specialtyIntentions(): array
+    {
+        return [['1'], ['0']];
+    }
+
+    #[DataProvider('specialtyIntentions')]
+    public function test_professional_domain_validation_flashes_the_normalized_original_request(string $intent): void
     {
         $actor = $this->member();
         $specialty = LegalSpecialty::create(['name' => 'Especialidad de regresión', 'slug' => (string) Str::uuid()]);
@@ -199,13 +210,15 @@ class IntegrationAuditFixesTest extends TestCase
             }
         });
         $this->actingAs($actor)->from('/perfil/profesional/editar')->put('/perfil/profesional', [
-            'headline' => 'Cambio inválido', 'visibility' => 'private', 'contact_visible' => '0', 'update_specialties' => '1',
+            'headline' => 'Cambio inválido', 'visibility' => 'private', 'contact_visible' => '0', 'update_specialties' => $intent, 'specialty_ids' => [],
             'municipality_id' => $municipality->id,
         ])->assertRedirect('/perfil/profesional/editar')->assertSessionHasErrors('municipality_id')
-            ->assertSessionHasInput('specialty_ids', [])->assertSessionHasInput('update_specialties', '1');
+            ->assertSessionHasInput('specialty_ids', [])->assertSessionHasInput('update_specialties', $intent);
         $this->assertFalse($armed);
         $this->assertSame('Original', $profile->fresh()->headline);
         $this->assertSame([$specialty->id], $profile->fresh()->specialties->pluck('id')->all());
+        $html = $this->get('/perfil/profesional/editar')->assertOk()->getContent();
+        $this->assertSame($intent, $this->dom($html)->evaluate('string(//form[@id="profile-edit-form"]//button[@name="update_specialties"][1]/@value)'));
     }
 
     #[DataProvider('validationStages')]

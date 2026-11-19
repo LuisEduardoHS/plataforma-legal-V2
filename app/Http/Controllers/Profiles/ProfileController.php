@@ -10,6 +10,8 @@ use App\Http\Requests\Profiles\SaveUserProfileRequest;
 use App\Models\LegalSpecialty;
 use App\Models\Municipality;
 use App\Models\State;
+use App\Services\Profiles\ProfessionalEditor;
+use App\Services\Profiles\ProfessionalHub;
 use App\Services\Profiles\ProfileService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -17,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ViewErrorBag;
+use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
@@ -25,9 +28,11 @@ class ProfileController extends Controller
     public function show(Request $request)
     {
         return $this->read(function () use ($request) {
+            // Take the existing workflow's owner locks before the profile read locks.
+            $journey = app(ProfessionalHub::class)->project($request->user());
             [$profile, $professional] = $this->ownData($request);
 
-            return view('pages.profile.show', compact('profile', 'professional'));
+            return view('pages.profile.show', compact('profile', 'professional', 'journey'));
         });
     }
 
@@ -64,6 +69,7 @@ class ProfileController extends Controller
         $state = $validator->validated();
 
         return $this->read(function () use ($request, $isProfessional, $state) {
+            $editorVersion = $isProfessional ? app(ProfessionalEditor::class)->version($request->user()) : null;
             [$personal, $professional] = $this->ownData($request);
             $profile = $isProfessional ? $professional : $personal;
             // A failed submission may return to a URL whose state predates the live catalog.
@@ -87,6 +93,7 @@ class ProfileController extends Controller
                 'states' => State::orderBy('name')->get(['id', 'name']),
                 'selectedState' => $selectedState, 'municipalities' => $municipalities, 'selectedMunicipality' => (string) $selectedMunicipality,
                 'specialties' => $isProfessional ? LegalSpecialty::active()->ordered()->get(['id', 'name']) : collect(),
+                'editorVersion' => $editorVersion,
             ]);
         });
     }
@@ -104,24 +111,41 @@ class ProfileController extends Controller
 
     public function updateProfessional(SaveProfessionalProfileRequest $request)
     {
-        $data = $request->safe()->except('update_specialties');
-        if ($request->boolean('update_specialties')) {
-            $data['specialty_ids'] = $data['specialty_ids'] ?? [];
-        } else {
-            unset($data['specialty_ids']);
-        }
-        // A blank replacement field preserves the encrypted credential.
-        if (empty($data['license_number'])) {
-            unset($data['license_number']);
-        }
         try {
-            $this->profiles->saveProfessionalProfile($request->user(), $request->user()->id, $data);
-        } catch (ProfileException|VerificationException $error) {
-            return back()->withErrors(['profile' => $error->getMessage()])
-                ->withInput($request->safe()->except('license_number'));
+            app(ProfessionalEditor::class)->update($request, $request->validated());
+        } catch (ProfileException|VerificationException|ValidationException $error) {
+            return $this->professionalFailure($request, $error);
         }
 
         return to_route('profile')->with('status', 'Tu perfil profesional se guardó. Los cambios materiales requieren una nueva verificación.');
+    }
+
+    public function prepareProfessional(SaveProfessionalProfileRequest $request)
+    {
+        // The review POST saves only when no confirmation is needed. A material write uses one final PUT.
+        try {
+            $pending = app(ProfessionalEditor::class)->prepare($request, $request->validated());
+        } catch (ProfileException|VerificationException|ValidationException $error) {
+            return $this->professionalFailure($request, $error);
+        }
+        if ($pending) {
+            return $request->expectsJson() ? response()->json($pending)
+                : response()->view('pages.profile.confirm-professional', $pending)->header('Cache-Control', 'private, no-store');
+        }
+
+        return $request->expectsJson() ? response()->json(['redirect' => route('profile')])
+            : to_route('profile')->with('status', 'Tu presentación profesional se guardó correctamente.');
+    }
+
+    private function professionalFailure(SaveProfessionalProfileRequest $request, ProfileException|VerificationException|ValidationException $error)
+    {
+        $errors = $error instanceof ValidationException ? $error->errors() : ['profile' => [$error->getMessage()]];
+        if ($request->expectsJson()) {
+            return response()->json(['errors' => $errors], 422);
+        }
+
+        return to_route('profile.professional.edit')->withErrors($errors)
+            ->withInput(app(ProfessionalEditor::class)->oldInput($request));
     }
 
     private function ownData(Request $request): array
@@ -152,6 +176,7 @@ class ProfileController extends Controller
                 'location' => $model->municipality ? $model->municipality->name.', '.$model->municipality->state->name : null,
                 'specialty_ids' => $model->specialties->pluck('id')->all(),
                 'specialties' => $model->specialties->pluck('name')->all(),
+                'inactive_specialties' => $model->specialties->where('is_active', false)->pluck('name')->all(),
             ];
         }
 

@@ -26,12 +26,12 @@ class VerificationWorkflow
         private AttachmentValidator $validator,
     ) {}
 
-    public function own(User $actor): array
+    public function own(User $actor, ?int $page = null): array
     {
-        return DB::transaction(function () use ($actor) {
+        return DB::transaction(function () use ($actor, $page) {
             $actor = $this->current($actor);
             $profile = ProfessionalProfile::where('user_id', $actor->id)->lockForUpdate()->first();
-            $requests = $profile?->verificationRequests()->orderByDesc('id')->paginate(15)
+            $requests = $profile?->verificationRequests()->orderByDesc('id')->paginate(15, page: $page)
                 ->through(fn ($request) => $this->summary($request));
 
             return [

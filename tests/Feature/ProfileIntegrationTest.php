@@ -12,6 +12,7 @@ use App\Models\State;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Services\Profiles\ProfessionalDirectory;
+use App\Services\Profiles\ProfessionalEditor;
 use App\Services\Profiles\ProfileService;
 use App\Services\Verification\VerificationService;
 use Illuminate\Database\QueryException;
@@ -71,6 +72,16 @@ class ProfileIntegrationTest extends TestCase
     private function specialty(string $name = 'Derecho civil', bool $active = true): LegalSpecialty
     {
         return LegalSpecialty::create(['name' => $name, 'slug' => fake()->uuid(), 'is_active' => $active]);
+    }
+
+    private function confirmedProfessionalUpdate(array $data)
+    {
+        $data['profile_version'] = app(ProfessionalEditor::class)->version(auth()->user());
+        $pending = $this->postJson(route('profile.professional.prepare'), $data)->assertOk()->json('pending_change');
+        $this->assertIsString($pending);
+        $this->withCookie(config('session.cookie'), session()->getId());
+
+        return $this->put(route('profile.professional.update'), ['pending_change' => $pending, 'confirm_material' => '1']);
     }
 
     public function test_guests_can_read_the_directory_but_cannot_edit_or_download_private_photos(): void
@@ -286,7 +297,8 @@ class ProfileIntegrationTest extends TestCase
         $profile = $user->professionalProfile;
         $profile->forceFill(['verification_status' => 'verified', 'verified_at' => now()])->save();
         $this->mock(VerificationService::class)->shouldReceive('invalidateForProfileChange')->once()->andThrow(new VerificationException);
-        $this->actingAs($user)->from('/perfil/profesional/editar')->put('/perfil/profesional', [
+        $this->actingAs($user)->from('/perfil/profesional/editar');
+        $this->confirmedProfessionalUpdate([
             'visibility' => 'public', 'contact_visible' => false, 'headline' => 'No guardar', 'license_number' => '001234567',
         ])->assertRedirect('/perfil/profesional/editar')->assertSessionHasErrors('profile')->assertSessionMissing('_old_input.license_number');
         $this->assertSame('Asesoría jurídica', $profile->fresh()->headline);
@@ -336,7 +348,7 @@ class ProfileIntegrationTest extends TestCase
         $this->assertCount(1, $user->professionalProfile->specialties);
         $this->putJson('/perfil/profesional', ['visibility' => 'public', 'contact_visible' => false, 'update_specialties' => true, 'specialty_ids' => [$specialty->id]])->assertUnprocessable()->assertJsonValidationErrors('specialty_ids');
         $this->putJson('/perfil/profesional', ['visibility' => 'public', 'contact_visible' => false, 'update_specialties' => true, 'specialty_ids' => [999999]])->assertUnprocessable();
-        $this->put('/perfil/profesional', ['visibility' => 'private', 'contact_visible' => false, 'update_specialties' => true])->assertRedirect(route('profile'));
+        $this->confirmedProfessionalUpdate(['visibility' => 'private', 'contact_visible' => false, 'update_specialties' => true])->assertRedirect(route('profile'));
         $this->assertSame(0, $user->professionalProfile->specialties()->count());
     }
 
@@ -348,7 +360,7 @@ class ProfileIntegrationTest extends TestCase
         $this->get('/profesionales')->assertSee('Perfil verificado');
         $this->actingAs($user)->put('/perfil/profesional', ['visibility' => 'public', 'contact_visible' => true, 'contact_email' => 'publico@example.test'])->assertRedirect(route('profile'));
         $this->assertSame(ProfessionalVerificationStatus::Verified, $profile->fresh()->verification_status);
-        $this->put('/perfil/profesional', ['visibility' => 'public', 'contact_visible' => true, 'headline' => 'Nueva presentación'])->assertRedirect(route('profile'));
+        $this->confirmedProfessionalUpdate(['visibility' => 'public', 'contact_visible' => true, 'headline' => 'Nueva presentación'])->assertRedirect(route('profile'));
         $this->assertSame(ProfessionalVerificationStatus::Unverified, $profile->fresh()->verification_status);
         $this->assertNull($profile->fresh()->verified_at);
         $this->get('/profesionales/'.$user->id)->assertSee('Sin verificar')->assertDontSee('Perfil verificado');
