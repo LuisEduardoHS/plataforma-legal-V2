@@ -4,19 +4,24 @@
     @vite(['resources/css/professionals.css'])
 @endsection
 @section('content')
-<div class="profile-editor min-h-screen bg-bg dark:bg-bg-dark text-text dark:text-text-dark pb-24">
+<div data-profile-location data-location-catalog-state="{{ $selectedState }}" data-municipalities-url="{{ route($isProfessional ? 'profile.professional.edit' : 'profile.edit') }}" class="profile-editor min-h-screen bg-bg dark:bg-bg-dark text-text dark:text-text-dark pb-24">
     <div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         <a href="{{ route('profile') }}" class="underline">← Volver a mi perfil</a>
         <h1 class="text-2xl font-bold">{{ $isProfessional ? 'Presentación profesional' : 'Editar mi perfil' }}</h1>
         @if ($errors->any())<div role="alert" class="profile-panel"><h2 class="font-semibold">Revisa el formulario</h2><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
         @if ($isProfessional)<p class="text-sm">Crear este perfil no acredita credenciales ni concede permisos. Los cambios de presentación, cédula, experiencia, modalidad, ubicación o especialidades invalidan la verificación existente. <a class="underline" href="{{ route('verification') }}">Consultar mi verificación y solicitudes</a>.</p>@endif
-        <form method="GET" class="profile-panel" action="{{ route($isProfessional ? 'profile.professional.edit' : 'profile.edit') }}">
+        <form data-location-form method="GET" class="profile-panel" action="{{ route($isProfessional ? 'profile.professional.edit' : 'profile.edit') }}">
             <h2 class="font-semibold">Ubicación</h2>
-            <p class="text-sm">Elige el estado y carga sus municipios antes de editar. Cargar el catálogo vuelve a abrir el formulario sin guardar los cambios.</p>
-            <div class="profile-field"><label for="state_id">Estado del catálogo</label><select name="state_id" id="state_id"><option value="">Seleccionar estado</option>@foreach ($states as $state)<option value="{{ $state->id }}" @selected((string) $selectedState === (string) $state->id)>{{ $state->name }}</option>@endforeach</select></div>
-            <button class="profile-button-secondary">Cargar municipios</button>
+            <div data-location-fallback class="text-sm space-y-3">
+                <p>Sin JavaScript, cargar municipios recarga la página y descarta los cambios sin guardar, la cédula escrita y los archivos seleccionados. Guarda primero tus cambios, vuelve a editar y carga el catálogo antes de continuar.</p>
+                <button type="submit" form="profile-edit-form" class="profile-button-secondary">Guardar primero mis cambios</button>
+                <label class="flex items-start gap-2"><input data-location-ack type="checkbox" required>Entiendo que cargar municipios y recargar descarta los cambios sin guardar.</label>
+            </div>
+            <div class="profile-field"><label for="state_id">Estado del catálogo</label><select data-location-state name="state_id" id="state_id" aria-describedby="profile-location-status"><option value="">Seleccionar estado</option>@foreach ($states as $state)<option value="{{ $state->id }}" @selected((string) $selectedState === (string) $state->id)>{{ $state->name }}</option>@endforeach</select></div>
+            <button data-location-load type="submit" class="profile-button-secondary">Cargar municipios y recargar</button>
+            <p id="profile-location-status" data-location-status role="status" aria-live="polite" aria-atomic="true" class="text-sm"></p>
         </form>
-        <form method="POST" action="{{ route($isProfessional ? 'profile.professional.update' : 'profile.update') }}" class="profile-panel space-y-5">
+        <form id="profile-edit-form" data-profile-edit-form method="POST" action="{{ route($isProfessional ? 'profile.professional.update' : 'profile.update') }}" class="profile-panel space-y-5">
             @csrf @method('PUT')
             @if (! $isProfessional)
                 <x-profiles.field name="display_name" label="Nombre público (opcional)" :value="$profile['display_name'] ?? null" maxlength="150" autocomplete="nickname" />
@@ -43,7 +48,7 @@
                 <input type="hidden" name="contact_visible" value="0">
                 <label class="flex items-start gap-2"><input type="checkbox" name="contact_visible" value="1" @checked(old('contact_visible', $profile['contact_visible'] ?? false))>Autorizo publicar este correo y teléfono en mi presentación profesional pública.</label>
             @endif
-            <div class="profile-field"><label for="municipality_id">Municipio</label><select id="municipality_id" name="municipality_id"><option value="">Sin ubicación</option>@foreach ($municipalities as $municipality)<option value="{{ $municipality->id }}" @selected((string) old('municipality_id', $profile['municipality_id'] ?? '') === (string) $municipality->id)>{{ $municipality->name }}</option>@endforeach</select></div>
+            <div class="profile-field"><label for="municipality_id">Municipio</label><select data-location-municipality id="municipality_id" name="municipality_id" aria-describedby="profile-location-status{{ $errors->has('municipality_id') ? ' municipality_id-error' : '' }}" @if ($errors->has('municipality_id')) aria-invalid="true" @endif><option value="" @selected($selectedMunicipality === '')>Sin ubicación</option>@foreach ($municipalities as $municipality)<option value="{{ $municipality->id }}" @selected($selectedMunicipality === (string) $municipality->id)>{{ $municipality->name }}</option>@endforeach</select>@error('municipality_id')<p id="municipality_id-error" class="text-sm">{{ $message }}</p>@enderror</div>
             <x-profiles.field name="website" label="Sitio web" type="url" :value="$profile['website'] ?? null" maxlength="2048" placeholder="https://" />
             <div class="profile-field"><label for="visibility">Visibilidad de este perfil</label><select id="visibility" name="visibility" required><option value="private" @selected(old('visibility', $profile['visibility'] ?? 'private') === 'private')>Privado</option><option value="public" @selected(old('visibility', $profile['visibility'] ?? 'private') === 'public')>Público</option></select></div>
             <p class="text-sm">La visibilidad personal y la profesional son independientes. El correo de tu cuenta, la cédula y los documentos nunca se publican.</p>

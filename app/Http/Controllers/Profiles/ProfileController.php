@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\ViewErrorBag;
 
 class ProfileController extends Controller
 {
@@ -42,6 +43,20 @@ class ProfileController extends Controller
 
     private function editForm(Request $request, bool $isProfessional)
     {
+        if ($request->expectsJson()) {
+            $validator = Validator::make($request->query(), ['state_id' => ['required', 'integer', 'exists:states,id']]);
+            if ($validator->fails() || array_diff(array_keys($request->query()), ['state_id'])) {
+                return response()->json(['message' => 'Selecciona un estado válido.'], 422)
+                    ->header('Cache-Control', 'private, no-store')->header('Vary', 'Accept');
+            }
+
+            return $this->read(fn () => response()->json([
+                'state_id' => (int) $validator->validated()['state_id'],
+                'municipalities' => Municipality::where('state_id', $validator->validated()['state_id'])
+                    ->orderBy('name')->get(['id', 'name']),
+            ])->header('Cache-Control', 'private, no-store')->header('Vary', 'Accept'));
+        }
+
         $validator = Validator::make($request->only('state_id'), ['state_id' => ['nullable', 'integer', 'exists:states,id']]);
         if ($validator->fails()) {
             return to_route($isProfessional ? 'profile.professional.edit' : 'profile.edit')->withErrors(['state_id' => 'Selecciona un estado válido.']);
@@ -51,16 +66,26 @@ class ProfileController extends Controller
         return $this->read(function () use ($request, $isProfessional, $state) {
             [$personal, $professional] = $this->ownData($request);
             $profile = $isProfessional ? $professional : $personal;
-            $selectedState = $state['state_id'] ?? $profile['state_id'] ?? null;
+            // A failed submission may return to a URL whose state predates the live catalog.
+            $errors = $request->session()->get('errors');
+            $recovering = $errors instanceof ViewErrorBag && $errors->any();
+            $old = $request->session()->getOldInput();
+            $hasOldMunicipality = $recovering && array_key_exists('municipality_id', $old);
+            $invalidMunicipality = $recovering && $errors->has('municipality_id');
+            $oldMunicipality = $hasOldMunicipality ? $old['municipality_id'] : null;
+            $oldState = $hasOldMunicipality && ! $invalidMunicipality && is_scalar($oldMunicipality) && ctype_digit((string) $oldMunicipality)
+                ? Municipality::whereKey($oldMunicipality)->value('state_id') : null;
+            $selectedState = $oldState ?? $state['state_id'] ?? $profile['state_id'] ?? null;
             $municipalities = Municipality::where('state_id', $selectedState)->orderBy('name')->get(['id', 'name']);
-            if ($profile && $profile['municipality_id'] && ! $municipalities->contains('id', $profile['municipality_id'])) {
-                $municipalities->push(Municipality::findOrFail($profile['municipality_id'], ['id', 'name']));
+            $selectedMunicipality = $hasOldMunicipality ? $oldMunicipality : ($profile['municipality_id'] ?? null);
+            if ($invalidMunicipality || ! is_scalar($selectedMunicipality) || ! $municipalities->contains('id', $selectedMunicipality)) {
+                $selectedMunicipality = '';
             }
 
             return view('pages.profile.edit', [
                 'profile' => $profile, 'isProfessional' => $isProfessional,
                 'states' => State::orderBy('name')->get(['id', 'name']),
-                'selectedState' => $selectedState, 'municipalities' => $municipalities,
+                'selectedState' => $selectedState, 'municipalities' => $municipalities, 'selectedMunicipality' => (string) $selectedMunicipality,
                 'specialties' => $isProfessional ? LegalSpecialty::active()->ordered()->get(['id', 'name']) : collect(),
             ]);
         });

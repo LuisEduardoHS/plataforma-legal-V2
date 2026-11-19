@@ -45,7 +45,9 @@ abstract class ProfileFormRequest extends FormRequest
         // Invalid arrays must never reach Blade string fields; credentials never return.
         $old = [];
         foreach ($this->rules() as $key => $rules) {
-            if ($key !== 'license_number' && is_string($this->input($key))) {
+            if ($key === 'municipality_id' && $this->exists($key) && $this->input($key) === null) {
+                $old[$key] = null;
+            } elseif ($key !== 'license_number' && is_string($this->input($key))) {
                 $old[$key] = mb_substr($this->input($key), 0, 10000);
             }
         }

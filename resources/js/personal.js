@@ -1,5 +1,8 @@
 import { onPage } from './ui/page.js';
 import { normalize } from './saved/store.js';
+import { setupProfileLocation } from './profiles/location.js';
+
+onPage('[data-profile-location]', setupProfileLocation);
 
 onPage('[data-help]', (root) => {
     root.querySelector('[data-help-tools]').hidden = false;
