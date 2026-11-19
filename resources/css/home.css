@@ -1,5 +1,5 @@
 .home-dashboard {
- --home-page:#efefef; --home-surface:#fff; --home-soft:#f6f6f6; --home-text:#242424; --home-muted:#6e6e73; --home-focus:#82828b; --home-link:var(--color-accent); --home-lexa:var(--color-lexa); --home-tint:color-mix(in srgb,var(--color-accent) 8%,var(--home-surface));
+ --home-page:#efefef; --home-surface:#fff; --home-soft:#f6f6f6; --home-text:#242424; --home-muted:var(--color-light-text); --home-focus:#82828b; --home-link:var(--color-accent); --home-lexa:var(--color-lexa); --home-tint:color-mix(in srgb,var(--color-accent) 8%,var(--home-surface));
  background:var(--home-page); color:var(--home-text); font-family:var(--font-sans),sans-serif; min-height:calc(100dvh - 72px); padding:28px 24px 64px; font-size:15px; line-height:1.5;
 }
 .home-dashboard *, .home-dashboard *::before,.home-dashboard *::after { box-sizing:border-box; }

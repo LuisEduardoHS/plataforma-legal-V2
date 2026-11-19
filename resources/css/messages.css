@@ -4,7 +4,7 @@
     --messages-soft: #f8f8f8;
     --messages-hover: #eee;
     --messages-text: #242424;
-    --messages-muted: #737378;
+    --messages-muted: var(--color-light-text);
     --messages-border: #ececef;
     --messages-focus: #85858e;
     /* Primary actions, selected conversations, then unread/activity signals. */
@@ -243,6 +243,6 @@
 .messages-edit { max-width:760px; margin:32px auto; padding:24px 20px 90px; line-height:1.7; }
 .messages-edit h1 { font-size:26px; font-weight:650; }
 .messages-edit label { display:grid; gap:8px; margin:24px 0; }
-.messages-edit textarea { width:100%; padding:14px; background:var(--color-bg); color:inherit; border:1px solid var(--color-light-text); border-radius:var(--radius-ui); }
-@media(prefers-color-scheme:dark) { .messages-edit textarea { background:var(--color-surface-dark); } .messages-edit .messages-action { background:var(--color-accent-bg-dark); color:var(--color-accent-text-dark); } }
+.messages-edit textarea { width:100%; padding:14px; background:var(--color-bg); color:inherit; border:1px solid var(--color-control-border); border-radius:var(--radius-ui); }
+@media(prefers-color-scheme:dark) { .messages-edit textarea { background:var(--color-surface-dark); border-color:var(--color-focus-dark); } .messages-edit .messages-action { background:var(--color-accent-bg-dark); color:var(--color-accent-text-dark); } }
 @media(max-width:639px) { .messages-action,.messages-filters a { min-height:44px; } .messages-prepared-file .messages-action { font-size:11px; padding:4px 8px; } }

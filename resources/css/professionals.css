@@ -4,7 +4,7 @@
     --professionals-soft: #f3f3f3;
     --professionals-hover: #eaeaea;
     --professionals-text: #262626;
-    --professionals-muted: #717176;
+    --professionals-muted: var(--color-light-text);
     --professionals-focus: #918b92;
     --professionals-link: var(--color-accent);
     --professionals-tint: color-mix(in srgb, var(--color-accent) 9%, var(--professionals-surface));
@@ -245,7 +245,7 @@
 .profile-editor .profile-panel { background: white; padding: 24px; border-radius: 16px; border: 1px solid #eee; }
 .profile-editor .profile-field { display: grid; gap: 8px; margin: 16px 0; min-width: 0; }
 .profile-editor .profile-field label { font-size: 14px; font-weight: 600; }
-.profile-editor .profile-field :is(input,textarea,select) { width: 100%; min-width: 0; padding: 10px 12px; min-height: 44px; border: 1px solid #ccc; border-radius: var(--radius-ui); background: transparent; color: inherit; font: inherit; }
+.profile-editor .profile-field :is(input,textarea,select) { width: 100%; min-width: 0; padding: 10px 12px; min-height: 44px; border: 1px solid var(--color-control-border); border-radius: var(--radius-ui); background: transparent; color: inherit; font: inherit; }
 .profile-editor .profile-field input[type=file] { overflow: hidden; }
 .profile-editor input[type=checkbox] { accent-color: var(--color-dark-accent); margin-top: 4px; flex-shrink: 0; }
 .profile-editor :is(input,textarea,select,button,a):focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
@@ -256,6 +256,6 @@
 .profile-editor .profile-error { font-size: 14px; color: #9e1f52; }
 @media (prefers-color-scheme: dark) {
     .profile-editor .profile-panel { background: var(--color-surface-dark); border-color: var(--color-border-dark); }
-    .profile-editor .profile-field :is(input,textarea,select) { border-color: #666; color-scheme: dark; }
+    .profile-editor .profile-field :is(input,textarea,select) { border-color: var(--color-focus-dark); color-scheme: dark; }
     .profile-editor .profile-error { color: #ffb0cc; }
 }

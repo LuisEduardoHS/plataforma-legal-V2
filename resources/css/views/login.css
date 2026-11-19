@@ -7,6 +7,12 @@
 
 .login-input {
     @apply bg-bg dark:bg-bg-dark rounded-md w-full text-text dark:text-text-dark font-medium py-3 px-3 focus:outline-none focus:ring-2 focus:ring-dark-accent dark:focus:ring-light-accent;
+    border: 1px solid var(--color-control-border);
+}
+
+#remember:not(:checked) { border-color: var(--color-control-border); }
+@media (prefers-color-scheme: dark) {
+    .login-input, #remember:not(:checked) { border-color: var(--color-focus-dark); }
 }
 
 .login-remember-label {

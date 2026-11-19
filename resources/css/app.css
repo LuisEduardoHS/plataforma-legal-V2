@@ -19,7 +19,8 @@
     --color-lexa-rose: #B32667;
 
     --color-text: #1A1A1A;
-    --color-light-text: #848484;
+    --color-light-text: #68616F;
+    --color-control-border: #827987;
     
     --color-bg: #EEEEEE;
     --color-accent-bg: #E6E6E6;
@@ -132,3 +133,31 @@
 .content-save-message { position:absolute; z-index:5; right:0; top:100%; width:min(240px,70vw); padding:12px; background:var(--color-bg); color:var(--color-text); border:1px solid var(--color-accent); border-radius:var(--radius-ui); font-size:12px; line-height:1.5; box-shadow:0 4px 12px #0002; }
 .content-save-message[hidden] { display:none; }
 @media(prefers-color-scheme:dark) { .content-save-control .resource-save.is-saved { color:var(--color-accent-text-dark); } .content-save-message { background:var(--color-surface-dark); color:var(--color-text-dark); } }
+
+/* Shared, semantic controls; decorative surfaces keep their existing borders. */
+.ui-skip-link { position:fixed; top:8px; left:8px; z-index:1000; padding:12px 18px; border-radius:var(--radius-ui); background:var(--color-dark-accent); color:white; transform:translateY(-180%); }
+.ui-skip-link:focus { transform:none; outline:3px solid currentColor; outline-offset:3px; }
+.ui-field { display:grid; gap:6px; min-width:0; }
+.ui-field > label { font-size:14px; font-weight:600; }
+.ui-input { width:100%; min-width:0; padding:11px 12px; border:1px solid var(--color-control-border); border-radius:var(--radius-ui); background:white; color:var(--color-text); font:inherit; }
+.ui-input::placeholder { color:var(--color-light-text); opacity:1; }
+.ui-field-error { color:#B42318; font-size:14px; overflow-wrap:anywhere; }
+.ui-error-summary { padding:16px; margin-bottom:20px; border:2px solid #B42318; border-radius:var(--radius-ui); background:white; color:#B42318; overflow-wrap:anywhere; }
+.ui-error-summary h2 { font-weight:700; }
+.ui-error-summary ul { list-style:disc; padding-left:20px; }
+.ui-error-summary a { text-decoration:underline; }
+#app :where(input,textarea,select,fieldset,[data-validation-summary]), #main-content { scroll-margin-block:6rem; }
+.ui-error-summary:focus { outline:3px solid var(--color-dark-accent); outline-offset:3px; }
+.ui-dialog { margin:auto; width:min(400px,calc(100% - 32px)); max-height:calc(100dvh - 32px); padding:0; border:0; border-radius:16px; background:white; color:var(--color-text); overflow:auto; }
+.ui-dialog::backdrop { background:rgb(0 0 0 / .5); }
+.ui-dialog-panel { padding:24px; display:grid; gap:20px; text-align:center; overflow-wrap:anywhere; }
+.ui-dialog-panel > p { color:var(--color-light-text); line-height:1.6; }
+.ui-dialog :is(button,a):focus-visible, .ui-input:focus-visible { outline:3px solid var(--color-dark-accent); outline-offset:3px; }
+@media (prefers-color-scheme:dark) {
+    .ui-input, .ui-error-summary, .ui-dialog { background:var(--color-surface-dark); color:var(--color-text-dark); }
+    .ui-input { border-color:var(--color-focus-dark); }
+    .ui-input::placeholder, .ui-dialog-panel > p { color:var(--color-light-text-dark); }
+    .ui-field-error, .ui-error-summary { color:#FDA4AF; }
+    .ui-error-summary { border-color:#FDA4AF; }
+    .ui-error-summary:focus, .ui-dialog :is(button,a):focus-visible, .ui-input:focus-visible { outline-color:var(--color-focus-dark); }
+}

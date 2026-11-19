@@ -23,8 +23,9 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
 </head>
 <body data-turbo="false" class="min-h-screen bg-white dark:bg-bg-dark text-gray-900 dark:text-text-dark">
+    <a class="ui-skip-link" href="#main-content">Saltar al contenido</a>
 
-    <main>
+    <main id="main-content" tabindex="-1">
         @yield('content')
     </main>
 

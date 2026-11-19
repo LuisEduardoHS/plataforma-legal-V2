@@ -11,7 +11,7 @@
             @auth<a href="{{ route('saved') }}">Mis guardados</a><a href="{{ route($kind->permission().'.workspace') }}">Mi espacio editorial</a>@endauth
         </nav>
         @if (session('status'))<p class="content-notice" role="status">{{ session('status') }}</p>@endif
-        @if ($errors->any())<div class="content-error" role="alert"><h2>Revisa el formulario</h2><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+        @hasSection('library-errors') @yield('library-errors') @else <x-ui.error-summary /> @endif
         @yield('library-content')
     </div>
 </section>

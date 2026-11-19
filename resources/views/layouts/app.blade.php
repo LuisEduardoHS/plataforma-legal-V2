@@ -29,6 +29,7 @@
 </head>
 
 <body class="min-h-screen bg-gray-50 dark:bg-bg-dark text-gray-900 dark:text-text-dark">
+    <a class="ui-skip-link" href="#main-content">Saltar al contenido</a>
 
     <div id="app" class="min-h-screen">
 

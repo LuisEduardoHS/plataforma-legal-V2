@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Configuración | Plataforma Legal')
 @section('content')
-<div x-data="{ activeTab: 'profile', searchQuery: '', showLogoutModal: false }" class="min-h-screen bg-bg dark:bg-bg-dark flex flex-col font-sans pb-24 lg:pb-16 text-text dark:text-text-dark relative" @keydown.escape.window="showLogoutModal = false">
+<div x-data="{ activeTab: 'profile', searchQuery: '' }" class="min-h-screen bg-bg dark:bg-bg-dark flex flex-col font-sans pb-24 lg:pb-16 text-text dark:text-text-dark relative" data-dialog-root>
     <div class="w-full max-w-[1080px] mx-auto px-4 sm:px-6 pt-7">
         <div class="flex flex-col lg:flex-row gap-5 items-start">
             <aside class="w-full lg:w-64 xl:w-72 shrink-0">
@@ -21,7 +21,7 @@
                             />
                             <button
                                 x-show="searchQuery !== ''"
-                                @click="searchQuery = ''"
+                                @click="searchQuery = ''" aria-label="Borrar búsqueda de configuración" type="button"
                                 class="absolute right-2.5 top-1/2 -translate-y-1/2 text-light-text dark:text-light-text-dark hover:text-text dark:hover:text-text-dark cursor-pointer"
                                 style="display: none;"
                             >
@@ -30,7 +30,7 @@
                         </div>
 
                         {{-- Navigation Sections --}}
-                        <nav class="flex flex-col gap-4">
+                        <nav class="flex flex-col gap-4" aria-label="Secciones de configuración">
                             
                             {{-- Grupo: Tu cuenta --}}
                             <div x-show="searchQuery === '' || 'perfil privacidad seguridad'.includes(searchQuery.toLowerCase())">
@@ -92,12 +92,12 @@
 
                     {{-- Bottom "Cerrar sesión" button --}}
                     <div class="pt-6">
-                        <button
-                            @click="showLogoutModal = true"
+                        <form method="POST" action="{{ route('logout') }}" data-turbo="false">@csrf
+                        <button type="submit" data-dialog-open
                             class="w-full bg-dark-accent dark:bg-light-accent hover:opacity-90 transition-opacity text-white dark:text-black font-semibold text-xs py-2.5 px-4 rounded-xl cursor-pointer shadow-xs text-center"
                         >
                             Cerrar sesión
-                        </button>
+                        </button></form>
                     </div>
                 </div>
             </aside>
@@ -144,31 +144,17 @@
             </section>
         </div>
     </div>
-    {{-- Modal: Confirmar Cerrar Sesión --}}
-    <div x-show="showLogoutModal" 
-         role="dialog" aria-modal="true" aria-labelledby="settings-logout-title" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
-         style="display: none;">
-        <div @click.away="showLogoutModal = false" class="bg-white dark:bg-surface-dark rounded-2xl max-w-sm w-full p-5 shadow-xl text-center">
-            <div class="size-12 rounded-full bg-red-50 dark:bg-red-900/20 text-dark-accent dark:text-accent-text-dark flex items-center justify-center mx-auto mb-3">
-                <x-lucide-log-out class="w-[22px] h-[22px] stroke-[2]" />
-            </div>
-            <h3 id="settings-logout-title" class="font-bold text-base text-text dark:text-text-dark mb-1.5">¿Cerrar sesión?</h3>
-            <p class="text-xs text-light-text dark:text-light-text-dark mb-5 leading-relaxed">Tendrás que volver a ingresar tus credenciales para acceder a tus consultas legales y perfil.</p>
-
-            <div class="flex items-center gap-2.5">
-                <button @click="showLogoutModal = false" class="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-[#EEEEEE] dark:bg-accent-bg-dark text-text dark:text-text-dark hover:bg-gray-200 dark:hover:bg-accent-bg-hover-dark cursor-pointer transition-colors">
-                    Cancelar
-                </button>
-                
-                {{-- Formulario oficial de Laravel para cerrar sesión seguro --}}
-                <form method="POST" action="{{ route('logout') }}" data-turbo="false" class="flex-1">
-                    @csrf
-                    <button type="submit" class="w-full py-2.5 rounded-xl text-xs font-semibold bg-dark-accent dark:bg-light-accent text-white dark:text-black hover:opacity-90 cursor-pointer transition-opacity">
-                        Cerrar sesión
-                    </button>
+    <dialog id="settings-logout" class="ui-dialog" aria-labelledby="settings-logout-title" aria-describedby="settings-logout-description">
+        <div class="ui-dialog-panel">
+            <h2 id="settings-logout-title" class="text-lg font-bold">¿Cerrar sesión?</h2>
+            <p id="settings-logout-description">Tendrás que volver a ingresar tus credenciales para acceder a tus consultas legales y perfil.</p>
+            <div class="flex flex-wrap gap-3 justify-center">
+                <button type="button" data-dialog-close data-dialog-initial autofocus class="px-4 py-3 rounded-xl border">Cancelar</button>
+                <form method="POST" action="{{ route('logout') }}" data-turbo="false">@csrf
+                    <button type="submit" class="px-4 py-3 rounded-xl bg-dark-accent text-white">Cerrar sesión</button>
                 </form>
             </div>
         </div>
-    </div>
+    </dialog>
 </div>
 @endsection

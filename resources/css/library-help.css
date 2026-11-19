@@ -1,5 +1,5 @@
 .personal-page {
-    --personal-surface: #fff; --personal-soft: var(--color-light-hover); --personal-muted: #6e6e73;
+    --personal-surface: #fff; --personal-soft: var(--color-light-hover); --personal-muted: var(--color-light-text);
     --personal-line: var(--color-accent-bg); --personal-link: var(--color-accent);
     background: var(--color-bg); color: var(--color-text); min-height: calc(100dvh - 72px);
     padding: 32px 24px 64px; font-family: var(--font-sans), sans-serif; font-size: 15px; line-height: 1.55;
