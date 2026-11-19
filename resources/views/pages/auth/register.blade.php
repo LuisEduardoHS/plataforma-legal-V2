@@ -26,6 +26,7 @@
                     <p role="alert" class="mb-4 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                 @enderror
                 @csrf
+                @if ($hasReadingReturn ?? false)<p role="status" class="mb-4 text-sm">Al entrar intentaremos volver al contenido que elegiste. Después podrás decidir si guardar o contactar; esa acción todavía no se ha realizado.</p>@endif
 
                 {{-- Account name; profiles remain optional. --}}
                 <div class="mb-4">

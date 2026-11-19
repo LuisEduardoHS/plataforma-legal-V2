@@ -9,6 +9,6 @@
             <p class="content-save-message" data-save-message role="status" aria-live="polite" hidden></p>
         </div>
     @else
-        <a class="resource-save" href="{{ route('login') }}" aria-label="Inicia sesión para guardar"><x-lucide-bookmark aria-hidden="true" /></a>
+        <a class="resource-save" href="{{ App\Services\Auth\ReadingReturn::loginUrl($type, $id) }}" aria-label="Inicia sesión para guardar"><x-lucide-bookmark aria-hidden="true" /></a>
     @endauth
 @endif

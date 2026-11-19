@@ -38,6 +38,7 @@
 
         {{-- Contenido particular de cada página --}}
         <main id="main-content" tabindex="-1">
+            @if (session('auth_reading_notice'))<p role="status" class="max-w-3xl mx-auto px-4 py-4 text-sm">{{ session('auth_reading_notice') }}</p>@endif
             @yield('content')
         </main>
 
