@@ -47,7 +47,7 @@
                         <details class="help-faq" data-help-question data-category="{{ $question['category'] }}">
                             <summary class="!py-4 !px-5 !text-[14.5px]">{{ $question['question'] }}<x-lucide-chevron-down aria-hidden="true" /></summary>
                             <div class="help-answer !px-5 !pb-5">
-                                <span class="mb-2 inline-flex items-center rounded-full bg-accent/10 px-2.5 py-0.5 text-[11px] font-semibold text-accent dark:bg-selected-dark dark:text-accent-text-dark">{{ ['available' => 'Disponible', 'configuration' => 'Requiere configuración de entrega', 'demo' => 'Demostración', 'future' => 'Funcionalidad futura'][$question['status']] }}</span>
+                                <span class="help-availability !mb-2 !inline-flex items-center !rounded-full !bg-accent/10 !px-2.5 !py-0.5 !text-[11px] font-semibold !text-accent dark:!bg-selected-dark dark:!text-accent-text-dark">{{ ['available' => 'Disponible', 'configuration' => 'Requiere configuración de entrega', 'demo' => 'Demostración', 'future' => 'Funcionalidad futura'][$question['status']] }}</span>
                                 <p>{{ $question['answer'] }}</p>
                                 @if (isset($question['route']))
                                     <a class="!text-accent dark:!text-accent-text-dark" href="{{ route($question['route']) }}">
