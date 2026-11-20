@@ -8,6 +8,7 @@ use App\Models\UserProfile;
 use App\Policies\LexaConversationPolicy;
 use App\Policies\ProfilePolicy;
 use App\Services\Lexa\Contracts\AiProvider;
+use App\Services\Lexa\Providers\GeminiAiProvider;
 use App\Services\Lexa\Providers\NullAiProvider;
 use App\Support\CommunityCardIcons;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -24,7 +25,13 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(CommunityCardIcons::class);
-        $this->app->bind(AiProvider::class, NullAiProvider::class);
+        $this->app->bind(AiProvider::class, function ($app) {
+            if (config('lexa.enabled_generation', false) && config('lexa.provider') === 'gemini') {
+                return $app->make(GeminiAiProvider::class);
+            }
+
+            return $app->make(NullAiProvider::class);
+        });
     }
 
     /**
