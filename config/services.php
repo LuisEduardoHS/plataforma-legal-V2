@@ -43,4 +43,12 @@ return [
         'connect_timeout' => (int) env('GEMINI_CONNECT_TIMEOUT', 5),
     ],
 
+    'sidof' => [
+        'base_url' => env('SIDOF_BASE_URL', 'https://sidof.segob.gob.mx'),
+        'timeout' => (int) env('SIDOF_TIMEOUT', 15),
+        'connect_timeout' => (int) env('SIDOF_CONNECT_TIMEOUT', 5),
+        'max_response_bytes' => (int) env('SIDOF_MAX_RESPONSE_BYTES', 2_000_000),
+        'allowed_hosts' => ['sidof.segob.gob.mx', 'www.dof.gob.mx', 'dof.gob.mx'],
+    ],
+
 ];
