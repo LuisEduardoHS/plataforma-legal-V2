@@ -31,7 +31,7 @@
 <header class="platform-header bg-white dark:bg-surface-dark w-full py-0.5 sm:py-2 lg:px-6 px-3 lg:h-18 sm:h-16 h-12 flex items-center justify-between">
 
     {{-- Desktop Logo --}}
-    <div class="lg:inline hidden bg-linear-to-l from-dark-accent to-light-accent lg:size-11 size-8 rounded-full"></div>
+    <span class="lefenda-logo platform-brand-logo platform-brand-logo-desktop" aria-hidden="true"></span>
 
     {{-- Desktop NavBar --}}
     <nav aria-label="Navegación principal" class="lg:flex hidden space-x-2 absolute left-1/2 transform -translate-x-1/2">
@@ -71,7 +71,7 @@
     <x-header.account-menu />
 
     {{-- Mobile Logo --}}
-    <div class="lg:hidden space-x-2 absolute left-1/2 transform -translate-x-1/2 bg-linear-to-l from-dark-accent to-light-accent sm:size-9 size-8 rounded-lg"></div>
+    <span class="lefenda-logo platform-brand-logo platform-brand-logo-mobile absolute left-1/2 transform -translate-x-1/2" aria-hidden="true"></span>
 
     <a href="{{ route('lexa') }}" @if (request()->routeIs('lexa')) aria-current="page" @endif
        class="lg:hidden inline-flex min-h-11 items-center gap-1.5 rounded-ui bg-accent-bg-hover dark:bg-accent-bg-dark dark:hover:bg-accent-bg-hover-dark px-3 py-2 text-xs font-semibold text-lexa dark:text-lexa-dark focus-visible:outline-2 focus-visible:outline-offset-2"

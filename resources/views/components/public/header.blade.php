@@ -18,7 +18,7 @@
 @endphp
 <header class="public-header">
     <div class="public-header-inner">
-        <a class="public-brand" href="{{ route('landing') }}" aria-label="Plataforma Legal, portada" @if (request()->routeIs('landing')) aria-current="page" @endif><span class="public-brand-mark" aria-hidden="true"></span>Plataforma Legal</a>
+        <a class="public-brand" href="{{ route('landing') }}" aria-label="Plataforma Legal, portada" @if (request()->routeIs('landing')) aria-current="page" @endif><span class="lefenda-logo public-brand-logo" aria-hidden="true"></span></a>
         <nav class="public-navigation" aria-label="Navegación pública">
             <div class="public-desktop-links">
                 @foreach ($publicLinks as $link)<a href="{{ route($link['route']) }}" @if ($link['current']) aria-current="page" @endif>{{ $link['label'] }}</a>@endforeach

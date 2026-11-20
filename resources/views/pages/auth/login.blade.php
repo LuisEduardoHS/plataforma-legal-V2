@@ -28,7 +28,6 @@
                 @csrf
                 @if ($hasReadingReturn ?? false)<p role="status" class="mb-4 text-sm">Al entrar intentaremos volver al contenido que elegiste. Después podrás decidir si guardar o contactar; esa acción todavía no se ha realizado.</p>@endif
 
-                <p class="mb-4 text-sm"><a class="underline" href="{{ route('password.request') }}">¿Olvidaste tu contraseña?</a></p>
                 {{-- Email --}}
                 <div class="mb-4">
                     <label for="email" class="login-input-label">Correo electrónico</label>
@@ -70,7 +69,7 @@
             {{-- Forgot Password --}}
             <div class="mt-2 text-end">
                 @if (Route::has('password.request'))
-                    <a href="{{ route('password.request') }}" class="login-link">Olvidé mi contraseña</a>
+                    <a href="{{ route('password.request') }}" class="login-link" href="{{ route('password.request') }}">Olvidé mi contraseña</a>
                 @else
                     <span class="login-link" aria-disabled="true" title="Disponible en una próxima integración">Recuperación de contraseña próximamente</span>
                 @endif
