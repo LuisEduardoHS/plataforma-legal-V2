@@ -1,9 +1,20 @@
 @if ($history->nextPageUrl() || $history->previousPageUrl())<nav class="messages-pagination" aria-label="Paginación del historial">@if ($history->nextPageUrl())<a href="{{ $history->nextPageUrl() }}">Mensajes anteriores</a>@endif @if ($history->previousPageUrl())<a href="{{ $history->previousPageUrl() }}">Más recientes</a>@endif<a href="{{ route('messages.show', $context['id']) }}">Volver al historial reciente</a></nav>@endif
+@php($lastDay = null)
 @forelse (array_reverse($history->items()) as $message)
-    <article class="messages-bubble {{ $message['sender_id'] === $actorId ? 'is-own' : '' }}" data-message-id="{{ $message['id'] }}">
+    @php($sentInstant = Illuminate\Support\Carbon::parse($message['sent_at'], 'UTC'))
+    @php($dayKey = $sentInstant->toDateString())
+    @if ($dayKey !== $lastDay)
+        @php($lastDay = $dayKey)
+        <div class="messages-date"><time data-message-time="day" datetime="{{ $sentInstant->toIso8601String() }}" title="{{ $message['sent_at'] }} UTC">{{ $dayKey }}</time></div>
+    @endif
+    <article class="messages-bubble {{ $message['sender_id'] === $actorId ? 'is-own' : '' }}{{ $message['status'] === 'deleted' ? ' is-deleted' : '' }}" data-message-id="{{ $message['id'] }}">
         <p>{{ $message['status'] === 'deleted' ? 'Mensaje eliminado para todos' : $message['content'] }}</p>
         <div class="messages-message-files">@foreach ($message['attachments'] as $file)<a class="messages-file" href="{{ route('messages.download', ['conversation' => $context['id'], 'message' => $message['id'], 'attachment' => $file['id']]) }}" data-turbo="false"><x-lucide-file-text aria-hidden="true" /><span><strong>{{ $file['name'] }}</strong><small>{{ strtoupper($file['extension']) }} · {{ max(1, (int) ceil($file['size_bytes'] / 1024)) }} KiB · Descargar</small></span><x-lucide-download aria-hidden="true" /></a>@endforeach</div>
-        <footer><time data-message-time="full" datetime="{{ Illuminate\Support\Carbon::parse($message['sent_at'], 'UTC')->toIso8601String() }}" title="{{ $message['sent_at'] }} UTC">{{ $message['sent_at'] }} UTC</time>@if ($message['edited_at'])<span>Editado</span>@endif @if ($message['sender_id'] === $actorId && $message['status'] === 'sent')<span>{{ ($message['read_by_other'] ?? false) ? 'Leído' : 'Guardado' }}</span>@endif</footer>
+        <footer>
+            <time data-message-time="full" datetime="{{ $sentInstant->toIso8601String() }}" title="{{ $message['sent_at'] }} UTC">{{ $message['sent_at'] }} UTC</time>
+            @if ($message['edited_at'])<span class="messages-meta-tag">Editado</span>@endif
+            @if ($message['sender_id'] === $actorId && $message['status'] === 'sent')<span class="messages-meta-status {{ ($message['read_by_other'] ?? false) ? 'is-read' : '' }}">{{ ($message['read_by_other'] ?? false) ? 'Leído' : 'Guardado' }}</span>@endif
+        </footer>
         <details class="messages-message-actions"><summary>Acciones del mensaje</summary><div>
             @if ($message['sender_id'] === $actorId && $message['status'] === 'sent')
                 @if ($context['can_send'])<a href="{{ route('messages.edit', ['conversation' => $context['id'], 'message' => $message['id']]) }}">Editar</a>@endif

@@ -1,7 +1,7 @@
 import { onPage } from '../ui/page.js';
 import { savedResponse } from './store.js';
 
-onPage('#main-content', (root, { listen, onCleanup }) => {
+onPage('#main-content', (root, { listen, onCleanup, onBeforeVisit, isVisiting }) => {
     const pending = new Set();
     const timers = new WeakMap();
     const activeMessages = new Set();
@@ -20,6 +20,9 @@ onPage('#main-content', (root, { listen, onCleanup }) => {
             activeMessages.delete(message);
         }, duration));
     };
+    onBeforeVisit?.(() => {
+        requests.abort();
+    });
     onCleanup(() => {
         requests.abort();
         activeMessages.forEach((message) => {
@@ -44,6 +47,7 @@ onPage('#main-content', (root, { listen, onCleanup }) => {
                 headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             });
             const data = await response.json().catch(() => null);
+            if (requests.signal.aborted || isVisiting?.()) return;
             const result = savedResponse(response.ok, response.status, data);
             root.querySelectorAll('[data-save-form]').forEach((other) => {
                 if (other.dataset.saveType !== form.dataset.saveType || other.dataset.saveId !== form.dataset.saveId) return;
@@ -56,13 +60,13 @@ onPage('#main-content', (root, { listen, onCleanup }) => {
             });
             showMessage(message, result.message);
             const card = form.closest('[data-library-item]');
-            if (card && !result.saved) {
+            if (card && !result.saved && !isVisiting?.()) {
                 // Refresh the server page so counts, cursors and revoked visibility
                 // are resolved again; never retain a local copy of the library.
                 window.location.reload();
             }
         } catch (error) {
-            if (error.name === 'AbortError') return;
+            if (error.name === 'AbortError' || isVisiting?.()) return;
             showMessage(message, error instanceof TypeError ? 'No se pudo conectar. Inténtalo nuevamente.' : error.message, 4000);
         } finally {
             pending.delete(key);

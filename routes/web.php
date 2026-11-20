@@ -130,7 +130,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/conversaciones/{recipient}', [MessagingConversationController::class, 'start'])->middleware('throttle:messaging.start')->block(60, 10)->name('start');
         Route::middleware('throttle:messaging.read')->group(function () {
             Route::get('/{conversation}', [InboxController::class, 'show'])->block(60, 10)->name('show');
-            Route::get('/{conversation}/actualizaciones', [InboxController::class, 'updates'])->block(60, 10)->name('updates');
+            Route::get('/{conversation}/actualizaciones', [InboxController::class, 'updates'])->name('updates');
             Route::get('/{conversation}/mensajes/{message}/editar', [MessageController::class, 'edit'])->block(60, 10)->name('edit');
         });
         Route::get('/{conversation}/mensajes/{message}/archivos/{attachment}', [MessagingAttachmentController::class, 'download'])->middleware('throttle:messaging.files')->block(60, 10)->name('download');

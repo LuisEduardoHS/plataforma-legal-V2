@@ -2,7 +2,7 @@ import { setupDialog } from '../ui/dialog.js';
 
 // The server decides materiality and supplies only categories and an authenticated proposal.
 export function setupProfessionalEditor(root, lifecycle) {
-    const { listen, onCleanup } = lifecycle;
+    const { listen, onCleanup, onBeforeVisit, isVisiting } = lifecycle;
     const form = root.querySelector('[data-professional-edit]');
     const confirmation = root.querySelector('[data-professional-confirmation]');
     const dialog = confirmation?.querySelector('dialog');
@@ -12,6 +12,9 @@ export function setupProfessionalEditor(root, lifecycle) {
     const trigger = confirmation.querySelector('[data-dialog-open]');
     let busy = false, disposed = false, finalSent = false, opener, controller;
     setupDialog(confirmation, lifecycle);
+    onBeforeVisit?.(() => {
+        controller?.abort();
+    });
     listen(dialog, 'close', () => { if (!disposed && opener?.isConnected) opener.focus(); });
     listen(final, 'submit', event => {
         if (finalSent) { event.preventDefault(); return; }
@@ -35,7 +38,7 @@ export function setupProfessionalEditor(root, lifecycle) {
                 headers: { Accept: 'application/json' }, signal: controller.signal,
             });
             const data = await response.json();
-            if (disposed) return;
+            if (disposed || isVisiting?.()) return;
             if (!response.ok) {
                 feedback.textContent = response.status === 409
                     ? 'Los datos o el expediente cambiaron. Abre de nuevo el editor antes de guardar.'
@@ -45,8 +48,10 @@ export function setupProfessionalEditor(root, lifecycle) {
                 return;
             }
             if (data.redirect) {
-                // The server returns the fixed profile route, never a client-selected destination.
-                window.location.assign(data.redirect);
+                if (!isVisiting?.()) {
+                    // The server returns the fixed profile route, never a client-selected destination.
+                    window.location.assign(data.redirect);
+                }
                 return;
             }
             if (!Array.isArray(data.categories) || typeof data.pending_change !== 'string' || typeof data.notice !== 'string') throw new Error('Invalid review');

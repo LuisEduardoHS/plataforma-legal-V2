@@ -14,12 +14,17 @@
                 <div class="lexa-atmosphere" aria-hidden="true"></div>
                 <header class="lexa-toolbar">
                     <button type="button" class="lexa-icon lexa-history-toggle" data-open-history aria-label="Abrir historial de consultas" aria-haspopup="dialog"><x-lucide-panel-left aria-hidden="true" /></button>
-                    <span class="lexa-session-title" data-session-title>Nueva consulta</span>
+                    <div class="lexa-toolbar-identity">
+                        <span class="lexa-toolbar-badge" aria-hidden="true"><x-lucide-scale /><span>LEXA</span></span>
+                        <span class="lexa-session-title" data-session-title>Nueva consulta</span>
+                        <span class="lexa-toolbar-mode" data-toolbar-mode hidden></span>
+                    </div>
                     <button type="button" class="lexa-icon" data-delete-session hidden aria-label="Eliminar conversación" title="Eliminar conversación"><x-lucide-trash-2 aria-hidden="true" /></button>
                     <button type="button" class="lexa-icon lexa-new-mobile" data-new-session aria-label="Nueva consulta"><x-lucide-square-pen aria-hidden="true" /></button>
                 </header>
                 <div class="lexa-content">
                     <div class="lexa-welcome" data-welcome>
+                        <span class="lexa-welcome-pill"><x-lucide-scale aria-hidden="true" /><span>Asistente jurídico informativo</span></span>
                         <h1>¿Qué necesitas entender?</h1>
                         <p>Cuéntame tu situación o haz una<br class="lexa-desktop-break"> pregunta legal con tus palabras.</p>
                     </div>
@@ -29,6 +34,7 @@
                     </div>
                     <div class="lexa-entry">
                         <div class="lexa-banner" data-lexa-banner role="status" aria-live="polite" hidden>
+                            <span class="lexa-banner-indicator" aria-hidden="true"></span>
                             <p data-lexa-banner-text></p>
                             <div class="lexa-banner-actions">
                                 <button type="button" class="lexa-banner-btn" data-lexa-banner-retry hidden>Reintentar</button>
@@ -75,6 +81,7 @@
         <template data-message-template>
             <article class="lexa-message">
                 <div class="lexa-message-author">
+                    <span class="lexa-author-mark" aria-hidden="true"></span>
                     <strong data-message-author></strong>
                     <button type="button" class="lexa-copy-btn" data-copy-message aria-label="Copiar respuesta" title="Copiar respuesta" hidden><x-lucide-copy aria-hidden="true" /></button>
                 </div>

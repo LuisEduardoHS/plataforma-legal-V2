@@ -6,7 +6,8 @@
     w-auto basis-1/5 sm:py-2 px-2 py-1;
 }
 
-.headerNav-button.selected {
+.headerNav-button.selected,
+.headerNav-button[data-nav-pending="true"] {
     @apply bg-transparent text-accent dark:text-light-accent;
 }
 
@@ -27,12 +28,14 @@
     .headerNav-button:hover {
         color: var(--color-accent-text-dark);
     }
-    .headerNav-button.selected {
+    .headerNav-button.selected,
+    .headerNav-button[data-nav-pending="true"] {
         color: var(--color-light-accent);
     }
 }
 
-.headerNav-button.selected svg {
+.headerNav-button.selected svg,
+.headerNav-button[data-nav-pending="true"] svg {
     fill: none !important;
     fill-opacity: 0 !important;
     stroke: var(--color-accent) !important;
@@ -40,7 +43,8 @@
     stroke-width: 2 !important;
 }
 @media (prefers-color-scheme: dark) {
-    .headerNav-button.selected svg {
+    .headerNav-button.selected svg,
+    .headerNav-button[data-nav-pending="true"] svg {
         stroke: var(--color-light-accent) !important;
         color: var(--color-light-accent) !important;
     }
@@ -95,7 +99,8 @@
         height: 72px;
         border-radius: 0;
     }
-    .headerNav-button.selected::after {
+    .headerNav-button.selected::after,
+    .headerNav-button[data-nav-pending="true"]::after {
         content: "";
         position: absolute;
         left: 0;
@@ -107,7 +112,8 @@
     }
 
     @media (prefers-color-scheme: dark) {
-        .headerNav-button.selected::after {
+        .headerNav-button.selected::after,
+        .headerNav-button[data-nav-pending="true"]::after {
             background: var(--color-light-accent);
         }
     }

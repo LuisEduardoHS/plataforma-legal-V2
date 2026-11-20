@@ -11,7 +11,7 @@
     /* Standard corner radius for Community and future page components. */
     --radius-ui: 10px;
 
-    --font-sans: "DM Sans", sans-serif;;
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "DM Sans", system-ui, sans-serif;
 
     --color-accent: #9E1F52;
     --color-light-accent: #BE2562;
@@ -98,7 +98,16 @@
     }
 }
 /* Shared motion: short feedback, with no layout shifts or artificial delays. */
-:root { --motion-fast: 140ms; --motion-normal: 220ms; --motion-ease: cubic-bezier(.2,.7,.2,1); --lexa-tracking: 0.28em; interpolate-size: allow-keywords; }
+:root {
+    color-scheme: light dark;
+    --motion-fast: 140ms;
+    --motion-normal: 220ms;
+    --motion-ease: cubic-bezier(.2,.7,.2,1);
+    --lexa-tracking: 0.28em;
+    --ui-control-h: 36px;
+    --ui-touch-h: 44px;
+    interpolate-size: allow-keywords;
+}
 #main-content { view-transition-name: page-content; }
 #main-content:focus { outline: none; }
 .platform-header { position: relative; z-index: 60; view-transition-name: platform-header; }
@@ -112,12 +121,14 @@
 ::view-transition-old(root), ::view-transition-new(root),
 ::view-transition-old(platform-header), ::view-transition-new(platform-header),
 ::view-transition-old(mobile-nav), ::view-transition-new(mobile-nav) { animation: none; mix-blend-mode: normal; }
-::view-transition-old(page-content) { animation: page-out 140ms ease-out both; }
-::view-transition-new(page-content) { animation: page-in 240ms var(--motion-ease) both; }
-@keyframes page-out { to { opacity: 0; transform: translateY(-3px); } }
-@keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(page-content) { animation: page-out 130ms ease-out both; }
+    ::view-transition-new(page-content) { animation: page-in 200ms var(--motion-ease) both; }
+}
+@keyframes page-out { to { opacity: 0; transform: translateY(-2px); } }
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes ui-fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-.turbo-progress-bar { height: 2px; background: var(--color-accent); }
+.turbo-progress-bar { height: 2px; background: linear-gradient(90deg, var(--color-dark-accent), var(--color-accent), var(--color-lexa)); }
 #app :where(button, a, select, input, textarea, summary) {
     transition-property: background-color, color, border-color, box-shadow, opacity, transform;
     transition-duration: var(--motion-fast);
@@ -125,17 +136,19 @@
 }
 #app :where(button, a, select, input, textarea, summary):focus-visible {
     outline: 2px solid var(--color-accent);
-    outline-offset: 3px;
+    outline-offset: 2px;
 }
-#app :where(.community-post, .community-comment, .home-card, .help-faq, .help-guide, [data-library-item]) {
-    animation: ui-fade-up 240ms var(--motion-ease) both;
+@media (prefers-reduced-motion: no-preference) {
+    #app :where(.community-post, .community-comment, .home-card, .help-faq, .help-guide, [data-library-item]) {
+        animation: ui-fade-up 220ms var(--motion-ease) both;
+    }
+    #app :where(.community-feed, .community-comments, .home-continue-grid, .help-faqs, [data-library-list]) > :nth-child(2) { animation-delay: 25ms; }
+    #app :where(.community-feed, .community-comments, .home-continue-grid, .help-faqs, [data-library-list]) > :nth-child(3) { animation-delay: 50ms; }
+    #app :where(.community-feed, .community-comments, .help-faqs, [data-library-list]) > :nth-child(4) { animation-delay: 75ms; }
+    #app :where(.community-feed, .community-comments, .help-faqs, [data-library-list]) > :nth-child(5) { animation-delay: 100ms; }
 }
-#app :where(.community-feed, .community-comments, .home-continue-grid, .help-faqs, [data-library-list]) > :nth-child(2) { animation-delay: 30ms; }
-#app :where(.community-feed, .community-comments, .home-continue-grid, .help-faqs, [data-library-list]) > :nth-child(3) { animation-delay: 60ms; }
-#app :where(.community-feed, .community-comments, .help-faqs, [data-library-list]) > :nth-child(4) { animation-delay: 90ms; }
-#app :where(.community-feed, .community-comments, .help-faqs, [data-library-list]) > :nth-child(5) { animation-delay: 120ms; }
 #app details::details-content {
-    transition: block-size 220ms var(--motion-ease), opacity 180ms ease, content-visibility 220ms allow-discrete;
+    transition: block-size 200ms var(--motion-ease), opacity 160ms ease, content-visibility 200ms allow-discrete;
     block-size: 0;
     opacity: 0;
     overflow: clip;
@@ -145,7 +158,7 @@
     opacity: 1;
 }
 #app dialog[open] {
-    transition: opacity 180ms ease, transform 200ms var(--motion-ease), display 180ms allow-discrete, overlay 180ms allow-discrete;
+    transition: opacity 160ms ease, transform 180ms var(--motion-ease), display 160ms allow-discrete, overlay 160ms allow-discrete;
     opacity: 1;
     transform: translateY(0) scale(1);
 }
@@ -173,7 +186,14 @@
     #app :where(button, a, select, input, textarea, summary):focus-visible { outline-color: var(--color-focus-dark); }
 }
 @media (prefers-reduced-motion: reduce) {
-    #app *, #app *::before, #app *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: 0ms !important; scroll-behavior: auto !important; }
+    #app :where(button, a, select, input, textarea, summary) {
+        transition-property: background-color, color, border-color, box-shadow, opacity;
+        transform: none !important;
+    }
+    #app details::details-content, #app dialog[open] {
+        transition: opacity 120ms ease;
+        transform: none;
+    }
     ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
 .platform-mobile-nav .headerNav-button { min-width: 0; padding-inline: 2px; }

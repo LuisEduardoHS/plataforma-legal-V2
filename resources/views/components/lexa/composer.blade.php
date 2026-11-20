@@ -1,12 +1,21 @@
 @props(['modes', 'states' => []])
 <div class="lexa-composer-card">
     <form class="lexa-composer" data-composer aria-label="Preparar una consulta">
+        <div class="lexa-scope-bar">
+            <label class="lexa-jurisdiction" for="lexa-jurisdiction">
+                <x-lucide-landmark aria-hidden="true" />
+                <span>Alcance jurídico</span>
+                <select id="lexa-jurisdiction" data-legal-state aria-describedby="lexa-scope-help">
+                    <option value="">Sólo federal</option>
+                    @foreach (($states ?? []) as $state)
+                        <option value="{{ $state['id'] }}">Federal y {{ $state['name'] }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <p id="lexa-scope-help" class="lexa-scope-help">Para legislación local, selecciona la entidad. No se deduce del texto de tu consulta.</p>
+        </div>
         <label class="lexa-sr" for="lexa-prompt">Describe tu situación legal</label>
         <textarea id="lexa-prompt" rows="3" maxlength="5000" data-prompt placeholder="Describe tu situación legal o pregunta lo que necesites…" aria-describedby="lexa-composer-help"></textarea>
-        <label class="lexa-jurisdiction" for="lexa-jurisdiction">Alcance jurídico
-            <select id="lexa-jurisdiction" data-legal-state aria-describedby="lexa-scope-help"><option value="">Sólo federal</option>@foreach (($states ?? []) as $state)<option value="{{ $state['id'] }}">Federal y {{ $state['name'] }}</option>@endforeach</select>
-        </label>
-        <p id="lexa-scope-help" class="lexa-scope-help">Para legislación local, selecciona la entidad. No se deduce del texto de tu consulta.</p>
         <ul class="lexa-draft-files" data-draft-files aria-label="Contexto adjunto"></ul>
         <p class="lexa-file-error" data-file-error role="alert" hidden></p>
         <div class="lexa-composer-tools">

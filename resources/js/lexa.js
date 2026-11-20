@@ -1,10 +1,10 @@
-import { onPage } from './ui/navigation.js';
+import { onPage } from './ui/page.js';
 import { createDraft, matchesSession, normalizeLexaSession, formatApiError } from './lexa/state.js';
 import { renderLegalCitations } from './lexa/citations.js';
 import { renderMarkdownToFragment } from './lexa/markdown.js';
 import { takeHandoff } from './ui/handoff.js';
 
-onPage('[data-lexa]', (root, { listen, onCleanup }) => {
+export function setupLexa(root, { listen, onCleanup, onBeforeVisit }) {
     const $ = (selector, scope = root) => scope.querySelector(selector);
     const clone = (name) => $('[data-' + name + '-template]').content.firstElementChild.cloneNode(true);
     const data = JSON.parse($('[data-lexa-data]').textContent);
@@ -32,15 +32,19 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
     const sidebarBreakpoint = matchMedia('(min-width: 768px)');
     const buttons = new Map();
     const controllers = new Set();
+    const generatingSessions = new Set();
 
     let selectedId = null;
     let welcomeDraft = createDraft();
     let sidebarTrigger;
     let deleteTrigger;
     let previousOverflow = '';
-    let isBusy = false;
+    let isSubmitting = false;
     let isLoadingThread = false;
+    let isLoadingSessions = false;
     let activeThreadController = null;
+    let activeSessionsController = null;
+    let disposed = false;
 
     function currentSession() {
         return sessions.find((session) => session.id === selectedId) || null;
@@ -50,26 +54,60 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
         return currentSession()?.draft || welcomeDraft;
     }
 
+    function isCurrentSessionBusy() {
+        return isSubmitting || (selectedId !== null && generatingSessions.has(selectedId));
+    }
+
     function announce(text) {
-        $('[data-lexa-status]').textContent = text;
+        if (disposed) return;
+        const statusNode = $('[data-lexa-status]');
+        if (statusNode) statusNode.textContent = text;
     }
 
     function clearBanner() {
         banner.hidden = true;
-        banner.classList.remove('is-error');
+        banner.classList.remove('is-error', 'is-generating');
         bannerText.textContent = '';
         bannerRetry.hidden = true;
         bannerReload.hidden = true;
         bannerLogin.hidden = true;
     }
 
-    function showBanner(text, { error = false, retry = false, reload = false, login = false } = {}) {
+    function showBanner(text, { error = false, generating = false, retry = false, reload = false, login = false } = {}) {
+        if (disposed) return;
         bannerText.textContent = text;
         banner.classList.toggle('is-error', error);
+        banner.classList.toggle('is-generating', generating);
         bannerRetry.hidden = !retry;
         bannerReload.hidden = !reload;
         bannerLogin.hidden = !login;
         banner.hidden = false;
+    }
+
+    function syncGenerationBanner() {
+        if (selectedId !== null && generatingSessions.has(selectedId)) {
+            showBanner('Generando respuesta…', { error: false, generating: true });
+        } else {
+            clearBanner();
+        }
+    }
+
+    function abortActiveThreadLoad() {
+        if (activeThreadController) {
+            activeThreadController.abort();
+            controllers.delete(activeThreadController);
+            activeThreadController = null;
+        }
+        isLoadingThread = false;
+    }
+
+    function abortActiveSessionsLoad() {
+        if (activeSessionsController) {
+            activeSessionsController.abort();
+            controllers.delete(activeSessionsController);
+            activeSessionsController = null;
+        }
+        isLoadingSessions = false;
     }
 
     async function apiFetch(url, options = {}) {
@@ -105,6 +143,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
     }
 
     function renderHistory() {
+        if (disposed) return;
         const list = $('[data-history-list]');
         const query = $('[data-search]').value;
         const activeIds = new Set(sessions.map((s) => s.id));
@@ -124,6 +163,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             $('span', button).textContent = session.title;
             button.title = session.title;
             button.setAttribute('aria-current', String(session.id === selectedId));
+            button.classList.toggle('is-generating', generatingSessions.has(session.id));
             button.hidden = !matchesSession(session, query);
             list.append(button);
         }
@@ -132,26 +172,36 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
     }
 
     function updateComposer() {
+        if (disposed) return;
+        const busy = isCurrentSessionBusy();
         const hasText = prompt.value.trim().length > 0;
         const sendBtn = $('[data-send]');
-        sendBtn.disabled = isBusy || !hasText;
-        prompt.readOnly = isBusy;
-        mode.disabled = isBusy || Boolean(currentSession());
+        sendBtn.disabled = busy || !hasText;
+        prompt.readOnly = busy;
+        mode.disabled = busy || Boolean(currentSession());
         prompt.style.height = 'auto';
-        prompt.style.height = Math.min(prompt.scrollHeight, 180) + 'px';
+        prompt.style.height = Math.min(prompt.scrollHeight || 0, 180) + 'px';
     }
 
     function updateContext() {
+        if (disposed) return;
         const session = currentSession();
+        const modeLabel = session ? (data.modes.find((item) => item.id === session.mode)?.label || '') : '';
         $('[data-context-details]').hidden = !session;
         $('[data-context-title]').textContent = session?.title || '';
-        $('[data-context-mode]').textContent = session ? (data.modes.find((item) => item.id === session.mode)?.label || '') : '';
+        $('[data-context-mode]').textContent = modeLabel;
+        const toolbarMode = $('[data-toolbar-mode]');
+        if (toolbarMode) {
+            toolbarMode.textContent = modeLabel;
+            toolbarMode.hidden = !modeLabel;
+        }
         $('[data-context-count]').textContent = '';
         $('[data-context-files]').replaceChildren();
         $('[data-context-empty]').hidden = false;
     }
 
     function renderComposer() {
+        if (disposed) return;
         prompt.value = currentDraft().text;
         mode.value = currentDraft().mode;
         $('[data-file-error]').hidden = true;
@@ -160,6 +210,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
     }
 
     function renderThread({ scrollToBottom = true } = {}) {
+        if (disposed) return;
         const session = currentSession();
         root.dataset.stage = session ? 'thread' : 'welcome';
         prompt.rows = session ? 1 : 3;
@@ -199,7 +250,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
         }
         if (scrollToBottom) {
             requestAnimationFrame(() => {
-                thread.scrollTop = thread.scrollHeight;
+                if (!disposed) thread.scrollTop = thread.scrollHeight;
             });
         }
     }
@@ -208,7 +259,8 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
         if (sidebarDialog.open) sidebarDialog.close();
     }
 
-    sidebarDialog.addEventListener('close', () => {
+    listen(sidebarDialog, 'close', () => {
+        if (disposed) return;
         $('.lexa-layout').prepend(sidebar);
         document.body.style.overflow = previousOverflow;
         sidebarTrigger?.focus({ preventScroll: true });
@@ -228,16 +280,15 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
     });
 
     function focusPrompt() {
+        if (disposed) return;
         prompt.focus({ preventScroll: true });
         if (!currentSession()) {
-            requestAnimationFrame(() => prompt.scrollIntoView({ block: 'nearest', behavior: 'instant' }));
+            requestAnimationFrame(() => prompt.scrollIntoView?.({ block: 'nearest', behavior: 'instant' }));
         }
     }
 
     async function loadMessages(session, { cursor = null, append = false } = {}) {
-        if (activeThreadController) {
-            activeThreadController.abort();
-        }
+        abortActiveThreadLoad();
         const controller = new AbortController();
         activeThreadController = controller;
         controllers.add(controller);
@@ -246,9 +297,11 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             const url = new URL(`${baseUrl}/${session.id}/mensajes`, window.location.origin);
             if (cursor) url.searchParams.set('cursor', cursor);
             const { ok, status, json } = await apiFetch(url.toString(), { method: 'GET', signal: controller.signal });
-            if (controller.signal.aborted) return;
+            if (disposed || controller.signal.aborted) return;
             if (!ok) {
-                handleApiFailure(status, json?.message, session);
+                if (selectedId === session.id) {
+                    handleApiFailure(status, json?.message, session);
+                }
                 return;
             }
             const incoming = json?.messages || [];
@@ -259,7 +312,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
                 renderThread({ scrollToBottom: !append });
             }
         } catch (error) {
-            if (error?.name !== 'AbortError') {
+            if (!disposed && !controller.signal.aborted && error?.name !== 'AbortError' && selectedId === session.id) {
                 showBanner('No pudimos cargar el historial. Revisa tu conexión e inténtalo de nuevo.', { error: true, reload: true });
             }
         } finally {
@@ -272,6 +325,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
     }
 
     function handleApiFailure(status, serverMessage, session = null) {
+        if (disposed) return;
         const info = formatApiError(status, serverMessage);
         if (info.kind === 'auth') {
             showBanner(info.text, { error: true, login: true });
@@ -302,8 +356,11 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
     }
 
     async function selectSession(id) {
-        clearBanner();
-        selectedId = String(id);
+        if (isSubmitting) return;
+        const targetId = String(id);
+        abortActiveThreadLoad();
+        selectedId = targetId;
+        syncGenerationBanner();
         renderThread();
         renderComposer();
         renderHistory();
@@ -312,12 +369,16 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
         if (session && !session.loaded) {
             await loadMessages(session);
         }
-        requestAnimationFrame(focusPrompt);
+        if (!disposed && selectedId === targetId) {
+            requestAnimationFrame(focusPrompt);
+        }
     }
 
     function newSession() {
-        clearBanner();
+        if (isSubmitting) return;
+        abortActiveThreadLoad();
         selectedId = null;
+        clearBanner();
         welcomeDraft = createDraft();
         renderThread();
         renderComposer();
@@ -329,21 +390,30 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
 
     async function generateForSession(session) {
         if (!data.generation_enabled) {
-            showBanner('Tu consulta quedó guardada. La generación automática con IA está desactivada en esta configuración.', { error: false });
+            if (selectedId === session.id) {
+                showBanner('Tu consulta quedó guardada. La generación automática con IA está desactivada en esta configuración.', { error: false });
+            }
             return;
         }
-        isBusy = true;
-        updateComposer();
-        showBanner('Generando respuesta…', { error: false });
-        announce('Generando respuesta.');
+        if (generatingSessions.has(session.id)) return;
+        generatingSessions.add(session.id);
+        renderHistory();
+        if (selectedId === session.id) {
+            updateComposer();
+            showBanner('Generando respuesta…', { error: false, generating: true });
+            announce('Generando respuesta.');
+        }
         try {
             const attemptToken = crypto.randomUUID();
             const { ok, status, json } = await apiFetch(`${baseUrl}/${session.id}/generar`, {
                 method: 'POST',
                 body: JSON.stringify({ attempt_token: attemptToken, state_id: $('[data-legal-state]')?.value ? Number($('[data-legal-state]').value) : null }),
             });
+            if (disposed) return;
             if (!ok) {
-                handleApiFailure(status, json?.message, session);
+                if (selectedId === session.id) {
+                    handleApiFailure(status, json?.message, session);
+                }
                 return;
             }
             if (json?.conversation) {
@@ -355,31 +425,35 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             if (json?.message && !session.messages.some((m) => m.id === json.message.id)) {
                 session.messages.push(json.message);
             }
-            clearBanner();
+            renderHistory();
             if (selectedId === session.id) {
+                clearBanner();
                 renderThread({ scrollToBottom: true });
-                renderHistory();
+                updateContext();
+                announce('Respuesta recibida.');
             }
-            announce('Respuesta recibida.');
         } catch (error) {
-            if (error?.name !== 'AbortError') {
+            if (!disposed && error?.name !== 'AbortError' && selectedId === session.id) {
                 showBanner('No pudimos conectar con el servicio de orientación. Tu mensaje quedó guardado.', { error: true, retry: true });
             }
         } finally {
-            isBusy = false;
-            updateComposer();
+            generatingSessions.delete(session.id);
+            renderHistory();
+            if (selectedId === session.id) {
+                updateComposer();
+            }
         }
     }
 
     async function send() {
-        if (isBusy) return;
+        if (isCurrentSessionBusy()) return;
         const draft = currentDraft();
         draft.text = prompt.value;
         const clean = draft.text.trim();
         if (!clean) return;
 
         clearBanner();
-        isBusy = true;
+        isSubmitting = true;
         updateComposer();
 
         let session = currentSession();
@@ -389,6 +463,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
                     method: 'POST',
                     body: JSON.stringify({ mode: draft.mode, content: clean }),
                 });
+                if (disposed) return;
                 if (!ok) {
                     handleApiFailure(status, json?.message);
                     return;
@@ -406,6 +481,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
                     method: 'POST',
                     body: JSON.stringify({ content: clean }),
                 });
+                if (disposed) return;
                 if (!ok) {
                     handleApiFailure(status, json?.message, session);
                     return;
@@ -421,27 +497,35 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             renderHistory();
             announce('Consulta guardada.');
         } catch (error) {
-            if (error?.name !== 'AbortError') {
+            if (!disposed && error?.name !== 'AbortError') {
                 showBanner('No pudimos guardar tu consulta. Verifica tu conexión e inténtalo nuevamente.', { error: true });
             }
             return;
         } finally {
-            isBusy = false;
+            isSubmitting = false;
             updateComposer();
         }
 
-        if (session) {
+        if (session && !disposed) {
             await generateForSession(session);
-            focusPrompt();
+            if (!disposed && selectedId === session.id) {
+                focusPrompt();
+            }
         }
     }
 
     async function loadMoreSessions() {
-        if (!sessionsNextCursor || isBusy) return;
+        if (!sessionsNextCursor || isLoadingSessions || isSubmitting) return;
+        abortActiveSessionsLoad();
+        const controller = new AbortController();
+        activeSessionsController = controller;
+        controllers.add(controller);
+        isLoadingSessions = true;
         try {
             const url = new URL(baseUrl, window.location.origin);
             url.searchParams.set('cursor', sessionsNextCursor);
-            const { ok, status, json } = await apiFetch(url.toString(), { method: 'GET' });
+            const { ok, status, json } = await apiFetch(url.toString(), { method: 'GET', signal: controller.signal });
+            if (disposed || controller.signal.aborted) return;
             if (!ok) {
                 handleApiFailure(status, json?.message);
                 return;
@@ -454,19 +538,26 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             sessionsNextCursor = json?.next_cursor || null;
             renderHistory();
         } catch (error) {
-            if (error?.name !== 'AbortError') {
+            if (!disposed && !controller.signal.aborted && error?.name !== 'AbortError') {
                 showBanner('No pudimos cargar más consultas.', { error: true });
+            }
+        } finally {
+            controllers.delete(controller);
+            if (activeSessionsController === controller) {
+                activeSessionsController = null;
+                isLoadingSessions = false;
             }
         }
     }
 
     async function confirmDeleteSession() {
         const session = currentSession();
-        if (!session || isBusy) return;
-        isBusy = true;
+        if (!session || isCurrentSessionBusy()) return;
+        isSubmitting = true;
         updateComposer();
         try {
             const { ok, status, json } = await apiFetch(`${baseUrl}/${session.id}`, { method: 'DELETE' });
+            if (disposed) return;
             if (!ok) {
                 if (deleteDialog.open) deleteDialog.close();
                 handleApiFailure(status, json?.message, session);
@@ -482,21 +573,21 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             clearBanner();
             announce('Conversación eliminada.');
         } catch (error) {
-            if (error?.name !== 'AbortError') {
+            if (!disposed && error?.name !== 'AbortError') {
                 if (deleteDialog.open) deleteDialog.close();
                 showBanner('No pudimos eliminar la conversación.', { error: true });
             }
         } finally {
-            isBusy = false;
+            isSubmitting = false;
             updateComposer();
         }
     }
 
-    deleteDialog.addEventListener('close', () => {
-        deleteTrigger?.focus({ preventScroll: true });
+    listen(deleteDialog, 'close', () => {
+        if (!disposed) deleteTrigger?.focus({ preventScroll: true });
     });
 
-    root.addEventListener('click', (event) => {
+    listen(root, 'click', (event) => {
         const target = event.target.closest('button');
         if (!target) return;
         if (target.matches('[data-new-session]')) newSession();
@@ -511,7 +602,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             }
         }
         if (target.matches('[data-delete-session]')) {
-            if (currentSession()) {
+            if (currentSession() && !isCurrentSessionBusy()) {
                 deleteTrigger = target;
                 deleteDialog.showModal();
             }
@@ -522,7 +613,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
         if (target.matches('[data-confirm-delete]')) confirmDeleteSession();
         if (target.matches('[data-lexa-banner-retry]')) {
             const session = currentSession();
-            if (session && !isBusy) generateForSession(session);
+            if (session && !isCurrentSessionBusy()) generateForSession(session);
         }
         if (target.matches('[data-lexa-banner-reload]')) {
             const session = currentSession();
@@ -532,7 +623,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             }
         }
         if (target.matches('[data-suggestion]')) {
-            if (isBusy) return;
+            if (isCurrentSessionBusy()) return;
             currentDraft().text = target.dataset.suggestion;
             currentDraft().mode = target.dataset.mode;
             renderComposer();
@@ -541,26 +632,30 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
         if (target.matches('[data-copy-message]')) {
             const copyText = target.dataset.copyText || '';
             if (copyText && navigator.clipboard?.writeText) {
-                navigator.clipboard.writeText(copyText).then(() => announce('Respuesta copiada al portapapeles.')).catch(() => {});
+                navigator.clipboard.writeText(copyText).then(() => {
+                    target.dataset.copied = 'true';
+                    setTimeout(() => { delete target.dataset.copied; }, 1600);
+                    announce('Respuesta copiada al portapapeles.');
+                }).catch(() => {});
             }
         }
     });
 
-    $('[data-search]').addEventListener('input', renderHistory);
-    prompt.addEventListener('input', () => {
+    listen($('[data-search]'), 'input', renderHistory);
+    listen(prompt, 'input', () => {
         currentDraft().text = prompt.value;
         updateComposer();
     });
-    prompt.addEventListener('keydown', (event) => {
+    listen(prompt, 'keydown', (event) => {
         if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
             event.preventDefault();
             send();
         }
     });
-    mode.addEventListener('change', () => {
+    listen(mode, 'change', () => {
         currentDraft().mode = mode.value;
     });
-    $('[data-composer]').addEventListener('submit', (event) => {
+    listen($('[data-composer]'), 'submit', (event) => {
         event.preventDefault();
         send();
     });
@@ -568,18 +663,27 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
     function resizeViewport() {
         root.style.setProperty('--lexa-viewport', (window.visualViewport?.height || window.innerHeight) + 'px');
         if (document.activeElement === prompt && !currentSession()) {
-            requestAnimationFrame(() => prompt.scrollIntoView({ block: 'nearest', behavior: 'instant' }));
+            requestAnimationFrame(() => prompt.scrollIntoView?.({ block: 'nearest', behavior: 'instant' }));
         }
     }
 
     listen(window.visualViewport, 'resize', resizeViewport);
     listen(window, 'resize', resizeViewport);
 
+    onBeforeVisit?.(() => {
+        abortActiveThreadLoad();
+        abortActiveSessionsLoad();
+    });
+
     onCleanup(() => {
+        disposed = true;
+        abortActiveThreadLoad();
+        abortActiveSessionsLoad();
         for (const controller of controllers) {
             controller.abort();
         }
         controllers.clear();
+        generatingSessions.clear();
         if (sidebarDialog.open) sidebarDialog.close();
         if (deleteDialog.open) deleteDialog.close();
     });
@@ -600,4 +704,6 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             focusPrompt();
         }
     }
-});
+}
+
+onPage('[data-lexa]', setupLexa);

@@ -1,19 +1,16 @@
 import { visit, config } from '@hotwired/turbo';
+import { onPage, isVisiting, setupNavigationFeedback } from './page.js';
 
 // Laravel continues handling submissions, validation and downloads normally.
 config.forms.mode = 'off';
-config.drive.progressBarDelay = 180;
+config.drive.progressBarDelay = 80;
 
 export function navigate(url) {
     visit(url);
 }
 
-export { onPage } from './page.js';
+export { onPage, isVisiting, setupNavigationFeedback };
 
-// Keep keyboard navigation oriented after the body changes, without stealing
-// focus from a draft or a dialog explicitly opened by a page controller.
-document.addEventListener('turbo:load', (event) => {
-    if (!event.detail.timing?.visitStart) return;
-    if (document.activeElement !== document.body) return;
-    document.querySelector('#main-content')?.focus({ preventScroll: true });
-});
+if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+    setupNavigationFeedback(document, window);
+}

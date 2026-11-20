@@ -15,15 +15,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="turbo-cache-control" content="no-cache">
     <meta name="turbo-prefetch" content="false">
 
     <title>@yield('title', 'Lefenda')</title>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @if ($internalNavigation) @vite(['resources/css/components/userHeader.css']) @endif
-    @yield('page-assets')
+    @vite([
+        'resources/css/app.css',
+        'resources/css/components/userHeader.css',
+        'resources/css/home.css',
+        'resources/css/community.css',
+        'resources/css/professionals.css',
+        'resources/css/articles.css',
+        'resources/css/library-help.css',
+        'resources/css/messages.css',
+        'resources/css/lexa.css',
+        'resources/js/app.js',
+    ])
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
