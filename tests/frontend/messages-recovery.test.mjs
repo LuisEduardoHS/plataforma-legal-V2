@@ -18,7 +18,7 @@ class Element extends EventTarget {
     querySelector(selector) { return this.nodes[selector] || null; }
     querySelectorAll(selector) { return this.lists[selector] || []; }
     replaceChildren(...children) { this.replaceCount = (this.replaceCount || 0) + 1; this.children = children; this.textContent = children.map(x => x.textContent || '').join(''); }
-    contains() { return false; }
+    contains(element) { return this.contained === element && element != null; }
     setAttribute(name, value) { this[name] = value; }
     focus() { this.focused = true; this.focusCount = (this.focusCount || 0) + 1; }
     remove() { this.isConnected = false; }
@@ -29,9 +29,10 @@ function fixture({ pollUrl = '/mensajes/10/actualizaciones', managed = false, de
     const doc = Object.assign(new EventTarget(), { visibilityState: 'visible', hasFocus: () => true, activeElement: null });
     const win = Object.assign(new EventTarget(), { location: { reload() {}, assign() {} } });
     const header = new Element('IDENTIDAD PRIVADA'), mobile = new Element('ENLACES PRIVADOS');
+    let parses = 0;
     doc.querySelectorAll = () => [header, mobile];
     doc.getElementById = () => new Element();
-    doc.createElement = () => ({ content: new Element('FRAGMENTO AUTORIZADO'), set innerHTML(value) { this.content.textContent = value; } });
+    doc.createElement = () => ({ content: new Element('FRAGMENTO AUTORIZADO'), set innerHTML(value) { parses++; this.content.textContent = value; } });
     globalThis.document = doc; globalThis.window = win;
     globalThis.matchMedia = () => Object.assign(new EventTarget(), { matches: false });
     globalThis.innerHeight = 800;
@@ -47,9 +48,10 @@ function fixture({ pollUrl = '/mensajes/10/actualizaciones', managed = false, de
     const recovery = nodes['messaging-recovery']; recovery.hidden = true;
     const retry = new Element(), access = new Element(), title = new Element(), explanation = new Element();
     Object.assign(recovery.nodes, { '[data-read-retry]': retry, '[data-recovery-access]': access, '[data-recovery-title]': title, '[data-recovery-message]': explanation });
-    const form = nodes.composer, send = new Element(), token = new Element('d5c101d0-2ae1-4321-9123-123456789012');
+    const form = nodes.composer, send = new Element(), token = new Element('d5c101d0-2ae1-4321-9123-123456789012'), csrf = new Element('synthetic-session-token');
     form.elements = { client_token: token }; form.nodes['[data-send]'] = send; form.action = '/mensajes/10/mensajes';
-    root.lists.input = [token];
+    form.nodes['[name="_token"]'] = csrf;
+    root.lists.input = [token, csrf];
     nodes.draft.value = 'BORRADOR PRIVADO'; nodes.history.textContent = 'HISTORIAL PRIVADO';
     nodes['conversation-list'].textContent = 'ALIAS PRIVADO'; nodes['information-body'].textContent = 'ARCHIVO PRIVADO';
     nodes.information.nodes.h2 = new Element();
@@ -75,13 +77,16 @@ function fixture({ pollUrl = '/mensajes/10/actualizaciones', managed = false, de
     const settle = () => new Promise(resolve => setImmediate(resolve));
     const tick = async () => { const [id, task] = timers.entries().next().value; timers.delete(id); task.fn(); await settle(); };
     const respond = async (index, status = 200, data = { history_html: 'NUEVO HISTORIAL', inbox_html: 'ALIAS', information_html: 'INFO', can_send: true }) => {
-        requests[index].resolve({ ok: status >= 200 && status < 300, status, json: async () => data }); await settle();
+        const payload = { conversation_id: Number(pollUrl.match(/\/mensajes\/(\d+)/)[1]), ...data };
+        requests[index].resolve({ ok: status >= 200 && status < 300, status, json: async () => payload }); await settle();
     };
     const cleanup = () => {
         if (managed) doc.dispatchEvent(new Event('turbo:before-render'));
         else { listeners.abort(); cleanups.forEach(fn => fn()); }
     };
-    return { root, nodes, recovery, retry, access, title, requests, timers, header, mobile, token, send,
+    return { root, nodes, recovery, retry, access, title, requests, timers, header, mobile, token, csrf, send,
+        parses: () => parses,
+        fragments: () => ['history', 'conversation-list', 'information-body'].map(key => nodes[key].replaceCount || 0),
         finishImport: async () => { finishImport(); await settle(); },
         setPageRoot: value => { pageRoot = value; },
         tick, respond, settle, cleanup, focus: () => win.dispatchEvent(new Event('focus')),
@@ -89,6 +94,192 @@ function fixture({ pollUrl = '/mensajes/10/actualizaciones', managed = false, de
         restore() { cleanup(); for (const key of keys) globalThis[key] = previous[key]; },
     };
 }
+
+test('fragment measurements: identical polls skip parsing and only changed fragments are rebuilt', async t => {
+    const f = fixture();
+    try {
+        const response = { history_html: 'H1', inbox_html: 'I1', information_html: 'F1', can_send: true };
+        const measured = [];
+        for (const change of [{}, {}, { history_html: 'H2' }, { inbox_html: 'I2' }, { information_html: 'F2' }, {}]) {
+            Object.assign(response, change);
+            const parses = f.parses(), counts = f.fragments();
+            await f.tick(); await f.respond(f.requests.length - 1, 200, { ...response });
+            measured.push({ parses: f.parses() - parses, replacements: f.fragments().map((n, i) => n - counts[i]) });
+        }
+        t.diagnostic(JSON.stringify(measured));
+        assert.deepEqual(measured, [
+            { parses: 3, replacements: [1, 1, 1] }, { parses: 0, replacements: [0, 0, 0] },
+            { parses: 1, replacements: [1, 0, 0] }, { parses: 1, replacements: [0, 1, 0] },
+            { parses: 1, replacements: [0, 0, 1] }, { parses: 0, replacements: [0, 0, 0] },
+        ]);
+        assert.equal(f.nodes.draft.value, 'BORRADOR PRIVADO');
+        assert.equal(f.token.value, 'd5c101d0-2ae1-4321-9123-123456789012');
+        assert.equal(f.requests.filter(r => r.options.method === 'POST').length, 0);
+    } finally { f.restore(); }
+});
+
+const htmlResponse = (changes = {}) => ({ history_html: 'H1', inbox_html: 'I1', information_html: 'F1', can_send: true, ...changes });
+async function manualRead(f, data = htmlResponse(), status = 200) {
+    f.retry.dispatchEvent(new Event('click')); await f.settle();
+    await f.respond(f.requests.length - 1, status, data);
+}
+
+test('equal authorized HTML preserves localized DOM, scroll and drafts but updates can_send and manual recovery', async () => {
+    const f = fixture();
+    try {
+        await manualRead(f);
+        f.nodes.history.textContent = 'FECHA LOCALIZADA'; f.nodes.history.scrollTop = 37;
+        await manualRead(f, {}, 503); assert.equal(f.recovery.hidden, false);
+        await manualRead(f, htmlResponse({ can_send: false }));
+        assert.equal(f.parses(), 3); assert.deepEqual(f.fragments(), [1, 1, 1]);
+        assert.equal(f.nodes.history.textContent, 'FECHA LOCALIZADA'); assert.equal(f.nodes.history.scrollTop, 37);
+        assert.equal(f.recovery.hidden, true); assert.equal(f.timers.size, 1);
+        assert.equal(f.nodes.draft.disabled, true); assert.equal(f.send.disabled, true);
+        assert.equal(f.nodes.draft.value, 'BORRADOR PRIVADO'); assert.match(f.nodes['poll-status'].textContent, /historial accesible/);
+        await manualRead(f); assert.equal(f.nodes.draft.disabled, false); assert.equal(f.parses(), 3);
+    } finally { f.restore(); }
+});
+
+test('focused inbox and information defer new HTML without marking it as applied', async () => {
+    const f = fixture();
+    try {
+        await manualRead(f);
+        const focused = {}; document.activeElement = focused;
+        f.nodes['conversation-list'].contained = focused; f.nodes['information-body'].contained = focused;
+        const changed = htmlResponse({ history_html: 'H2', inbox_html: 'I2', information_html: 'F2' });
+        await manualRead(f, changed); assert.deepEqual(f.fragments(), [2, 1, 1]);
+        document.activeElement = null;
+        await manualRead(f, changed); assert.deepEqual(f.fragments(), [2, 2, 2]); assert.equal(f.parses(), 6);
+    } finally { f.restore(); }
+});
+
+test('open history/information details defer application until the same HTML can be applied safely', async () => {
+    const f = fixture();
+    try {
+        await manualRead(f);
+        f.nodes.history.nodes['details[open]'] = {}; f.nodes['information-body'].nodes['details[open]'] = {};
+        const changed = htmlResponse({ history_html: 'H2', information_html: 'F2' });
+        await manualRead(f, changed); assert.deepEqual(f.fragments(), [1, 1, 1]);
+        delete f.nodes.history.nodes['details[open]']; delete f.nodes['information-body'].nodes['details[open]'];
+        await manualRead(f, changed); assert.deepEqual(f.fragments(), [2, 1, 2]);
+    } finally { f.restore(); }
+});
+
+test('a reconstructed target node cannot reuse the previous node comparison', async () => {
+    const f = fixture();
+    try {
+        await manualRead(f);
+        const replacement = new Element(); f.root.nodes['[data-information-body]'] = replacement;
+        await manualRead(f); assert.equal(replacement.textContent, 'F1'); assert.equal(replacement.replaceCount, 1);
+        assert.equal(f.parses(), 4); assert.deepEqual(f.fragments(), [1, 1, 1]);
+    } finally { f.restore(); }
+});
+
+test('a response for a different or missing conversation never parses or updates any fragment', async () => {
+    const f = fixture();
+    try {
+        await manualRead(f);
+        for (const conversation_id of [20, undefined]) {
+            await manualRead(f, htmlResponse({ conversation_id, history_html: 'AJENO' }));
+            assert.equal(f.parses(), 3); assert.deepEqual(f.fragments(), [1, 1, 1]);
+            assert.equal(f.nodes.history.textContent, 'H1'); assert.equal(f.recovery.hidden, false); assert.equal(f.timers.size, 0);
+        }
+    } finally { f.restore(); }
+});
+
+for (const change of ['conversation', 'security-token', 'composer', 'history', 'disconnected']) test(`a changed ${change} context retires a pending read before applying or revoking anything`, async () => {
+    const f = fixture();
+    try {
+        await manualRead(f); await f.tick();
+        if (change === 'conversation') f.root.dataset.pollUrl = '/mensajes/20/actualizaciones';
+        if (change === 'security-token') f.csrf.value = 'new-session';
+        if (change === 'composer') f.root.nodes['[data-composer]'] = new Element();
+        if (change === 'history') f.root.nodes['[data-history]'] = new Element();
+        if (change === 'disconnected') f.root.isConnected = false;
+        await f.respond(1, 401);
+        assert.equal(f.parses(), 3); assert.deepEqual(f.fragments(), [1, 1, 1]);
+        assert.equal(f.root.replaceCount || 0, 0); assert.equal(f.header.textContent, 'IDENTIDAD PRIVADA');
+        assert.equal(f.requests[1].options.signal.aborted, true); assert.equal(f.timers.size, 0);
+        f.focus(); f.retry.dispatchEvent(new Event('click')); await f.settle(); assert.equal(f.requests.length, 2);
+    } finally { f.restore(); }
+});
+
+test('context is checked again when the JSON body finishes after the session token changed', async () => {
+    const f = fixture();
+    try {
+        await manualRead(f); await f.tick();
+        let finish; const body = new Promise(resolve => { finish = resolve; });
+        f.requests[1].resolve({ ok: true, status: 200, json: () => body }); await f.settle();
+        f.csrf.value = 'new-session'; finish(htmlResponse({ conversation_id: 10, history_html: 'TARDIO' })); await f.settle();
+        assert.equal(f.parses(), 3); assert.equal(f.nodes.history.textContent, 'H1'); assert.equal(f.timers.size, 0);
+    } finally { f.restore(); }
+});
+
+test('a POST from a retired security context cannot purge or acknowledge the new context', async () => {
+    const f = fixture();
+    try {
+        await manualRead(f); f.submit(); await f.settle();
+        f.csrf.value = 'new-session'; await f.respond(1, 401);
+        assert.equal(f.root.replaceCount || 0, 0); assert.equal(f.nodes.draft.value, 'BORRADOR PRIVADO');
+        assert.equal(f.token.value, 'd5c101d0-2ae1-4321-9123-123456789012');
+        assert.equal(f.timers.size, 0); assert.equal(f.requests[1].options.signal.aborted, true);
+    } finally { f.restore(); }
+});
+
+test('a stale successful read cannot advance the applied baseline after an uncertain send', async () => {
+    const f = fixture();
+    try {
+        await manualRead(f); await f.tick(); f.submit(); await f.settle();
+        f.requests[2].reject(new TypeError('uncertain send')); await f.settle();
+        await f.respond(1, 200, htmlResponse({ history_html: 'H2' }));
+        assert.equal(f.parses(), 3); assert.equal(f.nodes.history.textContent, 'H1'); assert.equal(f.timers.size, 0);
+        await manualRead(f, htmlResponse({ history_html: 'H2' }));
+        assert.equal(f.parses(), 4); assert.deepEqual(f.fragments(), [2, 1, 1]);
+        assert.equal(f.nodes.draft.readOnly, true); assert.equal(f.requests.filter(r => r.options.method === 'POST').length, 1);
+    } finally { f.restore(); }
+});
+
+test('a new controller/conversation starts without the previous applied representation', async () => {
+    const old = fixture({ managed: true }); let current;
+    try {
+        await manualRead(old); await old.tick(); old.cleanup();
+        current = fixture({ managed: true, pollUrl: '/mensajes/20/actualizaciones' });
+        await manualRead(current); assert.equal(current.parses(), 3);
+        await manualRead(current); assert.equal(current.parses(), 3);
+        await old.respond(1); assert.equal(old.parses(), 3); assert.deepEqual(current.fragments(), [1, 1, 1]);
+    } finally { current?.restore(); old.restore(); }
+});
+
+test('BFCache disposes a controller with applied fragments and ignores a later successful body', async () => {
+    const f = fixture();
+    try {
+        await manualRead(f); await f.tick();
+        window.dispatchEvent(Object.assign(new Event('pagehide'), { persisted: true }));
+        await f.respond(1); assert.equal(f.parses(), 3); assert.equal(f.timers.size, 0);
+        assert.equal(f.root.textContent, ''); assert.equal(f.requests[1].options.signal.aborted, true);
+    } finally { f.restore(); }
+});
+
+for (const code of [409, 429, 503]) test(`${code} cannot update an applied baseline and manual recovery still works with equal HTML`, async () => {
+    const f = fixture();
+    try {
+        await manualRead(f); await manualRead(f, htmlResponse({ history_html: 'ERROR' }), code);
+        assert.equal(f.parses(), 3); assert.equal(f.nodes.history.textContent, 'H1'); assert.equal(f.timers.size, 0);
+        await manualRead(f); assert.equal(f.parses(), 3); assert.equal(f.recovery.hidden, true); assert.equal(f.timers.size, 1);
+    } finally { f.restore(); }
+});
+
+for (const code of [401, 403, 404, 419]) test(`applied fragments never suppress P1 ${code} after an uncertain send`, async () => {
+    const f = fixture();
+    try {
+        await manualRead(f); await f.tick(); f.submit(); await f.settle();
+        f.requests[2].reject(new TypeError('uncertain send')); await f.settle();
+        await f.respond(1, code, htmlResponse());
+        assert.equal(f.parses(), 3); assert.equal(f.nodes.history.textContent, ''); assert.equal(f.nodes.draft.value, '');
+        assert.equal(f.timers.size, 0); assert.equal(f.root.replaceCount, 1); assert.equal(f.retry.hidden, true);
+        assert.equal(f.requests.filter(r => r.options.method === 'POST').length, 1);
+    } finally { f.restore(); }
+});
 
 for (const code of [401, 403, 404, 419]) test(`${code} aborts polling, removes private surfaces and leaves manual access only`, async () => {
     const f = fixture();

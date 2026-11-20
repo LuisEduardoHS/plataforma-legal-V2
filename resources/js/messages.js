@@ -36,6 +36,11 @@ export function setupMessages(root, { listen, onCleanup }) {
     const recovery = $('[data-messaging-recovery]');
     const retry = recovery.querySelector('[data-read-retry]');
     const access = recovery.querySelector('[data-recovery-access]');
+    const pollUrl = root.dataset.pollUrl;
+    const conversationId = pollUrl?.match(/\/mensajes\/([1-9][0-9]*)\/actualizaciones(?:[?#]|$)/)?.[1];
+    const csrf = form.querySelector('[name="_token"]');
+    const securityToken = csrf?.value;
+    const applied = new Map();
     const say = (message) => { if (!revoked && !disposed) status.textContent = message; };
     const atEnd = () => history.scrollHeight - history.scrollTop - history.clientHeight < 80;
     function controls() {
@@ -53,6 +58,25 @@ export function setupMessages(root, { listen, onCleanup }) {
         template.innerHTML = html; // Same-origin Blade fragments, with escaped DTO fields.
         return template.content;
     }
+    function replaceFragment(key, node, html) {
+        const previous = applied.get(key);
+        if (previous?.node === node && previous.html === html) return false;
+        node.replaceChildren(fragment(html));
+        applied.set(key, { node, html }); // Record applied HTML, never a deferred response.
+        return true;
+    }
+    function dispose() {
+        disposed = true;
+        applied.clear();
+        poller.stop();
+        requests.abort();
+        if (dialog?.open) dialog.close();
+    }
+    function currentContext() {
+        if (root.isConnected && root.dataset.pollUrl === pollUrl && $('[data-composer]') === form && $('[data-history]') === history && csrf?.value === securityToken) return true;
+        dispose();
+        return false;
+    }
     function pauseReads(statusCode) {
         if (revoked || disposed) return;
         readGeneration++;
@@ -69,6 +93,7 @@ export function setupMessages(root, { listen, onCleanup }) {
     function revoke(statusCode) {
         if (revoked || disposed) return;
         revoked = true;
+        applied.clear();
         canSend = false;
         poller.stop();
         requests.abort();
@@ -111,25 +136,26 @@ export function setupMessages(root, { listen, onCleanup }) {
         : statusCode === 422 ? 'Revisa el texto y los archivos. Conserva el identificador y el contenido original del envío; recarga para revisar un identificador ya utilizado.'
         : 'No pudimos confirmar la operación. Reintenta el mismo envío.';
     async function post(target, body) {
+        if (!currentContext()) throw new DOMException('Request cancelled', 'AbortError');
         const response = await fetch(target, { method: 'POST', body, credentials: 'same-origin', signal: requests.signal, redirect: 'error',
             headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-        if (revoked || disposed || requests.signal.aborted) throw new DOMException('Request cancelled', 'AbortError');
+        if (revoked || disposed || requests.signal.aborted || !currentContext()) throw new DOMException('Request cancelled', 'AbortError');
         if (!response.ok) {
             if ([401,403,404,419].includes(response.status)) revoke(response.status);
             else if (response.status !== 422) pauseReads(response.status);
             const error = new Error(errorText(response.status)); error.status = response.status; throw error;
         }
         const data = await response.json().catch(() => null);
-        if (revoked || disposed || requests.signal.aborted) throw new DOMException('Request cancelled', 'AbortError');
+        if (revoked || disposed || requests.signal.aborted || !currentContext()) throw new DOMException('Request cancelled', 'AbortError');
         return data;
     }
     async function update() {
-        if (refreshing || revoked || disposed || requests.signal.aborted) return;
+        if (refreshing || revoked || disposed || requests.signal.aborted || !currentContext()) return;
         refreshing = true;
         const generation = readGeneration;
         try {
-            const response = await fetch(root.dataset.pollUrl, { credentials: 'same-origin', signal: requests.signal, redirect: 'error', headers: { Accept: 'application/json' } });
-            if (revoked || disposed || requests.signal.aborted) return;
+            const response = await fetch(pollUrl, { credentials: 'same-origin', signal: requests.signal, redirect: 'error', headers: { Accept: 'application/json' } });
+            if (revoked || disposed || requests.signal.aborted || !currentContext()) return;
             // A paused read generation is still part of this live access context.
             // Definitive denial takes priority over discarding its stale results.
             if ([401,403,404,419].includes(response.status)) { revoke(response.status); return; }
@@ -139,17 +165,17 @@ export function setupMessages(root, { listen, onCleanup }) {
                 return;
             }
             const data = await response.json();
-            if (revoked || disposed || requests.signal.aborted || generation !== readGeneration) return;
-            if (typeof data.history_html !== 'string' || typeof data.inbox_html !== 'string' || typeof data.information_html !== 'string' || typeof data.can_send !== 'boolean') throw new Error('Invalid response');
+            if (revoked || disposed || requests.signal.aborted || generation !== readGeneration || !currentContext()) return;
+            if (!data || !conversationId || String(data.conversation_id) !== conversationId || typeof data.history_html !== 'string' || typeof data.inbox_html !== 'string' || typeof data.information_html !== 'string' || typeof data.can_send !== 'boolean') throw new Error('Invalid response');
             const bottom = atEnd();
             if (!history.contains(document.activeElement) && !history.querySelector('details[open]')) {
-                history.replaceChildren(fragment(data.history_html));
-                if (bottom) history.scrollTop = history.scrollHeight;
+                const changed = replaceFragment('history', history, data.history_html);
+                if (changed && bottom) history.scrollTop = history.scrollHeight;
             }
             const inbox = $('[data-conversation-list]');
-            if (!inbox.contains(document.activeElement)) inbox.replaceChildren(fragment(data.inbox_html));
+            if (!inbox.contains(document.activeElement)) replaceFragment('inbox', inbox, data.inbox_html);
             const information = $('[data-information-body]');
-            if (!information.contains(document.activeElement) && !information.querySelector('details[open]')) information.replaceChildren(fragment(data.information_html));
+            if (!information.contains(document.activeElement) && !information.querySelector('details[open]')) replaceFragment('information', information, data.information_html);
             localizeMessageTimes(root);
             recovery.hidden = true;
             poller.resume();
@@ -168,11 +194,11 @@ export function setupMessages(root, { listen, onCleanup }) {
     poller.start();
     listen(document, 'visibilitychange', () => { if (document.visibilityState === 'visible') poller.wake(); });
     listen(window, 'focus', () => poller.wake());
-    onCleanup(() => { disposed = true; poller.stop(); requests.abort(); if (dialog?.open) dialog.close(); });
+    onCleanup(dispose);
     // A browser history cache can preserve a document without disposing the
     // shared page controller. Do not restore stale private chat content.
     listen(window, 'pagehide', event => {
-        if (event.persisted) { disposed = true; poller.stop(); requests.abort(); root.replaceChildren(); }
+        if (event.persisted) { dispose(); root.replaceChildren(); }
     });
     listen(window, 'pageshow', event => { if (event.persisted) window.location.reload(); });
     listen(form, 'submit', async event => {

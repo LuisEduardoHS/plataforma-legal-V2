@@ -511,3 +511,415 @@ migraciones, configuración de entorno, dependencias, datos ni adjuntos privados
 Evidencias externas en `js09pb2-1795152770` bajo las visualizaciones de esta sesión:
 build anterior, métricas por cierre de imports, logs de requests y captura de QA.
 Sin staging, commit o push; no se inicia 09P-B.3 ni otra optimización.
+
+## Diseño 09P-B.3-A — Polling seguro sin cambios (2026-11-19)
+
+Análisis focalizado sobre `main`, HEAD
+`60b82e3c79ce740998c6192618db12c73c57686c`, con árbol limpio y staging vacío
+al comenzar. Esta sección es una propuesta: no implementa ninguna optimización.
+Se inspeccionaron controlador, consultas, acceso, cliente/poller y pruebas de
+Mensajes. Las lecturas auxiliares se limitaron a sus vistas, Request, política,
+mutaciones y middleware de sesión, necesarios para identificar invalidaciones.
+No se ejecutaron pruebas, HTTP, builds, consultas MySQL, migraciones ni seeders.
+
+### 1. Funcionamiento actual y fronteras de seguridad
+
+- `InboxController.php:24-55`: cada GET de `updates` construye la bandeja mediante
+  una transacción, libera sus locks y construye estado/historial en otra.
+  `state()` e `history()` vuelven a recorrer el acceso del chat. El poll ignora
+  los cursores de página y consulta las ventanas recientes; conserva los filtros
+  de archivado y participante. No prepara un nuevo compositor en cada poll.
+  Siempre renderiza tres parciales Blade y devuelve `conversation_id`,
+  `can_send`, `history_html`, `inbox_html` e `information_html` con
+  `Cache-Control: private, no-store`.
+- `MessagingQuery.php:22-100,127-160`: los DTO incluyen lectura/ocultamiento por
+  participante, versiones, texto redactado, adjuntos elegibles y alias públicos.
+  La bandeja incluye otras conversaciones, orden, extractos y no leídos.
+  `can_send=false` puede proceder de cualquiera de los bloqueos o de una cuenta
+  destinataria inactiva; no significa que se haya revocado la lectura.
+- `MessagingAccess.php:19-80`: recarga cuentas, comprueba pertenencia inicial y
+  nuevamente bajo locks, exige exactamente los dos participantes y aplica Gate.
+  `EnsureActiveAccount` revalida cuenta y sello de credenciales de sesión; las
+  rutas mantienen auth, throttle y bloqueo de sesión. Una decisión de igualdad
+  nunca debe ejecutarse en lugar de estos controles ni evitar sus errores.
+- `messages.js:126-160`: una lectura por controlador; tras recibir cabeceras
+  descarta respuestas de un controlador revocado/dispuesto/abortado. Dentro del
+  contexto vivo, 401/403/404/419 tienen prioridad sobre una generación de lectura
+  pausada: las cuatro P1 impiden ocultar una revocación detrás de un POST incierto.
+  Después valida generación, HTTP y payload; sustituye cada fragmento si su
+  foco/details lo permiten, localiza fechas y actualiza recuperación/capacidad.
+- `messages.js:162-177` y `messages/polling.js:1-23`: intervalo normal de diez
+  segundos después del tick, sin solapamientos. El automático solo consulta con
+  documento visible/en foco, historial reciente al final, sin foco/details dentro
+  del historial. El reintento manual y la actualización tras un envío usan también
+  `update()`. Los errores temporales pausan; un éxito actual puede reanudar.
+  Turbo desmonta/aborta y BFCache retira el chat privado y recarga al restaurar.
+
+Las pruebas existentes separan estos contratos: `MessagingIntegrationTest`
+comprueba que leer/pollear no marca como leído, bloqueos mantienen historial,
+actor inactivo no puede pollear, cursores/filtros privados y consultas acotadas;
+`MessagingTest`, `MessagingConcurrencyTest` y `MessagingMediaIntegrationTest`
+cubren versiones, locks, idempotencia, ocultamientos y descargas privadas.
+`messages-recovery.test.mjs` cubre las cuatro P1, errores definitivos/temporales,
+respuesta tardía, cambio de contexto/identidad, envío incierto y montaje diferido;
+`messages-transport.test.mjs` cubre intentos y temporizadores. Se inspeccionaron,
+pero no se ejecutaron en esta fase de diseño; no hay un nuevo resultado de suite.
+
+### 2. Alternativas
+
+| Aspecto | A: comparar HTML en cliente | B: respuesta mínima negociada |
+| --- | --- | --- |
+| HTTP | Conserva endpoint y JSON completos | Añade modo opt-in; clientes anteriores reciben JSON completo |
+| Beneficio esperado | Evita parsear/reemplazar fragmentos idénticos ya aplicados | Evita además render Blade, serialización de HTML y transferencia cuando hay igualdad |
+| SQL y locks | Sin reducción | Inicialmente sin reducción: se reconstruyen los DTO autorizados antes de comparar |
+| Autorización | Misma lectura completa en cada petición | Misma lectura completa; ninguna salida temprana anterior al acceso |
+| Invalidación | Igualdad exacta del HTML completo, por fragmento | Huella de todos los insumos de representación y contexto; mucho más delicada |
+| Cliente | Tres referencias de HTML en memoria por controlador | Además negociación, contexto, revisión y ramas full/unchanged |
+| Riesgo principal | Confundir recibido con aplicado, o comparar contra DOM localizado | Omitir una dependencia, contestar sin revalidar o adelantar una revisión con DOM pendiente |
+| Complejidad | Baja y verificable de forma aislada | Media; exige pruebas backend y de compatibilidad antes de activarse |
+
+**Elegida: A como primera implementación, seguida de evaluación de B.** A produce
+un beneficio comprobable en parseo y sustituciones, con cero cambios de contrato
+HTTP o autorización. No cumple por sí sola el objetivo de evitar renderizar en
+servidor: Blade, bytes de respuesta y SQL seguirán igual. B queda como segunda
+etapa condicionada a medir el beneficio y completar su cobertura de invalidación;
+no se presenta A como una solución de ahorro de red/SQL ni se autoriza B aquí.
+No se propone tiempo real, tablas de revisiones, caché compartida ni modificar locks.
+
+### 3. Contrato propuesto para A
+
+1. Mantener todos los GET, credenciales, `redirect: error`, errores y validación
+   actuales. El comparador queda después de los guards de acceso, generación y
+   payload. El `conversation_id` ya enviado puede verificarse contra el contexto
+   capturado del poll antes de usar la representación; una discordancia es una
+   respuesta inválida, sin aplicarla ni repintar otra conversación.
+2. Guardar, dentro de la closure de `setupMessages`, el último HTML **aplicado**
+   para cada uno de los tres contenedores y su identidad de nodo/contexto.
+   No usar un singleton, sesión JS compartida, URL, storage, service worker o logs.
+   No deducir autorización ni identidad de la coincidencia de esas cadenas.
+3. Inicializar los tres valores como desconocidos. El primer poll apto aplicará
+   su HTML, aunque el SSR parezca igual. No comparar contra `innerHTML`: el
+   navegador normaliza markup y `localizeMessageTimes` ya transforma texto/title.
+   Comparar cadenas originales recibidas, sin normalizar, truncar ni quitar CSRF.
+4. Por fragmento: si coincide exactamente con el último aplicado al mismo nodo,
+   no crear template ni llamar a `replaceChildren`; si difiere, respetar los
+   guards actuales de foco/details y aplicar solo donde esté permitido. Avanzar
+   su referencia únicamente después de aplicar con éxito. Si se omite por foco,
+   no marcarlo como aplicado: el siguiente poll idéntico debe poder actualizarlo.
+5. No hacer un `return` global por igualdad. Validar y procesar siempre
+   `can_send`, `controls()`, recuperación y reanudación de una lectura manual
+   válida. Un chat bloqueado sigue leyendo y un éxito antiguo no reanuda una
+   generación pausada por incertidumbre de envío. No tocar `attempt`/tokens/POST.
+6. Conservar el scroll al omitir historial y el comportamiento actual al aplicar
+   un historial distinto. Mantener inicialmente la localización de fechas tal
+   como funciona: todavía puede escribir nodos `time` incluso con fragmentos
+   iguales. No prometer cero mutaciones DOM ni ampliar el alcance a ese formateo.
+7. Soltar las tres referencias al revocar, desmontar, cambiar contexto y ocultar
+   mediante BFCache; una raíz nueva empieza sin referencias. Una pausa temporal
+   puede conservar las de su contexto vivo para compararlas solo después de otra
+   respuesta completa y autorizada. Las cadenas no son persistencia ni cachean
+   decisiones de acceso; soltar referencias no garantiza borrado físico de memoria
+   en JavaScript. Si un contenedor se reconstruye por otra vía, invalidar su valor.
+
+Los guards de foco son una decisión de presentación, nunca autorización para
+acciones: los endpoints de edición, bloqueo, borrado y descarga continúan
+revalidando. No ampliar aquí los aplazamientos ni relajar la purga definitiva.
+
+### Contrato incremental de B, si se autoriza posteriormente
+
+Mismo GET y mismo camino de acceso/DTO, con negociación explícita por cabeceras
+(por ejemplo `X-Messaging-Poll-Version: 1`, contexto y revisión conocidos).
+No añadir esos parámetros arbitrariamente al query: `MessagingRequest::after()`
+rechaza campos que no están permitidos. No incluir texto, identidad legible,
+CSRF o secretos en URL. No usar ETag/304 ni caché HTTP para este protocolo.
+
+- Sin opt-in, mantener exactamente las cinco claves actuales y HTML completo.
+  Con opt-in, responder 200 JSON `mode: full`, contexto/revisión opacos y todas
+  las claves actuales cuando no hay revisión válida o cambió la representación.
+- Solo después de acceso autorizado y DTO actuales, una revisión coincidente
+  permite 200 JSON `mode: unchanged`, mismo contexto/revisión, `conversation_id`
+  y `can_send`, sin los tres HTML. Mantener `private, no-store` en todos los modos
+  y errores. Evitar 204: obligaría a otra interpretación sin cuerpo/estado explícito.
+- La revisión se calcularía antes de Blade, sobre una serialización canónica de
+  todos sus insumos: DTO completos, actor/contexto de sesión, filtros, metadatos
+  de paginación/URLs, CSRF de formularios, locale/config relevante y versión de
+  plantillas/despliegue. Usar una huella opaca autenticada, no IDs/timestamps como
+  sustituto ni un hash público de texto privado. Un hash calculado después de
+  renderizar ahorra red, pero no Blade; no se contabilizaría como el beneficio B.
+- Contexto y revisión son pistas de representación, jamás credenciales. El
+  contexto debe vincular actor efectivo, sesión, conversación y filtros y
+  arrancar desde el render autenticado, incluso antes del primer poll. Un cambio
+  de identidad/sesión no puede validar una revisión previa, aunque ambos usuarios
+  participen en el mismo chat. Un contexto retirado del cliente opt-in debe
+  conducir a recuperación/purga compatible con sesión no vigente (419 genérico),
+  tras los controles normales; una conversación ajena/inexistente conserva 404.
+  El cliente antiguo no se obliga a enviar estos nuevos datos.
+- El cliente acepta `unchanged` solo para el contexto vivo, una revisión que
+  realmente tiene aplicada y una generación actual. Si algún fragmento quedó
+  aplazado por foco, no adelantar la revisión global: debe seguir recibiendo full
+  hasta aplicar todos. Una respuesta mínima inesperada sin base es error de
+  protocolo/pausa, no permiso para reutilizar datos ajenos ni un éxito vacío.
+- Sesión/autorización y los DTO se leen cada vez. No responder por un token
+  recibido antes de entrar a `MessagingAccess`, ni almacenar resultados de Gate.
+  Conservar las dos transacciones y sus lecturas actuales; esta fase no pretende
+  un snapshot atómico entre toda la bandeja y el chat ni reducir recorridos SQL.
+
+### 4. Invalidaciones que no puede omitir la solución
+
+| Cambio | Representación/estado afectado |
+| --- | --- |
+| Envío nuevo, incluso en otro chat de la bandeja | Ventana reciente, extracto, orden, no leídos y paginación; envío puede volver a mostrar una conversación oculta |
+| Edición o eliminación de un mensaje anterior | Texto, versión de formularios, lápida, adjuntos, extracto e información, aunque el último ID no cambie |
+| Ocultar un mensaje o el historial para un participante | Filas visibles, límites de ocultamiento, extracto/no leídos, cursores y archivos; no trasladar ese resultado al otro participante |
+| Confirmación explícita de lectura de cualquiera de los dos | No leídos propios, botón de confirmación y marcas Leído/Guardado, incluyendo ocultamientos de la otra persona |
+| Archivar/desarchivar o cambiar filtros | Pertenencia/orden de bandeja, links y botones; una preferencia propia no modifica la ajena |
+| Bloquear/desbloquear cualquiera de los dos | `can_send`, enlaces Editar y controles; `blocked_by_me` cambia la acción propia; retirar solo uno de dos bloqueos no habilita envío |
+| Perfil/alias/privacidad o estado del destinatario | Nombre público o Usuario, username, enlace de perfil, bandeja/información y capacidad de envío; historial puede seguir autorizado |
+| Adjunto deja de ser elegible, se retiene o cambia su metadato | Listas de archivos/metadatos visibles en los DTO; descarga sigue revalidando por separado, incluida corrupción o ausencia física |
+| Cuenta propia inactiva, credenciales/sesión retiradas, membresía inválida | Revalidación y error definitivo; nunca unchanged ni conservación por igualdad |
+| Nuevo contexto, cursores, idioma/config, CSRF o versión de vistas | Descartar base/revisión o forzar representación completa según corresponda |
+
+`activity_at` se actualiza al enviar (`MessageService.php:70`), pero editar,
+borrar, ocultar, leer, bloquear o cambiar perfiles no dependen de ese reloj.
+Tampoco basta `MAX(message.id)`, `unread_count` o `can_send` aislados. B debe
+probar cada dependencia antes de sustituir una respuesta completa por mínima.
+
+### 5. Riesgos de privacidad y recuperación
+
+401/403/404/419 del contexto vivo revocan con prioridad aun si el GET es de una
+generación anterior a un envío incierto. Una respuesta de controlador dispuesto
+por Turbo/cambio de identidad se ignora, sin purgar el DOM nuevo. 409/429/503,
+fallo de red, JSON inválido o error de protocolo mantienen la pausa y recuperación
+manual actuales; ninguna coincidencia reanuda un envío ni rota un token idempotente.
+No confundir igualdad con entrega/lectura ni marcar mensajes como leídos por poll.
+
+Toda revisión, cadena o base es local al controlador de ese usuario/chat. No
+registrar payloads, huellas de texto privado o tokens en logs/analítica; no usar
+localStorage/sessionStorage. B podría revelar existencia/cambios de un chat si
+compara antes de autorizar: evitarlo manteniendo los mismos errores genéricos y
+sin devolver contexto/revisión al ajeno. Ni A ni B deben reutilizar decisiones de
+autorización, abrir accesos a administradores ni cambiar retención/descargas.
+
+### 6. Pruebas necesarias antes de implementar/publicar
+
+Para A: pruebas del controlador JS real con respuestas sucesivas iguales y
+distintas, contando parseos/reemplazos por contenedor; primera respuesta sin base;
+cambio de solo un fragmento; igualdad con fechas localizadas; foco/details impiden
+aplicar y la misma respuesta se aplica cuando se liberan; scroll y borrador
+conservados; nodo reconstruido invalida referencia; cambio exclusivo de
+`can_send`; recuperación manual con HTML igual; malformed/temporales sin reanudar.
+Comprobar liberación de referencias y ausencia de repintado tras revoke/Turbo/
+BFCache, identidad/chat nuevos y cargas dinámicas pendientes de 09P-B.2.
+
+Reejecutar las cuatro P1 401/403/404/419 después de un envío incierto, con un
+comparador preparado para saltar todos los fragmentos; respuestas definitivas
+simultáneas POST/GET; éxito antiguo; error tardío de contexto retirado; mantener
+`can_send=false` con GET autorizado y cero POST automáticos. Suite frontend
+completa, build y whitespace después de implementar. A no requiere modificar PHP.
+
+Para B, además: pruebas HTTP de cada invalidación de la tabla, actor suspendido/
+sesión invalidada con revisión coincidente, ajeno e inexistente indistinguibles,
+token/contexto de otro usuario/chat/filtro, entrada malformada, compatibilidad
+legacy, CSRF/config/despliegue y revisión no adelantada por foco. Instrumentar
+Blade para acreditar cero render de los tres parciales en unchanged, sin omitir
+acceso/SQL. Concurrencia: editar/ocultar/bloquear durante lecturas, conservando
+locks y contenido redactado. Todo fixture futuro exige dentro del proceso
+`APP_ENV=testing`, MySQL efectivo `plataforma_legal_v2_test`, sesiones/caché y
+almacenamiento aislados; nunca usar desarrollo ni documentos reales.
+
+### 7. Medición futura y criterio de aceptación
+
+No hay métricas posteriores en esta intervención. Referencia histórica 09P-A:
+poll poblado de 24 conversaciones adicionales, 23 consultas, 48.97 ms de Kernel
+(8.26 ms SQL) y 17,145 bytes JSON. No son TTFB/LCP ni una nueva medición de HEAD.
+
+| Medida | A que habrá que medir | B que habrá que medir |
+| --- | --- | --- |
+| Consultas/locks y tiempo SQL | Sin reducción esperada; revalidación íntegra | Sin reducción esperada en este contrato inicial |
+| Render/tiempo Kernel y CPU Blade | Misma renderización de tres parciales | Comparar full/unchanged y coste de calcular huella; cero render de parciales solo en unchanged |
+| Bytes JSON sin comprimir/gzip y bytes de cabeceras | Sin reducción esperada | Medir cuerpo mínimo y cabeceras de negociación/revisión; no inventar un tamaño objetivo |
+| Templates creados y `replaceChildren` por poll | Tras primera aplicación y con tres HTML iguales: objetivo cero de ambos; baseline instrumentado pendiente | Cero en unchanged; en full aprovechar el comparador de A |
+| Otras mutaciones, CPU JS, layout y foco | Medir por separado, especialmente escritura de fechas; no afirmar cero DOM ni beneficio CPU sin traza | Medir validación del protocolo y UI conservada; sin deducir LCP/INP de bytes |
+| Red/frecuencia/recuperación | Mismo intervalo y requests GET; cero reenvíos automáticos | Mismo intervalo; incluir coste del primer full y de revisiones invalidadas |
+
+Usar fixtures equivalentes pequeños/poblados, polls estables y cada invalidación,
+con/sin foco y con conversación en solo lectura. Separar primera respuesta,
+estable, actualizada, error y restauración. Documentar muestras y dispersión;
+comparar antes/después del cambio aislado, sin sumar ahorros de SQL del punto 5
+de la auditoría. A se acepta con cero sustituciones/parseos redundantes en el caso
+estable y garantías intactas; la mejora de CPU debe demostrarse y podría ser baja.
+El objetivo de no renderizar en servidor sigue pendiente hasta aprobar y medir B.
+
+### 8. Alcance probable de implementación y estado de esta intervención
+
+Primera etapa A: `resources/js/messages.js` y
+`tests/frontend/messages-recovery.test.mjs`; un helper/prueba focalizada solo si
+reduce el tamaño de la lógica. Actualizar este informe con resultados reales.
+No se prevén cambios en `polling.js`, `attempt.js`, servicios, permisos, rutas,
+cadencia, archivos ni contrato HTTP. No cambiar `ui/page.js` salvo regresión
+demostrada que requiera una autorización de alcance distinta.
+
+Etapa B separada: `InboxController.php`, una representación/revisión junto a
+`MessagingQuery.php` si hace falta, cliente y pruebas HTTP/frontend. El contexto
+inicial podría requerir `pages/messages/index.blade.php`; cualquier validación de
+cabeceras debe ser explícita. No rediseñar `MessagingAccess`, mutaciones ni
+duplicación de consultas dentro de esta optimización. Ese trabajo requiere su
+propia autorización y medición.
+
+Único cambio realizado ahora: añadir esta sección a
+`docs/performance-audit-09p-a.md`, conservando su contenido anterior. Sin cambios
+en PHP, JS, pruebas, configuración, datos ni otros worktrees; staging vacío,
+sin commit ni push. La implementación se detiene en este diseño.
+
+## Resultados 09P-B.3-B — Reconstrucciones DOM selectivas (2026-11-20)
+
+Se implementó únicamente A sobre `main`, HEAD inicial
+`60b82e3c79ce740998c6192618db12c73c57686c`, con staging vacío. El único cambio
+previo era este informe con el diseño 09P-B.3-A; su contenido se conserva junto
+con las métricas históricas de 09P-A, 09P-B.1 y 09P-B.2. No se implementa la
+respuesta mínima B ni se cambia contrato HTTP, PHP, SQL o autorización.
+
+### Implementación y contexto
+
+`resources/js/messages.js` mantiene, dentro de cada `setupMessages`, como máximo
+tres registros de HTML aplicado: historial, bandeja e información. Cada registro
+incluye la identidad del nodo destino y la cadena original recibida. La primera
+lectura apta establece la base; no se compara con el SSR ni con `innerHTML`, que
+puede haber sido normalizado o localizado por el navegador.
+
+Después de validar acceso/vigencia y el payload completo, cada fragmento apto
+compara nodo y cadena por igualdad exacta. Si coinciden, no crea un template ni
+llama a `replaceChildren`. Si difieren, aplica y solo entonces actualiza su
+registro. El foco/details conservan los aplazamientos anteriores: un fragmento
+recibido pero no aplicado nunca adelanta la comparación. Un nodo de información
+o bandeja reconstruido no hereda la comparación del nodo anterior.
+
+Se captura la URL de poll de ese montaje, incluida su conversación/filtros. Antes
+de iniciar una lectura y después de sus esperas se comprueba conexión de la raíz,
+misma URL, compositor/historial originales y token CSRF local sin variaciones.
+Se valida `conversation_id`, ya presente en el JSON vigente, contra la conversación
+de esa URL. Una respuesta de otro chat o sin ese campo se trata como payload
+inválido y pausa, sin parseos ni actualizaciones parciales. No se añade ningún
+campo ni cabecera al transporte. La ruta utilizada sigue siendo la actual.
+
+Un contexto DOM retirado se dispone, detiene y aborta sin repintar/purgar una
+raíz que podría representar ya otro contexto. La comprobación compartida se
+aplica también al resultado de POST para que una respuesta anterior no confirme
+un intento ni revoque el contexto nuevo. No se cambian datos enviados, rotación
+de tokens, idempotencia ni reglas de reintento; no se crean POST automáticos.
+
+La igualdad no termina globalmente `update()`: se siguen procesando `can_send`,
+controles, estado de recuperación y reanudación manual vigente. Por eso
+`can_send=false` conserva lectura y un éxito idéntico puede recuperar una pausa
+temporal sin reconstruir HTML. El scroll del historial idéntico permanece intacto;
+cuando se reemplaza conserva el comportamiento de scroll previo.
+
+401/403/404/419 del contexto vivo siguen revocando antes de descartar una generación
+de lectura antigua. La igualdad nunca puede ocultar esa denegación. Un controlador
+dispuesto o un contexto distinto no procesa resultados tardíos. En revocación,
+desmontaje, retiro de contexto y BFCache se vacían los tres registros; BFCache
+conserva la purga del contenido privado y recarga al volver. Las pausas temporales
+conservan solo la representación ya aplicada de su propio montaje, y solo otra
+respuesta completa/actual puede volver a utilizarla para comparar.
+
+El servidor continúa revalidando cuenta/sesión, membresía y autorización en cada
+lectura completa. Los guards locales detectan el contexto del controlador y el
+DOM, no sustituyen esa identidad efectiva del servidor ni cachean decisiones de
+Gate. Los flujos de login/logout/cambio de usuario y Turbo deben seguir creando
+su nuevo montaje. No hay caché global, storage, service worker ni registro de
+HTML, CSRF o contenidos privados en logs. Soltar referencias no es una garantía
+de borrado físico inmediato de memoria JavaScript.
+
+### Medición reproducida antes/después
+
+Se ejecutó primero la nueva prueba de medición contra `messages.js` anterior a la
+corrección: reprodujo tres parseos y tres reemplazos en las seis lecturas. Después
+se contrastó con el controlador corregido. Los contadores de la prueba observan
+asignaciones a `template.innerHTML` y llamadas a reemplazar los tres contenedores.
+
+Además se midió DOM nativo en el navegador con el controlador real: versión
+`git show HEAD:resources/js/messages.js` como antes y fuente actual como después,
+mismos módulos auxiliares, mismo marcado mínimo, contenido sintético y respuestas
+JSON completas equivalentes. Un servidor estático local en `127.0.0.1:8125` sirvió
+las fuentes y el montaje; `fetch` dentro del fixture devolvió respuestas sintéticas
+sin llamar al backend y rechazó escrituras. El runner esperó a terminar cada
+lectura antes de la siguiente. No se utilizó Laravel, MySQL, sesión de aplicación
+ni cuentas/documentos reales. Servidor y pestaña se cerraron al terminar.
+
+En cada variante se realizaron estas seis lecturas secuenciales. La tabla muestra
+`parseos / replaceChildren / registros childList` por lectura:
+
+| Lectura | Antes | Después |
+| --- | ---: | ---: |
+| Primera aplicación H1/I1/F1 | 3 / 3 / 3 | 3 / 3 / 3 |
+| Idéntica a la anterior | 3 / 3 / 3 | 0 / 0 / 0 |
+| Solo cambia historial a H2 | 3 / 3 / 3 | 1 / 1 / 1 |
+| Solo cambia bandeja a I2 | 3 / 3 / 3 | 1 / 1 / 1 |
+| Solo cambia información a F2 | 3 / 3 / 3 | 1 / 1 / 1 |
+| Idéntica a la anterior | 3 / 3 / 3 | 0 / 0 / 0 |
+| Total del fixture | 18 / 18 / 18 | 6 / 6 / 6 |
+
+`MutationObserver` observó únicamente `childList` directo de esos tres destinos.
+En este fixture se evitaron **12 parseos, 12 reemplazos y 12 registros de mutación
+estructural**, 66.7% de esas operaciones para esta secuencia concreta. No representa
+un porcentaje de rendimiento de la aplicación ni del número total de mutaciones.
+Los HTML son párrafos mínimos, no un historial poblado representativo de producción.
+La comparación de cadenas y sus referencias también tienen coste/memoria.
+
+Se mantiene `localizeMessageTimes(root)` y la actualización de controles/status,
+que pueden seguir escribiendo DOM incluso si no cambian los tres HTML. El fixture
+de conteo no contiene fechas en sus respuestas; esas escrituras, estilos, atributos
+y cualquier mutación fuera de los tres destinos no están incluidas. No se midieron
+CPU, layout, latencia, LCP o INP. No se promete reducir render Blade, consultas,
+locks, número/frecuencia de GET ni bytes HTTP: el servidor sigue enviando el JSON
+completo. Las cifras históricas SQL/Kernel/red del informe no se midieron de nuevo.
+
+### Regresiones y validación
+
+`tests/frontend/messages-recovery.test.mjs` conserva sus casos anteriores y añade
+23 pruebas/casos, usando `setupMessages` real y transporte/DOM sintéticos:
+
+- Conteos por lectura y actualización exclusiva del fragmento distinto.
+- HTML localizado, scroll y borrador conservados con respuesta idéntica;
+  `can_send` y recuperación manual siguen actualizándose sin reemplazo.
+- Foco/details aplazan aplicación sin adelantar la referencia; al liberar esos
+  controles se aplica la misma respuesta pendiente. Nodo destino nuevo sin base.
+- ID de conversación ausente/distinto rechazado antes de aplicar; cambio de URL,
+  token de sesión local, compositor, historial o conexión de raíz retira el contexto.
+- Contexto revisado también después de leer JSON, y POST tardío sin confirmación
+  o purga del contexto nuevo. Éxito antiguo no adelanta la base tras envío incierto.
+- Nuevo controlador/chat comienza sin comparación anterior; Turbo/BFCache abortan
+  y bloquean resultados tardíos con base ya aplicada.
+- 409/429/503 no actualizan la base y permiten recuperación manual con HTML igual.
+- Cuatro casos adicionales con base aplicada y envío incierto verifican que
+  401/403/404/419 siguen purgando. Se conservan también las cuatro P1 originales.
+
+Resultados finales:
+
+- Suite frontend completa: **141/141 aprobadas**.
+- Recuperación/polling del controlador: **49/49 aprobadas**, incluidas las P1.
+- Build Vite aprobado; `git diff --check` aprobado.
+- Medición DOM nativa completada sin errores JS observados.
+- No se ejecutó Laravel completo ni se accedió a MySQL.
+
+### Inventario, límites y cierre de esta intervención
+
+Únicamente tres archivos del proyecto modificados:
+
+1. `resources/js/messages.js`: comparador local, validación de contexto y limpieza.
+2. `tests/frontend/messages-recovery.test.mjs`: instrumentación y 23 regresiones.
+3. `docs/performance-audit-09p-a.md`: esta sección, además del diseño previo ya
+   pendiente; se conserva todo el contenido anterior.
+
+`messages/polling.js`, `attempt.js`, backend, vistas, configuración y LEXA no
+cambian. Los artefactos compilados ignorados se regeneran por el build. Las
+evidencias de DOM nativo y el harness están fuera del repositorio, en
+`dom09pb3-1795154439` bajo las visualizaciones de la sesión. No se modifican datos
+ni adjuntos y no se accede al worktree de Antigravity. No se añaden archivos al
+proyecto, no hay staging, commit o push y no se comienza 09P-B.4.
+
+Pendiente por diseño: el primer poll apto reconstruye los tres fragmentos; no hay
+deduplicación inicial con SSR. La respuesta mínima B, el ahorro de servidor/red,
+pruebas de despliegue con sesiones reales y medidas de CPU siguen fuera de este
+alcance. El cambio mantiene los guards de foco previos y las autorizaciones de
+cada acción; no promete actualización de un fragmento mientras esté aplazado.
