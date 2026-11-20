@@ -61,13 +61,13 @@
 }
 
 .public-brand-logo {
-    width: 150px;
-    height: 40px;
+    height: 32px;
+    aspect-ratio: 150 / 40;
 }
 
 .platform-brand-logo {
-    width: 140px;
-    height: 37px;
+    height: 32px;
+    aspect-ratio: 140 / 37;
 }
 
 @media (max-width: 1023px) {

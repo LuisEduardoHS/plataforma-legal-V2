@@ -6,13 +6,12 @@
 }
 
 .login-input {
-    @apply bg-bg dark:bg-bg-dark rounded-md w-full text-text dark:text-text-dark font-medium py-3 px-3 focus:outline-none focus:ring-2 focus:ring-dark-accent dark:focus:ring-light-accent;
-    border: 1px solid var(--color-control-border);
+    @apply bg-bg dark:bg-bg-dark rounded-md w-full text-text dark:text-text-dark font-medium py-3 px-3 focus:outline-none focus:ring-2 focus:ring-dark-accent dark:focus:ring-light-accent border-2 border-[#C7C5C9];
 }
 
 #remember:not(:checked) { border-color: var(--color-control-border); }
 @media (prefers-color-scheme: dark) {
-    .login-input, #remember:not(:checked) { border-color: var(--color-focus-dark); }
+    .login-input, #remember:not(:checked) { border-color: #5b585e; }
 }
 
 .login-remember-label {
@@ -26,4 +25,156 @@
 .login-alt-button {
     @apply bg-bg dark:bg-bg-dark hover:bg-accent-bg-hover dark:hover:bg-accent-bg-hover-dark transition-colors duration-200 py-2 px-2 w-22 lg:w-29 h-12
     text-sm text-light-text font-semibold rounded-lg cursor-pointer flex flex-row items-center justify-center;
+}
+
+.auth-back-link {
+    @apply text-text/25 dark:text-white/25;
+    position: fixed;
+    z-index: 20;
+    top: 20px;
+    left: 24px;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-back-link:hover {
+    text-decoration: underline;
+}
+
+@media (min-width: 640px) {
+    .auth-page {
+        padding: 32px 16px;
+    }
+
+    .auth-card {
+        width: calc(100% - 32px);
+        max-width: 896px;
+        min-height: 0;
+    }
+
+    .auth-card > div:last-child {
+        max-height: calc(100dvh - 64px);
+        overflow-y: auto;
+    }
+}
+
+@media (min-width: 640px) and (max-height: 820px) {
+    .auth-page {
+        align-items: flex-start;
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+
+    .auth-card {
+        max-height: calc(100dvh - 40px);
+        overflow-y: auto;
+    }
+
+    .auth-card > div:last-child {
+        max-height: none;
+        overflow-y: visible;
+        padding-top: 16px;
+        padding-bottom: 16px;
+    }
+
+    .auth-card > div:last-child > section {
+        padding-top: 8px;
+        margin-bottom: 40px;
+    }
+
+    .auth-card > div:last-child form > div {
+        margin-bottom: 12px;
+    }
+
+    .auth-card > div:last-child form > div:nth-last-of-type(2) {
+        margin-top: 12px;
+        margin-bottom: 12px;
+    }
+
+    .auth-card > div:last-child form > button {
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    .auth-card > div:last-child > div.mt-9,
+    .auth-card > div:last-child > div.mt-12 {
+        margin-top: 20px;
+    }
+
+    .auth-card > div:last-child > div.mt-3 {
+        margin-top: 8px;
+    }
+}
+
+/* Loading feedback for authentication submit buttons. */
+.auth-submit-button {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.auth-submit-button.is-loading {
+    cursor: wait;
+}
+
+.auth-submit-button.is-loading::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    inset: 0 auto 0 -55%;
+    width: 45%;
+    transform: skewX(-18deg);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 28%), transparent);
+    animation: auth-shimmer 1.35s linear infinite;
+    pointer-events: none;
+}
+
+.auth-submit-button > span {
+    position: relative;
+    z-index: 1;
+}
+
+.auth-loading-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-loading-dots {
+    display: inline-flex;
+    min-width: 1.05em;
+    justify-content: flex-start;
+}
+
+.auth-loading-dots i {
+    display: inline-block;
+    font-style: normal;
+    line-height: 1;
+    transform-origin: 50% 80%;
+}
+
+.auth-loading-dots i:nth-child(1) {
+    animation: auth-dot-wave 1.2s ease-in-out 0ms infinite;
+}
+
+.auth-loading-dots i:nth-child(2) {
+    animation: auth-dot-wave 1.2s ease-in-out 300ms infinite;
+}
+
+.auth-loading-dots i:nth-child(3) {
+    animation: auth-dot-wave 1.2s ease-in-out 600ms infinite;
+}
+
+@keyframes auth-shimmer {
+    from { left: -55%; }
+    to { left: 110%; }
+}
+
+@keyframes auth-dot-wave {
+    0%, 20%, 100% { transform: translateY(0); }
+    35%, 55% { transform: translateY(-5px); }
+    70%, 85% { transform: translateY(0); }
 }

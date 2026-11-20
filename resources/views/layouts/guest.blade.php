@@ -14,7 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="turbo-visit-control" content="reload">
 
-    <title>@yield('title', 'Plataforma Legal')</title>
+    <title>@yield('title', 'Lefenda')</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/views/login.css'])
 

@@ -19,7 +19,7 @@
     <meta name="turbo-cache-control" content="no-cache">
     <meta name="turbo-prefetch" content="false">
 
-    <title>@yield('title', 'Plataforma Legal')</title>
+    <title>@yield('title', 'Lefenda')</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @if ($internalNavigation) @vite(['resources/css/components/userHeader.css']) @endif
