@@ -179,7 +179,6 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             const text = message.content ?? message.text ?? '';
             article.classList.toggle('is-user', own);
             $('[data-message-author]', article).textContent = own ? data.current_user.name : 'LEXA';
-            $('[data-answer-icon]', article).toggleAttribute('hidden', own);
             const copyBtn = $('[data-copy-message]', article);
             if (copyBtn) {
                 copyBtn.hidden = own || !text;

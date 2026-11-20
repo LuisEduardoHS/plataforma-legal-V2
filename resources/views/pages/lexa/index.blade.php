@@ -75,7 +75,6 @@
         <template data-message-template>
             <article class="lexa-message">
                 <div class="lexa-message-author">
-                    <x-lucide-sparkles data-answer-icon aria-hidden="true" />
                     <strong data-message-author></strong>
                     <button type="button" class="lexa-copy-btn" data-copy-message aria-label="Copiar respuesta" title="Copiar respuesta" hidden><x-lucide-copy aria-hidden="true" /></button>
                 </div>

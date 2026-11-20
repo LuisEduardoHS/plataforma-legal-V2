@@ -7,7 +7,7 @@
         <p class="lexa-file-error" data-file-error role="alert" hidden></p>
         <div class="lexa-composer-tools">
             <div class="lexa-composer-options">
-                <label class="lexa-mode"><x-lucide-sparkles aria-hidden="true" /><span class="lexa-sr">Tipo de consulta</span><select data-consultation-mode aria-label="Tipo de consulta">@foreach ($modes as $mode)<option value="{{ $mode['id'] }}">{{ $mode['label'] }}</option>@endforeach</select><x-lucide-chevron-down aria-hidden="true" /></label>
+                <label class="lexa-mode"><span class="lexa-sr">Tipo de consulta</span><select data-consultation-mode aria-label="Tipo de consulta">@foreach ($modes as $mode)<option value="{{ $mode['id'] }}">{{ $mode['label'] }}</option>@endforeach</select><x-lucide-chevron-down aria-hidden="true" /></label>
                 <label class="lexa-attach" aria-disabled="true" title="Adjuntos disponibles próximamente"><x-lucide-paperclip aria-hidden="true" /><span>Adjuntos próximamente</span><input type="file" multiple data-attach disabled accept=".jpg,.jpeg,.png,.webp,.pdf,.docx" aria-label="Adjuntos no habilitados todavía" aria-describedby="lexa-file-limits"></label>
             </div>
             <div class="lexa-composer-actions">

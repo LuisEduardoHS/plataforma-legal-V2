@@ -104,7 +104,7 @@
 .lexa-message { max-width: 100%; padding: 16px 20px; overflow-wrap: anywhere; background: color-mix(in srgb, var(--lexa-surface) 94%, var(--lexa-soft)); border: 1px solid var(--lexa-border); border-radius: 18px 18px 18px 4px; box-shadow: 0 2px 10px #33234507; }
 .lexa-message-author { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .lexa-message-author strong { font-size: 13.5px; font-weight: 650; }
-.lexa-message-author svg { width: 16px; height: 16px; color: var(--lexa-link); }
+.lexa-message:not(.is-user) .lexa-message-author strong { font-size: 13px; font-weight: 700; letter-spacing: var(--lexa-tracking); background: linear-gradient(110deg, var(--color-dark-accent), var(--color-lexa-rose) 45%, var(--color-lexa)); background-clip: text; -webkit-background-clip: text; color: transparent; }
 .lexa-copy-btn { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; min-width: 30px; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--lexa-muted); }
 .lexa-copy-btn:hover { background: var(--lexa-tint); color: var(--lexa-link); }
 .lexa-copy-btn svg { width: 15px; height: 15px; color: currentColor; }
@@ -160,6 +160,7 @@
 @media (prefers-color-scheme: dark) {
     .lexa { --lexa-page: var(--color-bg-dark); --lexa-surface: var(--color-surface-dark); --lexa-soft: var(--color-accent-bg-dark); --lexa-text: var(--color-text-dark); --lexa-muted: var(--color-light-text-dark); --lexa-border: var(--color-border-dark); --lexa-focus: var(--color-focus-dark); --lexa-link: var(--color-lexa-dark); --lexa-tint: color-mix(in srgb, var(--color-lexa) 18%, var(--lexa-surface)); --lexa-wash: color-mix(in srgb, var(--color-lexa) 28%, transparent); --lexa-warm-wash: color-mix(in srgb, var(--color-accent) 14%, transparent); color-scheme: dark; }
     .lexa-sidebar-heading h2 { background-image: linear-gradient(110deg, var(--color-light-accent), var(--color-lexa-rose) 45%, #8F6FF0); }
+    .lexa-message:not(.is-user) .lexa-message-author strong { background-image: linear-gradient(110deg, var(--color-light-accent), var(--color-lexa-rose) 45%, #8F6FF0); }
     .lexa-welcome h1 { background-image: linear-gradient(110deg, var(--color-accent-text-dark), var(--lexa-link) 88%); }
 }
 @media (max-width: 1279px) {
