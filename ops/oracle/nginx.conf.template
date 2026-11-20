@@ -1,0 +1,38 @@
+# HTTP context: define once, coordinate with existing nginx.conf.
+server_names_hash_bucket_size 64;
+# Render STAGING_HOST explicitly; never envsubst all nginx variables.
+log_format lefenda_safe '$remote_addr $request_method $uri $status $body_bytes_sent $request_time';
+server {
+    listen 80;
+    server_name STAGING_HOST;
+    location ^~ /.well-known/acme-challenge/ { root /var/www/acme; }
+    location / { return 301 https://STAGING_HOST$request_uri; }
+}
+server {
+    listen 443 ssl;
+    server_name STAGING_HOST;
+    root /srv/lefenda/current/public;
+    index index.php;
+    ssl_certificate /etc/letsencrypt/live/STAGING_HOST/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/STAGING_HOST/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    server_tokens off;
+    access_log /var/log/nginx/lefenda.access.log lefenda_safe;
+    error_log /var/log/nginx/lefenda.error.log warn;
+    client_max_body_size 12m;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    location / { try_files $uri $uri/ /index.php?$query_string; }
+    location = /index.php {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root/index.php;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        fastcgi_param HTTPS on;
+        fastcgi_pass unix:/run/php/lefenda.sock;
+        fastcgi_read_timeout 60s;
+    }
+    location ~ \.php(?:/|$) { return 404; }
+    location ~ /\. { deny all; }
+    location ~* \.(?:sql|bak|env|log|ini|tar|gz|zip)$ { deny all; }
+}

@@ -1,0 +1,27 @@
+[Unit]
+Description=Lefenda staging queue worker
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=lefenda
+Group=lefenda
+WorkingDirectory=/srv/lefenda/current
+ExecStart=/usr/bin/php artisan queue:work database --sleep=3 --tries=1 --timeout=60 --max-time=3600
+Restart=always
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=90
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/lefenda/shared/storage
+MemoryMax=384M
+CPUQuota=50%
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
