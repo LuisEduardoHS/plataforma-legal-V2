@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPoller } from '../../resources/js/messages/polling.js';
-import { onPage } from '../../resources/js/ui/page.js';
+import { onPage, loadOnPage } from '../../resources/js/ui/page.js';
 
 // Load the actual page controller without mounting a page during module evaluation.
 globalThis.document = Object.assign(new EventTarget(), { querySelector: () => null });
@@ -23,7 +23,7 @@ class Element extends EventTarget {
     focus() { this.focused = true; this.focusCount = (this.focusCount || 0) + 1; }
     remove() { this.isConnected = false; }
 }
-function fixture({ pollUrl = '/mensajes/10/actualizaciones', managed = false } = {}) {
+function fixture({ pollUrl = '/mensajes/10/actualizaciones', managed = false, deferredMount = false } = {}) {
     const keys = ['document', 'window', 'fetch', 'matchMedia', 'innerHeight', 'setTimeout', 'clearTimeout', 'FormData'];
     const previous = Object.fromEntries(keys.map(key => [key, globalThis[key]]));
     const doc = Object.assign(new EventTarget(), { visibilityState: 'visible', hasFocus: () => true, activeElement: null });
@@ -58,10 +58,14 @@ function fixture({ pollUrl = '/mensajes/10/actualizaciones', managed = false } =
     const requests = [];
     globalThis.fetch = (url, options) => new Promise((resolve, reject) => requests.push({ url, options, resolve, reject }));
     const listeners = new AbortController(), cleanups = [];
+    let finishImport, pageRoot = root;
     if (managed) {
-        doc.querySelector = () => root;
+        doc.querySelector = () => pageRoot;
         doc.body = { style: { overflow: '' } };
-        onPage('[data-messaging]', setupMessages);
+        if (deferredMount) {
+            const ready = new Promise(resolve => { finishImport = resolve; });
+            loadOnPage('[data-messaging]', async () => { await ready; onPage('[data-messaging]', setupMessages); });
+        } else onPage('[data-messaging]', setupMessages);
     } else {
         setupMessages(root, {
             listen(target, name, callback) { target?.addEventListener(name, callback, { signal: listeners.signal }); },
@@ -78,6 +82,8 @@ function fixture({ pollUrl = '/mensajes/10/actualizaciones', managed = false } =
         else { listeners.abort(); cleanups.forEach(fn => fn()); }
     };
     return { root, nodes, recovery, retry, access, title, requests, timers, header, mobile, token, send,
+        finishImport: async () => { finishImport(); await settle(); },
+        setPageRoot: value => { pageRoot = value; },
         tick, respond, settle, cleanup, focus: () => win.dispatchEvent(new Event('focus')),
         submit: () => form.dispatchEvent(new Event('submit', { cancelable: true })),
         restore() { cleanup(); for (const key of keys) globalThis[key] = previous[key]; },
@@ -110,6 +116,34 @@ for (const code of [409, 429, 503]) test(`${code} pauses reads until a manual GE
         await f.respond(1); assert.equal(f.recovery.hidden, true);
         assert.equal(f.timers.size, 1); assert.equal([...f.timers.values()][0].delay, 10000);
         assert.equal(f.requests.filter(x => x.options.method === 'POST').length, 0);
+    } finally { f.restore(); }
+});
+
+test('lazy Messages mounts once after a delayed import and cleans in-flight work on Turbo departure', async () => {
+    const f = fixture({ managed: true, deferredMount: true });
+    try {
+        await f.settle(); assert.equal(f.timers.size, 0);
+        document.dispatchEvent(new Event('turbo:before-render'));
+        f.setPageRoot(null); document.dispatchEvent(new Event('turbo:load'));
+        await f.finishImport(); assert.equal(f.timers.size, 0); assert.equal(f.requests.length, 0);
+        f.setPageRoot(f.root); document.dispatchEvent(new Event('turbo:load'));
+        document.dispatchEvent(new Event('turbo:load')); assert.equal(f.timers.size, 1);
+        await f.tick(); assert.equal(f.requests.length, 1);
+        f.cleanup(); assert.equal(f.requests[0].options.signal.aborted, true);
+        await f.respond(0); assert.equal(f.nodes.history.textContent, 'HISTORIAL PRIVADO');
+        assert.equal(f.timers.size, 0);
+    } finally { f.restore(); }
+});
+
+test('lazy Messages frozen before import completion cannot start polling on a stale BFCache page', async () => {
+    const f = fixture({ managed: true, deferredMount: true });
+    try {
+        let reloads = 0; window.location.reload = () => reloads++;
+        await f.settle();
+        window.dispatchEvent(Object.assign(new Event('pagehide'), { persisted: true }));
+        await f.finishImport(); assert.equal(f.timers.size, 0);
+        window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
+        assert.equal(reloads, 1); assert.equal(f.timers.size, 0); assert.equal(f.requests.length, 0);
     } finally { f.restore(); }
 });
 

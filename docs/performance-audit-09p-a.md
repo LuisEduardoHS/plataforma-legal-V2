@@ -327,3 +327,187 @@ Evidencias de 09P-B.1 fuera del repositorio: `css09pb1-1795152095` en el mismo
 directorio de visualizaciones de la sesión; contiene copia del build anterior,
 tamaños, análisis de manifiesto/reglas y resultados de QA. No hubo staging,
 commit ni push. No se inicia 09P-B.2 ni se modifican los otros cuellos de botella.
+
+## Resultados de 09P-B.2 — JavaScript por pantalla (2026-11-19)
+
+Intervención posterior sobre `main`, HEAD inicial
+`581e43e09d0c50b18c82b1492eaf81c684ea06f0`, árbol limpio y staging vacío.
+Se conservan íntegros los apartados y métricas de 09P-A y 09P-B.1. No se accede
+al worktree de Antigravity, Laravel ni MySQL durante esta intervención.
+
+### Arquitectura y alcance
+
+`app.js` conserva estáticos `bootstrap`/Axios, Turbo, Alpine, navegación pública,
+menú de cuenta, diálogos compartidos, resumen de validación y recuperación de
+contraseña. Esta última debe limpiar fragmentos sensibles incluso después de
+una redirección a una pantalla distinta del formulario de recuperación.
+
+Ocho imports de módulos de pantalla pasan a funciones `import()` literales,
+resueltas por Vite. `loadOnPage` comprueba marcadores del DOM al comenzar y en
+cada `turbo:load`; no decide por texto de URL ni por una lista de rutas backend.
+
+| Marcador presente | Módulo solicitado |
+| --- | --- |
+| `data-home` | `home.js` |
+| `data-community` | `community.js` |
+| `data-messaging` | `messages.js` |
+| `data-lexa` | `lexa.js`, sin cambios funcionales |
+| `data-professional-directory` | `professionals.js` |
+| `data-profile-location` o `data-help` | `personal.js` |
+| `data-save-form` | `saved/library.js` |
+| `data-editorial-form` | `editorial.js` |
+
+Se mantiene la granularidad existente de `personal.js`, que agrupa editor y Ayuda;
+no se reorganizan sus funciones. El perfil de lectura no necesita ese módulo.
+Guardados se carga también en Inicio/Comunidad cuando hay formularios reales de
+guardado. Una página vacía o sin esos formularios no solicita el módulo.
+
+`ui/page.js` mantiene el contrato síncrono `onPage(selector, setup)` de los módulos:
+
+- Comparte una fase de ciclo de vida por documento. Durante `turbo:before-render`
+  o después de `pagehide` no monta registros que lleguen tarde. Al activar el DOM
+  actual monta una sola vez por raíz y aborta los listeners del controlador anterior.
+- Coalesce el import pendiente de cada módulo y conserva sus registros tras
+  evaluarlo. Los ES modules reutilizan el mismo URL en visitas posteriores.
+- Impide duplicar registros con el mismo selector y función, necesario porque
+  las entradas `public.js` y `app.js` pueden registrar la navegación pública al
+  cruzar layouts. Distintas funciones sobre una misma raíz siguen siendo válidas.
+- Los errores de limpieza/montaje se aíslan entre controladores para no dejar
+  activos los listeners de otras pantallas. Los imports fallidos se notifican
+  en consola y liberan el pendiente para otra visita; no se repiten escrituras.
+- BFCache conserva controladores ya montados sin reinstalarlos. Si se congela
+  el documento con un import pendiente, la restauración recarga desde el servidor:
+  ese módulo todavía puede no haber instalado sus salvaguardas de privacidad.
+  No se interpreta ese caso como una autorización nueva para mostrar contenido.
+
+`messages.js`, su polling, intentos idempotentes, purga de contenido y las reglas
+de lectura/autorización permanecen sin editar. Su manejador existente de BFCache
+sigue recargando los chats ya inicializados. No se cambian contratos HTTP ni PHP.
+
+Se retiraron de `vite.config.js` las cinco entradas JS de pantalla que ahora son
+destinos de imports dinámicos. Ninguna vista las declara directamente con `@vite`;
+mantener ambos papeles producía salidas redundantes. Siguen presentes en el
+manifiesto como `isDynamicEntry`; CSS, `app.js` y `public.js` conservan sus entradas.
+No se añade `manualChunks`, otra librería, un router ni un sistema de eventos nuevo.
+
+### Métricas antes/después
+
+Referencia: copia externa del build anterior, inmediatamente antes de editar.
+Resultado: build Vite 6.4.4, 99 módulos transformados. Bytes exactos de JS; gzip
+por archivo con Python/zlib 1.3.1, nivel 9 y `mtime=0`, igual que las mediciones
+anteriores. No se suman dependencias compartidas dos veces ni se incluyen CSS,
+HTML, fuentes o metadatos de transferencia HTTP.
+
+En las seis variantes, antes se declaraban **246,485 bytes / 80,053 gzip**, nueve
+URLs JS únicas (entrada más ocho dependencias). Ahora el grafo estático inicial
+común tiene **213,984 bytes / 68,608 gzip**, dos URLs (entrada más una dependencia).
+Son **32,501 bytes / 11,445 gzip menos en ese grafo estático**, no todo el ahorro
+de la visita: el módulo de la pantalla se solicita inmediatamente después.
+
+| Pantalla | JS diferido adicional | Gzip diferido | Total JS tras cargar su mejora | Total gzip | URLs JS antes → después |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Inicio con Guardados | 3,964 | 2,236 | 217,948 | 70,844 | 9 → 6 |
+| Comunidad con Guardados | 5,720 | 3,128 | 219,704 | 71,736 | 9 → 7 |
+| Profesionales | 408 | 272 | 214,392 | 68,880 | 9 → 3 |
+| Perfil propio de lectura | 0 | 0 | 213,984 | 68,608 | 9 → 2 |
+| Editor de Perfil | 7,476 | 3,198 | 221,460 | 71,806 | 9 → 4 |
+| Mensajes | 14,211 | 5,690 | 228,195 | 74,298 | 9 → 5 |
+
+Todos los totales posteriores incluyen el núcleo inicial; las columnas diferidas
+son incrementos sobre ese núcleo, no tamaños adicionales que deban sumarse otra
+vez al total. Si Inicio o Comunidad no tienen guardados, su grafo es menor.
+Son variantes por marcadores de vistas actuales, no una nueva medición SQL ni de
+HTML poblado. Una visita posterior a otra pantalla añade únicamente sus chunks
+todavía no evaluados/descargados; una sesión que recorra muchas pantallas terminará
+cargando más código que una sola fila. Las URLs no equivalen a requests nuevas
+con caché caliente. Gzip real depende de la compresión del servidor.
+
+El manifiesto pasa de ocho dependencias estáticas de `app` a una compartida y
+ocho destinos dinámicos. En HTML se requieren un script y un modulepreload inicial,
+frente al script y ocho dependencias anteriores. Vite prepara las dependencias de
+un import dinámico cuando se ejecuta ese import; no precarga todas las pantallas
+por aparecer sus URLs en el mapa del helper. Algunos chunks reutilizan exports
+de `app` (navegación/diálogo); la misma URL se reutiliza mediante el registro ESM.
+
+En Inicio ya no se solicita Mensajes, LEXA, directorio, editor/Ayuda ni editorial.
+Comunidad carga su módulo y Guardados; directorio carga solo su módulo; perfil de
+lectura usa el núcleo; editor carga `personal`/store; Mensajes carga su controlador,
+fechas y validación de adjuntos, sin LEXA ni los otros controladores de pantalla.
+El código pequeño de validación de archivos sigue compartido con Comunidad/LEXA;
+eso no implica descargar los controladores de esas pantallas.
+
+Las hojas CSS compiladas son idénticas a las del build anterior, conservando
+09P-B.1. No se afirma mejora de LCP, INP, CPU ni latencia: esas métricas no se midieron.
+
+### Validaciones
+
+- `node --test tests/frontend/*.test.mjs`: **118/118 aprobadas**.
+- Focalizadas de carga y recuperación real de Mensajes: **34/34 aprobadas**.
+  Incluyen las cuatro regresiones P1 401/403/404/419, sin cambios en sus casos.
+- Ocho pruebas nuevas de carga/ciclo de vida: selección por marcador, import
+  compartido durante cargas concurrentes, retorno Turbo, finalización tardía
+  durante render/otra pantalla, BFCache listo/pendiente, fallo de import,
+  aislamiento de limpieza y registros públicos compartidos.
+- Dos regresiones adicionales usan `setupMessages` real con import diferido:
+  no inicia polling al terminar en una pantalla ajena, monta un único timer al
+  retornar, aborta lecturas al salir, descarta respuestas tardías y no inicia
+  polling al restaurar un documento congelado antes de completar la carga.
+- Build Vite aprobado, sin entradas JS de pantalla duplicadas; manifiesto y
+  cierres transitivos de imports revisados. `git diff --check` aprobado.
+- QA estático con JS compilado: Inicio → Comunidad → Profesionales → Perfil →
+  Mensajes, arranques independientes, retornos Turbo y Atrás/Adelante del editor.
+  Sugerencia de Inicio una sola vez, reset del municipio del directorio, diálogos
+  y restauración de scroll, Alpine tras cambiar el body y montaje de Mensajes
+  comprobados. Sin errores JS observados durante ese recorrido.
+
+El QA se realizó con marcado sintético mínimo y un snapshot anterior de chat
+sintético, servidor estático local en `127.0.0.1:8124`, assets del build y POST
+rechazado. No ejecuta Laravel ni se conecta con bases de datos, sesiones, caché
+de aplicación, archivos privados o cuentas reales. Los logs confirman las mismas
+familias y cantidades de chunks de las cinco filas de lectura; en el recorrido
+Turbo cada chunk se solicitó una vez y no se solicitó LEXA/editorial. La revisión
+posterior añadió aislamiento de excepciones y deduplicación compartida, cubiertos
+por las pruebas finales; los hashes finales y tamaños son los de la tabla.
+Se cierra servidor y pestaña, dejando las evidencias fuera del repositorio.
+
+El historial probado en navegador fue Turbo; no se acredita una entrada real en
+BFCache nativo. Sus eventos, carrera con imports y protección de Mensajes se
+verifican con pruebas deterministas. Este QA no sustituye autenticación real,
+APIs, publicaciones/envíos, adjuntos, catálogos HTTP ni una sesión completa con
+usuarios de distintos permisos. No se ejecutó Laravel completo ni fixtures DB.
+
+### Riesgos y límites de la solución incremental
+
+La mejora JS aparece al completar una segunda fase de red; con red lenta puede
+haber un intervalo con el comportamiento HTML nativo antes del montaje. No se
+bloquean formularios ni se reproducen eventos o envíos para compensarlo. Un error
+de carga conserva ese comportamiento nativo y se registra; la recuperación de
+errores de evaluación cacheados puede requerir recarga manual. No se recarga una
+página activa automáticamente ante un error de chunk, para no perder borradores.
+
+El despliegue debe publicar manifiesto y assets de forma coherente y conservar
+chunks antiguos durante sesiones abiertas; eliminar un asset referenciado por un
+documento anterior puede causar un import fallido. El caso BFCache con import
+pendiente fuerza recarga, una decisión conservadora que puede descartar estado
+transitorio al restaurar; las páginas ya montadas conservan su contrato previo.
+El núcleo sigue incluyendo Axios, Turbo, Alpine y los diálogos compartidos: no se
+han retirado dependencias ni optimizado esos componentes. La entrada pública
+comparte ahora un registro de ciclo de vida mayor; no se promete reducir la landing.
+
+### Inventario y conservación
+
+Se modifican exactamente cinco archivos versionados y se añade una prueba:
+
+1. `resources/js/app.js`: selección de imports dinámicos.
+2. `resources/js/ui/page.js`: registro compartido de ciclo de vida y cargador.
+3. `vite.config.js`: retirar entradas JS que ahora administra el cargador.
+4. `tests/frontend/messages-recovery.test.mjs`: dos regresiones de montaje diferido.
+5. `docs/performance-audit-09p-a.md`: únicamente esta sección añadida.
+6. Nuevo `tests/frontend/page-loading.test.mjs`: ocho regresiones del cargador.
+
+Las huellas iniciales de los demás archivos versionados se contrastan al cerrar,
+incluidos `messages.js`, polling, LEXA, vistas y backend. No se modifican permisos,
+migraciones, configuración de entorno, dependencias, datos ni adjuntos privados.
+Evidencias externas en `js09pb2-1795152770` bajo las visualizaciones de esta sesión:
+build anterior, métricas por cierre de imports, logs de requests y captura de QA.
+Sin staging, commit o push; no se inicia 09P-B.3 ni otra optimización.
