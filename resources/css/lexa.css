@@ -11,13 +11,13 @@
     --lexa-wash: color-mix(in srgb, var(--color-lexa) 17%, transparent);
     --lexa-warm-wash: color-mix(in srgb, var(--color-accent) 7%, transparent);
     height: calc(var(--lexa-viewport, 100dvh) - 72px);
+    padding: 12px;
     background: var(--lexa-page);
     color: var(--lexa-text);
     font-family: var(--font-sans), sans-serif;
     font-size: 16px;
     line-height: 1.5;
     color-scheme: light;
-    border-top: 1px solid var(--lexa-page);
 }
 .lexa *, .lexa *::before, .lexa *::after { box-sizing: border-box; }
 .lexa [hidden] { display: none !important; }
@@ -27,20 +27,20 @@
 .lexa :is(button, a, input, textarea, select):focus-visible { outline: 2px solid var(--lexa-focus); outline-offset: 3px; }
 .lexa :is(button, a, input, select) { transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease; -webkit-tap-highlight-color: transparent; }
 .lexa svg { width: 20px; height: 20px; flex-shrink: 0; stroke-width: 1.7; }
-.lexa-layout { display: grid; grid-template-columns: 264px minmax(0, 1fr) 264px; height: 100%; }
-.lexa-sidebar { background: var(--lexa-surface); min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 24px 16px 18px; }
-.lexa-sidebar-heading { position: relative; display: flex; align-items: center; justify-content: center; min-height: 44px; margin-bottom: 28px; }
-.lexa-sidebar-heading h2 { font-size: 19px; font-weight: 650; letter-spacing: .35em; padding-left: .35em; background: linear-gradient(110deg, var(--color-lexa), var(--color-accent), var(--color-dark-accent)); background-clip: text; color: transparent; }
-.lexa .lexa-new-query { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; border: 0; border-radius: var(--radius-ui); background: var(--color-dark-accent); color: #fff; padding: 11px 12px; font-size: 14px; font-weight: 500; }
+.lexa-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr) 280px; gap: 12px; width: 100%; height: 100%; }
+.lexa-sidebar { background: var(--lexa-surface); border-radius: 14px; overflow: hidden; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 20px 16px 16px; }
+.lexa-sidebar-heading { position: relative; display: flex; align-items: center; justify-content: center; min-height: 40px; margin-bottom: 18px; }
+.lexa-sidebar-heading h2 { font-size: 20px; font-weight: 700; letter-spacing: var(--lexa-tracking); padding-left: var(--lexa-tracking); background: linear-gradient(110deg, var(--color-dark-accent), var(--color-lexa-rose) 45%, var(--color-lexa)); background-clip: text; -webkit-background-clip: text; color: transparent; }
+.lexa .lexa-new-query { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 38px; border: 0; border-radius: var(--radius-ui); background: var(--color-dark-accent); color: #fff; padding: 8px 12px; font-size: 13px; font-weight: 600; }
 .lexa .lexa-new-query:hover { background: var(--color-accent); }
 .lexa .lexa-new-query:active { background: var(--color-dark-accent); }
-.lexa-search { display: flex; align-items: center; gap: 8px; background: var(--lexa-soft); border-radius: var(--radius-ui); padding: 0 12px; margin: 10px 0 28px; }
+.lexa-search { display: flex; align-items: center; gap: 8px; background: var(--lexa-soft); border-radius: 999px; padding: 0 12px; margin: 10px 0 20px; }
 .lexa-search:focus-within { outline: 2px solid var(--lexa-focus); outline-offset: 2px; }
 .lexa-search svg { width: 16px; height: 16px; color: var(--lexa-muted); }
-.lexa-search input { width: 100%; min-width: 0; min-height: 44px; background: transparent; color: inherit; border: 0; outline: 0 !important; font-size: 14px; }
+.lexa-search input { width: 100%; min-width: 0; min-height: 36px; background: transparent; color: inherit; border: 0; outline: 0 !important; font-size: 13.5px; }
 .lexa-history-heading { color: var(--lexa-muted); font-weight: 500; font-size: 12px; margin: 0 8px 12px; }
 .lexa-history { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; }
-.lexa-history-item { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 46px; text-align: left; border: 0; border-radius: var(--radius-ui); background: transparent; color: var(--lexa-muted); padding: 10px; font-size: 13px !important; }
+.lexa-history-item { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 38px; text-align: left; border: 0; border-radius: var(--radius-ui); background: transparent; color: var(--lexa-muted); padding: 8px 10px; font-size: 13px !important; }
 .lexa-history-item svg { width: 16px; height: 16px; }
 .lexa-history-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lexa-history-item:hover { background: var(--lexa-soft); color: var(--lexa-text); }
@@ -51,7 +51,7 @@
 .lexa-sidebar-footer p { font-size: 11px; line-height: 1.6; }
 .lexa-sidebar-footer span { display: block; }
 .lexa-empty { padding: 12px 8px; font-size: 13px; color: var(--lexa-muted); }
-.lexa-workspace { position: relative; isolation: isolate; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: clip; }
+.lexa-workspace { position: relative; isolation: isolate; display: flex; flex-direction: column; min-width: 0; min-height: 0; border-radius: 14px; background: var(--lexa-surface); overflow: hidden; }
 .lexa-atmosphere { position: absolute; z-index: -1; inset: -8%; pointer-events: none; background: radial-gradient(ellipse 60% 42% at 57% 62%, var(--lexa-wash), transparent 85%), radial-gradient(ellipse 52% 38% at 30% 47%, var(--lexa-warm-wash), transparent 80%); }
 .lexa-toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 24px; min-height: 60px; flex-shrink: 0; }
 .lexa-session-title { flex: 1; min-width: 0; font-size: 12px; color: var(--lexa-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -61,12 +61,11 @@
 .lexa-welcome h1 { font-size: clamp(28px, 2.6vw, 40px); line-height: 1.22; font-weight: 700; letter-spacing: -.025em; background: linear-gradient(110deg, var(--color-dark-accent), var(--color-accent) 38%, var(--color-lexa) 90%); background-clip: text; color: transparent; text-wrap: balance; }
 .lexa-welcome > p { margin-top: 24px; font-size: 19px; line-height: 1.5; color: var(--lexa-muted); text-wrap: balance; }
 .lexa-entry { width: 100%; max-width: 760px; flex-shrink: 0; }
-.lexa-composer-card { background: color-mix(in srgb, var(--lexa-surface) 96%, transparent); border-radius: var(--radius-ui); border: 1px solid var(--lexa-border); box-shadow: 0 8px 32px #33234508; }
-.lexa-composer-card:focus-within { box-shadow: 0 4px 28px color-mix(in srgb, var(--color-lexa) 10%, transparent); }
+.lexa-composer-card { background: color-mix(in srgb, var(--lexa-surface) 96%, transparent); border-radius: 14px; border: 1px solid var(--lexa-border); box-shadow: 0 8px 32px #33234508; transition: border-color 160ms ease, box-shadow 160ms ease; }
+.lexa-composer-card:focus-within { border-color: color-mix(in srgb, var(--color-lexa) 55%, var(--lexa-border)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-lexa) 12%, transparent); }
 .lexa-composer { padding: 16px; }
-.lexa-composer textarea { display: block; width: 100%; min-width: 0; min-height: 92px; max-height: 180px; background: transparent; color: inherit; border: 0; border-radius: var(--radius-ui); resize: none; outline: 0 !important; padding: 0 0 12px; line-height: 1.6; font-size: 16px; }
+.lexa-composer textarea { display: block; width: 100%; min-width: 0; min-height: 92px; max-height: 180px; background: transparent; color: inherit; border: 0; border-radius: var(--radius-ui); resize: none; outline: 0 !important; box-shadow: none !important; padding: 0 0 12px; line-height: 1.6; font-size: 16px; }
 .lexa-composer textarea::placeholder { color: var(--lexa-muted); opacity: 1; }
-.lexa-composer textarea:focus-visible { box-shadow: inset 0 -1px var(--lexa-focus); }
 .lexa-composer-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
 .lexa-composer-options, .lexa-composer-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .lexa-mode { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 215px; min-height: 36px; background: var(--lexa-soft); border-radius: var(--radius-ui); color: var(--lexa-muted); padding: 0 9px; }
@@ -89,7 +88,7 @@
 .lexa-suggestions > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; max-width: 380px; margin: auto; }
 .lexa-suggestions button { display: block; width: 100%; min-height: 36px; border: 0; border-radius: var(--radius-ui); background: color-mix(in srgb, var(--lexa-surface) 72%, transparent); color: var(--lexa-text); padding: 8px 16px; font-size: 13px; text-align: center; }
 .lexa-suggestions button:hover { background: var(--lexa-surface); box-shadow: 0 3px 14px #33234508; }
-.lexa-context { min-width: 0; background: var(--lexa-surface); padding: 28px 22px; overflow-y: auto; }
+.lexa-context { min-width: 0; background: var(--lexa-surface); border-radius: 14px; padding: 24px 20px; overflow-y: auto; }
 .lexa-context h2 { font-size: 15px; font-weight: 600; margin-bottom: 20px; }
 .lexa-context-title { font-size: 14px; overflow-wrap: anywhere; }
 .lexa-context-mode { font-size: 12px; color: var(--lexa-muted); margin-top: 8px; }
@@ -139,7 +138,7 @@
 .lexa-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (prefers-color-scheme: dark) {
     .lexa { --lexa-page: var(--color-bg-dark); --lexa-surface: var(--color-surface-dark); --lexa-soft: var(--color-accent-bg-dark); --lexa-text: var(--color-text-dark); --lexa-muted: var(--color-light-text-dark); --lexa-border: var(--color-border-dark); --lexa-focus: var(--color-focus-dark); --lexa-link: var(--color-lexa-dark); --lexa-tint: color-mix(in srgb, var(--color-lexa) 18%, var(--lexa-surface)); --lexa-wash: color-mix(in srgb, var(--color-lexa) 28%, transparent); --lexa-warm-wash: color-mix(in srgb, var(--color-accent) 14%, transparent); color-scheme: dark; }
-    .lexa-sidebar-heading h2 { background-image: linear-gradient(110deg, var(--lexa-link), color-mix(in srgb, var(--color-light-accent) 50%, white)); }
+    .lexa-sidebar-heading h2 { background-image: linear-gradient(110deg, var(--color-light-accent), var(--color-lexa-rose) 45%, #8F6FF0); }
     .lexa-welcome h1 { background-image: linear-gradient(110deg, var(--color-accent-text-dark), var(--lexa-link) 88%); }
 }
 @media (max-width: 1279px) {
@@ -180,7 +179,7 @@
     .lexa-message.is-user { max-width: 96%; }
 }
 @media (max-width: 639px) {
-    .lexa { height: calc(var(--lexa-viewport, 100dvh) - 48px - 56px - env(safe-area-inset-bottom, 0px)); }
+    .lexa { padding: 8px; height: calc(var(--lexa-viewport, 100dvh) - 48px - 56px - env(safe-area-inset-bottom, 0px)); }
     .lexa-session-title { font-size: 11px; }
     .lexa-desktop-break { display: none; }
     .lexa-message-author > span { font-size: 10px; }

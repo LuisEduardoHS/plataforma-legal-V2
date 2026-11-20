@@ -4,7 +4,6 @@
 @section('content')
 <section class="articles-page content-page">
     <div class="content-wrap">
-        <header class="resources-intro"><span class="resources-eyebrow">Biblioteca legal</span><h1>@yield('library-title', 'Aprende a defenderte')</h1><p>Documentación y recursos para todos.</p></header>
         <nav class="content-tabs" aria-label="Biblioteca legal">
             <a href="{{ route('articles') }}" @if ($kind->value === 'article') aria-current="page" @endif>Artículos</a>
             <a href="{{ route('resources') }}" @if ($kind->value === 'resource') aria-current="page" @endif>Recursos jurídicos</a>

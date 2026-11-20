@@ -32,10 +32,10 @@
     --color-text-dark: #F2F2F2;
     --color-light-text-dark: #B6B3BA;
 
-    --color-bg-dark: #1A1A1A;
-    --color-surface-dark: #242424;
-    --color-accent-bg-dark: #2E2E30;
-    --color-accent-bg-hover-dark: #363636;
+    --color-bg-dark: #111112;
+    --color-surface-dark: #18181a;
+    --color-accent-bg-dark: #202022;
+    --color-accent-bg-hover-dark: #29292c;
     --color-light-hover-dark: var(--color-accent-bg-dark);
     --color-raised-dark: #303030;
     --color-border-dark: #38383C;
@@ -60,7 +60,7 @@
     }
 }
 /* Shared motion: short feedback, with no layout shifts or artificial delays. */
-:root { --motion-fast: 140ms; --motion-normal: 200ms; --motion-ease: cubic-bezier(.2,.7,.2,1); }
+:root { --motion-fast: 140ms; --motion-normal: 220ms; --motion-ease: cubic-bezier(.2,.7,.2,1); --lexa-tracking: 0.28em; interpolate-size: allow-keywords; }
 #main-content { view-transition-name: page-content; }
 #main-content:focus { outline: none; }
 .platform-header { position: relative; z-index: 60; view-transition-name: platform-header; }
@@ -74,13 +74,14 @@
 ::view-transition-old(root), ::view-transition-new(root),
 ::view-transition-old(platform-header), ::view-transition-new(platform-header),
 ::view-transition-old(mobile-nav), ::view-transition-new(mobile-nav) { animation: none; mix-blend-mode: normal; }
-::view-transition-old(page-content) { animation: page-out 130ms ease-out both; }
-::view-transition-new(page-content) { animation: page-in 200ms var(--motion-ease) both; }
-@keyframes page-out { to { opacity: 0; } }
-@keyframes page-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+::view-transition-old(page-content) { animation: page-out 140ms ease-out both; }
+::view-transition-new(page-content) { animation: page-in 240ms var(--motion-ease) both; }
+@keyframes page-out { to { opacity: 0; transform: translateY(-3px); } }
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ui-fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .turbo-progress-bar { height: 2px; background: var(--color-accent); }
 #app :where(button, a, select, input, textarea, summary) {
-    transition-property: background-color, color, border-color, box-shadow, opacity;
+    transition-property: background-color, color, border-color, box-shadow, opacity, transform;
     transition-duration: var(--motion-fast);
     transition-timing-function: var(--motion-ease);
 }
@@ -88,14 +89,46 @@
     outline: 2px solid var(--color-accent);
     outline-offset: 3px;
 }
+#app :where(.community-post, .community-comment, .home-card, .help-faq, .help-guide, [data-library-item]) {
+    animation: ui-fade-up 240ms var(--motion-ease) both;
+}
+#app :where(.community-feed, .community-comments, .home-continue-grid, .help-faqs, [data-library-list]) > :nth-child(2) { animation-delay: 30ms; }
+#app :where(.community-feed, .community-comments, .home-continue-grid, .help-faqs, [data-library-list]) > :nth-child(3) { animation-delay: 60ms; }
+#app :where(.community-feed, .community-comments, .help-faqs, [data-library-list]) > :nth-child(4) { animation-delay: 90ms; }
+#app :where(.community-feed, .community-comments, .help-faqs, [data-library-list]) > :nth-child(5) { animation-delay: 120ms; }
+#app details::details-content {
+    transition: block-size 220ms var(--motion-ease), opacity 180ms ease, content-visibility 220ms allow-discrete;
+    block-size: 0;
+    opacity: 0;
+    overflow: clip;
+}
+#app details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+}
+#app dialog[open] {
+    transition: opacity 180ms ease, transform 200ms var(--motion-ease), display 180ms allow-discrete, overlay 180ms allow-discrete;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+@starting-style {
+    #app dialog[open] {
+        opacity: 0;
+        transform: translateY(6px) scale(.985);
+    }
+}
 @media (hover: hover) and (pointer: fine) {
-    #app :where(.home-card, .resource-card, .professional-card, .community-post) {
-        transition: box-shadow var(--motion-normal) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+    #app :where(.home-card, .resource-card, .professional-card, .community-post, .help-guide, [data-library-item]) {
+        transition: box-shadow var(--motion-normal) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), transform var(--motion-normal) var(--motion-ease);
     }
-    #app :where(.home-card, .resource-card, .professional-card, .community-post):hover {
-        box-shadow: 0 4px 16px color-mix(in srgb,var(--color-text) 7%,transparent);
+    #app :where(.home-continuation, .community-post:not(.community-post--detail), .help-guide, [data-library-item]):hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px color-mix(in srgb,var(--color-text) 7%,transparent);
     }
-    #app :where(button:not(:disabled), a):active { opacity: .85; }
+    #app :where(.home-card:not(.home-continuation), .resource-card, .professional-card):hover {
+        box-shadow: 0 4px 16px color-mix(in srgb,var(--color-text) 6%,transparent);
+    }
+    #app :where(button:not(:disabled), a):active { opacity: .88; transform: scale(.985); }
     .home-mode select:hover { border-color: var(--home-muted); }
 }
 @media (prefers-color-scheme: dark) {
@@ -110,6 +143,10 @@
 .platform-mobile-nav nav > * { margin-inline: 0; }
 
 .home-bookmark[aria-pressed="true"] svg { fill:currentColor; fill-opacity:.18; }
+.landing-lexa-wordmark { background:linear-gradient(110deg,var(--color-dark-accent),var(--color-lexa-rose) 45%,var(--color-lexa)); background-clip:text; -webkit-background-clip:text; color:transparent; font-size:11px; font-weight:700; letter-spacing:var(--lexa-tracking); padding-left:var(--lexa-tracking); }
+@media (prefers-color-scheme:dark) {
+    .landing-lexa-wordmark { background-image:linear-gradient(110deg,var(--color-light-accent),var(--color-lexa-rose) 45%,#8F6FF0); }
+}
 /* Sidebar scrollbars follow the shared brand palette. */
 .home-sidebar, .community-sidebar {
     scrollbar-width: thin;
@@ -154,6 +191,95 @@
 .ui-dialog-panel { padding:24px; display:grid; gap:20px; text-align:center; overflow-wrap:anywhere; }
 .ui-dialog-panel > p { color:var(--color-light-text); line-height:1.6; }
 .ui-dialog :is(button,a):focus-visible, .ui-input:focus-visible { outline:3px solid var(--color-dark-accent); outline-offset:3px; }
+
+@supports (appearance: base-select) {
+    #app select,
+    #app select::picker(select) {
+        appearance: base-select;
+    }
+    #app select {
+        align-items: center;
+    }
+    #app select:has(+ svg)::picker-icon {
+        display: none;
+    }
+    #app select::picker-icon {
+        color: var(--color-light-text);
+        width: 14px;
+        height: 14px;
+        transition: transform 200ms var(--motion-ease);
+    }
+    #app select:open::picker-icon {
+        transform: rotate(180deg);
+    }
+    #app select::picker(select) {
+        margin-top: 6px;
+        padding: 6px;
+        min-width: anchor-size(width);
+        max-height: 280px;
+        border: 1px solid #e4e2ea;
+        border-radius: 12px;
+        background: #fff;
+        color: var(--color-text);
+        box-shadow: 0 12px 32px rgb(0 0 0 / 12%);
+        opacity: 0;
+        transform: translateY(-4px) scale(.98);
+        transition: display, overlay, opacity 180ms var(--motion-ease), transform 200ms var(--motion-ease);
+        transition-behavior: allow-discrete;
+    }
+    #app select:open::picker(select) {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    @starting-style {
+        #app select:open::picker(select) {
+            opacity: 0;
+            transform: translateY(-4px) scale(.98);
+        }
+    }
+    #app select option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: inherit;
+        cursor: pointer;
+        transition: background-color 140ms ease, color 140ms ease;
+    }
+    #app select option:hover,
+    #app select option:focus-visible {
+        background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+        color: var(--color-accent);
+    }
+    #app select option:checked {
+        background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+        color: var(--color-accent);
+        font-weight: 600;
+    }
+    #app select option::checkmark {
+        display: none;
+    }
+    @media (prefers-color-scheme: dark) {
+        #app select::picker-icon {
+            color: var(--color-light-text-dark);
+        }
+        #app select::picker(select) {
+            background: var(--color-surface-dark);
+            color: var(--color-text-dark);
+            border-color: var(--color-border-dark);
+            box-shadow: 0 12px 32px rgb(0 0 0 / 45%);
+        }
+        #app select option:hover,
+        #app select option:focus-visible,
+        #app select option:checked {
+            background: var(--color-selected-dark);
+            color: var(--color-accent-text-dark);
+        }
+    }
+}
 @media (prefers-color-scheme:dark) {
     .ui-input, .ui-error-summary, .ui-dialog { background:var(--color-surface-dark); color:var(--color-text-dark); }
     .ui-input { border-color:var(--color-focus-dark); }

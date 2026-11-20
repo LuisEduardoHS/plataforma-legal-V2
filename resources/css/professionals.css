@@ -22,7 +22,7 @@
 .professionals :is(button,input) { font: inherit; }
 .professionals button { cursor: pointer; }
 .professionals :is(button,input):disabled { opacity: .5; cursor: not-allowed; }
-.professionals :is(a,button,input):focus-visible { outline: 2px solid var(--professionals-focus); outline-offset: 3px; }
+.professionals :is(a,button,input,select):focus-visible { outline: 2px solid var(--professionals-focus); outline-offset: 3px; }
 .professionals :is(button,a) { transition: background-color 160ms ease, color 160ms ease; -webkit-tap-highlight-color: transparent; }
 .professionals svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.7; }
 .professionals-container { max-width: 1120px; margin: auto; }
@@ -121,7 +121,7 @@
 .professional-detail-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .professional-copy-status { color: var(--professionals-muted); font-size: 13px; margin-top: 12px; }
 .professional-copy-status:empty { display: none; }
-.professionals-error { color: var(--professionals-text); font-size: 14px; margin: 12px 0; }
+.professionals-error { color: #B42318; font-size: 14px; margin: 12px 0; }
 .professionals-skeleton { min-height: 260px; padding: 24px; border-radius: var(--radius-ui); background: var(--professionals-surface); }
 .professionals-skeleton span { display: block; height: 20px; background: var(--professionals-hover); border-radius: var(--radius-ui); margin: 16px 0; }
 .professionals-skeleton span:first-child { height: 64px; width: 64px; border-radius: 50%; }
@@ -171,6 +171,13 @@
 
 @media (prefers-color-scheme: dark) {
     .professionals { --professionals-page: var(--color-bg-dark); --professionals-surface: var(--color-surface-dark); --professionals-soft: var(--color-accent-bg-dark); --professionals-hover: var(--color-accent-bg-hover-dark); --professionals-text: var(--color-text-dark); --professionals-muted: var(--color-light-text-dark); --professionals-focus: var(--color-focus-dark); --professionals-link: var(--color-accent-text-dark); --professionals-tint: var(--color-selected-dark); color-scheme: dark; }
+    .professionals-search-panel, .professional-card, .professionals-empty, .professionals-guide, .professional-dialog { border: 1px solid var(--color-border-dark); }
+    .professionals-search { border: 1px solid var(--color-border-dark); }
+    .professionals-filters button:not([aria-pressed="true"]) { background: var(--professionals-soft); }
+    .professionals-filters button:not([aria-pressed="true"]):hover { background: var(--professionals-hover); color: var(--professionals-text); }
+    .professionals-location-filters select { border-color: var(--color-focus-dark); background: var(--professionals-soft); color: var(--professionals-text); }
+    .professionals-location-filters select option { background: var(--color-surface-dark); color: var(--color-text-dark); }
+    .professionals-error { color: #FDA4AF; }
 }
 @media (max-width: 1023px) {
     .professionals { padding: 36px 24px 112px; }
@@ -243,6 +250,8 @@
 .professionals-pagination { margin-top: 32px; }
 .professional-identity > div { min-width: 0; overflow-wrap: anywhere; }
 .professional-card { overflow-wrap: anywhere; }
+.professional-card > form { margin-top: 8px; }
+.professional-card > form .professional-view { width: 100%; }
 .profile-editor .profile-panel { background: white; padding: 24px; border-radius: 16px; border: 1px solid #eee; }
 .profile-editor .profile-field { display: grid; gap: 8px; margin: 16px 0; min-width: 0; }
 .profile-editor .profile-field label { font-size: 14px; font-weight: 600; }
@@ -258,5 +267,7 @@
 @media (prefers-color-scheme: dark) {
     .profile-editor .profile-panel { background: var(--color-surface-dark); border-color: var(--color-border-dark); }
     .profile-editor .profile-field :is(input,textarea,select) { border-color: var(--color-focus-dark); color-scheme: dark; }
+    .profile-editor .profile-field select option { background: var(--color-surface-dark); color: var(--color-text-dark); }
+    .profile-editor :is(input,textarea,select,button,a):focus-visible { outline-color: var(--color-focus-dark); }
     .profile-editor .profile-error { color: #ffb0cc; }
 }

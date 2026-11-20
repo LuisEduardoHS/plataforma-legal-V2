@@ -1,7 +1,40 @@
 @props(['post'])
+@php
+    $authorName = $post['author']['display_name'];
+    $authorInitial = mb_strtoupper(mb_substr($authorName, 0, 1));
+    $publishedAt = $post['published_at'] ? Illuminate\Support\Carbon::parse($post['published_at']) : null;
+@endphp
 <article class="home-card home-post" data-home-post="{{ $post['id'] }}">
-    <header><span class="home-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($post['author']['display_name'], 0, 1)) }}</span><div><h3>{{ $post['author']['display_name'] }}</h3><p class="home-meta">{{ $post['category']['name'] ?? 'Sin categoría' }} <span aria-hidden="true">·</span> {{ $post['published_at'] }} UTC</p></div><x-content.save type="post" :id="$post['id']" :saved="$post['saved']" /></header>
-    <h4 class="whitespace-pre-wrap break-words">{{ Illuminate\Support\Str::limit($post['content'] ?: 'Archivo compartido', 250) }}</h4>
-    <x-profiles.public-professional :author="$post['author']" />
-    <footer><span><x-lucide-message-circle aria-hidden="true" />{{ $post['comments_count'] }} {{ $post['comments_count'] === 1 ? 'comentario' : 'comentarios' }}</span><a href="{{ route('community.show', $post['id']) }}">Ver publicación <x-lucide-arrow-up-right aria-hidden="true" /></a></footer>
+    <a class="home-post-stretched-link" href="{{ route('community.show', $post['id']) }}" aria-label="Abrir publicación de {{ $authorName }}"></a>
+    <header class="home-post-header">
+        <span class="home-avatar" aria-hidden="true">{{ $authorInitial }}</span>
+        <div class="home-post-author">
+            <h3>
+                <span>{{ $authorName }}</span>
+                @if ($post['author']['professional_verified'] ?? false)
+                    <x-lucide-badge-check class="home-verified-icon" aria-label="Perfil verificado" title="Revisión documental interna vigente" />
+                @endif
+            </h3>
+            <p class="home-meta">
+                @if ($post['author']['professional_public'] ?? false)
+                    <a class="home-author-role" href="{{ route('professionals.show', $post['author']['id']) }}">Perfil profesional</a>
+                    <span aria-hidden="true">·</span>
+                @endif
+                @if ($publishedAt)
+                    <time datetime="{{ $publishedAt->toIso8601String() }}" title="{{ $post['published_at'] }}">{{ $publishedAt->locale('es')->diffForHumans() }}</time>
+                @endif
+            </p>
+        </div>
+        @if ($post['category'])
+            <span class="home-post-badge">{{ $post['category']['name'] }}</span>
+        @endif
+    </header>
+    <p class="home-post-excerpt">{{ Illuminate\Support\Str::limit($post['content'] ?: 'Archivo compartido', 240) }}</p>
+    <footer class="home-post-footer">
+        <div class="home-post-actions">
+            <span class="home-post-stat"><x-lucide-message-circle aria-hidden="true" /><span>{{ $post['comments_count'] }} {{ $post['comments_count'] === 1 ? 'comentario' : 'comentarios' }}</span></span>
+            <x-content.save type="post" :id="$post['id']" :saved="$post['saved']" />
+        </div>
+        <span class="home-post-open" aria-hidden="true"><x-lucide-arrow-up-right /></span>
+    </footer>
 </article>

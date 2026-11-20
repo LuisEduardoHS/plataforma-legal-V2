@@ -49,7 +49,7 @@
             >
                 <x-dynamic-component 
                     :component="'lucide-' . $item['icon']" 
-                    class="w-6 h-6 text-center {{ $active ? 'text-dark-accent dark:text-accent-text-dark' : 'text-text dark:text-text-dark' }}"
+                    class="w-6 h-6 text-center {{ $active ? 'header-active-icon text-accent dark:text-light-accent' : 'text-text dark:text-text-dark' }}"
                     stroke-width="2" 
                 />
                 {{ $item['label'] }}
@@ -59,10 +59,8 @@
 
     {{-- Desktop LEXA; account menu is shared above. --}}
     <div class="desktop-account-actions lg:flex hidden items-center">
-        <a href="{{ route('lexa') }}" @if (request()->routeIs('lexa')) aria-current="page" @endif class="inline-flex items-center bg-accent-bg-hover dark:bg-accent-bg-dark text-md font-semibold sm:px-12 px-8 py-1 tracking-[0.4rem] rounded-ui hover:bg-accent-bg dark:hover:bg-accent-bg-hover-dark cursor-pointer transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2">
-            <span class="text-transparent text-center bg-clip-text bg-linear-to-l from-lexa dark:from-lexa-dark via-accent dark:via-accent-text-dark to-dark-accent dark:to-accent-text-dark">
-                LEX<span class="tracking-normal">A</span>
-            </span>
+        <a href="{{ route('lexa') }}" @if (request()->routeIs('lexa')) aria-current="page" @endif class="lexa-header-btn inline-flex items-center text-md font-bold sm:px-12 px-8 py-1.5 rounded-ui cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2">
+            <span class="landing-lexa-wordmark !text-base">LEXA</span>
         </a>
 
     </div>
@@ -74,16 +72,16 @@
     <div class="lg:hidden space-x-2 absolute left-1/2 transform -translate-x-1/2 bg-linear-to-l from-dark-accent to-light-accent sm:size-9 size-8 rounded-lg"></div>
 
     <a href="{{ route('lexa') }}" @if (request()->routeIs('lexa')) aria-current="page" @endif
-       class="lg:hidden inline-flex min-h-11 items-center gap-1.5 rounded-ui bg-accent-bg-hover dark:bg-accent-bg-dark dark:hover:bg-accent-bg-hover-dark px-3 py-2 text-xs font-semibold text-lexa dark:text-lexa-dark focus-visible:outline-2 focus-visible:outline-offset-2"
+       class="lexa-header-btn lg:hidden inline-flex min-h-11 items-center gap-1.5 rounded-ui px-3 py-2 text-xs font-semibold text-lexa dark:text-lexa-dark focus-visible:outline-2 focus-visible:outline-offset-2"
        aria-label="Abrir LEXA">
-        <x-lucide-sparkles class="size-4" aria-hidden="true" /> LEXA
+        <span class="landing-lexa-wordmark">LEXA</span>
     </a>
 
 </header>
 
 {{-- Mobile NavBar --}}
-<div class="platform-mobile-nav bg-white dark:bg-surface-dark lg:hidden flex items-center justify-center rounded-t-xl fixed bottom-0 sm:h-18 h-14 w-full py-1 px-4">
-    <nav aria-label="Navegación principal móvil" class="flex w-full space-x-2 absolute left-1/2 transform -translate-x-1/2">
+<div class="platform-mobile-nav bg-white dark:bg-surface-dark lg:hidden flex items-center justify-center rounded-t-xl fixed bottom-0 min-h-14 sm:min-h-18 h-auto w-full py-1 px-2">
+    <nav aria-label="Navegación principal móvil" class="flex flex-wrap items-stretch justify-center w-full">
         @foreach ($navItems as $item)
             @php
                 $active = request()->routeIs($item['route']) || ($item['route'] === 'community' && request()->routeIs('community.*'))
@@ -98,10 +96,10 @@
             >
                 <x-dynamic-component 
                     :component="'lucide-' . $item['icon']" 
-                    class="w-6 h-6 text-center {{ $active ? 'text-dark-accent dark:text-accent-text-dark' : 'text-text dark:text-text-dark' }}"
+                    class="w-6 h-6 shrink-0 text-center {{ $active ? 'text-dark-accent dark:text-accent-text-dark' : 'text-text dark:text-text-dark' }}"
                     stroke-width="2" 
                 />
-                {{ $item['label'] }}
+                <span class="headerNav-label">{{ $item['label'] }}</span>
             </a>
         @endforeach
     </nav>
