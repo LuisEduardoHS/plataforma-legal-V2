@@ -25,3 +25,32 @@ export function appendExchange(session, draft, answer) {
     session.draft = createDraft(draft.mode);
     return true;
 }
+
+export function normalizeLexaSession(raw) {
+    return {
+        id: String(raw.id),
+        title: raw.title || 'Nueva consulta',
+        mode: raw.mode || 'orientation',
+        status: raw.status || 'active',
+        messages: Array.isArray(raw.messages) ? raw.messages : [],
+        loaded: Boolean(raw.loaded),
+        nextCursor: raw.next_cursor || null,
+        draft: createDraft(raw.mode || 'orientation'),
+    };
+}
+
+export function formatApiError(status, serverMessage) {
+    if (status === 401 || status === 419) {
+        return { kind: 'auth', text: 'Tu sesión venció. Inicia sesión nuevamente para continuar.' };
+    }
+    if (status === 404) {
+        return { kind: 'missing', text: 'Esta conversación ya no está disponible.' };
+    }
+    if (status === 409) {
+        return { kind: 'conflict', text: serverMessage || 'La conversación cambió o ya tiene una generación en curso.' };
+    }
+    if (status === 429) {
+        return { kind: 'rate', text: 'Se alcanzó el límite temporal de solicitudes. Espera unos segundos antes de volver a intentarlo.' };
+    }
+    return { kind: 'retryable', text: serverMessage || 'No pudimos completar la solicitud en este momento. Tu mensaje quedó guardado.' };
+}

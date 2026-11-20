@@ -11,6 +11,7 @@ use App\Services\Lexa\LexaConversationService;
 use App\Services\Lexa\LexaQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class LexaConversationController extends Controller
 {
@@ -18,6 +19,42 @@ class LexaConversationController extends Controller
         private LexaQuery $query,
         private LexaConversationService $service,
     ) {}
+
+    public function page(Request $request): Response
+    {
+        $user = $request->user();
+        $user->loadMissing('profile');
+        $page = $this->query->conversations($user);
+        $displayName = trim((string) ($user->profile?->display_name ?? $user->name ?? 'Tú'));
+
+        $lexa = [
+            'current_user' => [
+                'id' => $user->id,
+                'name' => $displayName !== '' ? $displayName : 'Tú',
+            ],
+            'generation_enabled' => (bool) config('lexa.enabled_generation', false),
+            'modes' => [
+                ['id' => 'orientation', 'label' => 'Orientación', 'note' => 'Orientación jurídica general en México.'],
+                ['id' => 'contract', 'label' => 'Revisar un contrato', 'note' => 'Organiza dudas sobre cláusulas y compromisos.'],
+                ['id' => 'organize', 'label' => 'Ordenar mi consulta', 'note' => 'Estructura hechos y preguntas clave.'],
+            ],
+            'suggestions' => [
+                ['label' => 'Problema laboral', 'prompt' => 'Tengo una situación en mi trabajo y quiero ordenar mis dudas antes de consultar a un profesional.', 'mode' => 'orientation'],
+                ['label' => 'Quiero revisar un contrato', 'prompt' => 'Quiero revisar un contrato. ¿Cómo puedo organizar los puntos que me gustaría aclarar?', 'mode' => 'contract'],
+                ['label' => 'Tengo una duda sobre una renta', 'prompt' => 'Tengo una duda sobre una renta y quiero explicar mi situación con claridad.', 'mode' => 'orientation'],
+            ],
+            'sessions' => $page->items(),
+            'next_cursor' => $page->nextCursor()?->encode(),
+            'endpoints' => [
+                'conversations' => route('lexa.conversations.index'),
+                'login' => route('login'),
+            ],
+        ];
+
+        return response()
+            ->view('pages.lexa.index', ['lexa' => $lexa])
+            ->header('Cache-Control', 'private, no-store');
+    }
 
     public function index(LexaIndexRequest $request): JsonResponse
     {

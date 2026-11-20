@@ -148,7 +148,7 @@ Route::middleware('auth')->group(function () {
             Route::delete('/{conversation}/adjuntos/{attachment}', [MessagingAttachmentController::class, 'remove'])->block(60, 10)->name('upload.remove');
         });
     });
-    Route::view('/lexa', 'pages.lexa.index')->name('lexa');
+    Route::get('/lexa', [LexaConversationController::class, 'page'])->middleware('throttle:lexa.read')->name('lexa');
     Route::prefix('lexa/conversaciones')->name('lexa.conversations.')->whereNumber('conversation')->group(function () {
         Route::get('/', [LexaConversationController::class, 'index'])->middleware('throttle:lexa.read')->name('index');
         Route::post('/', [LexaConversationController::class, 'store'])->middleware('throttle:lexa.write')->name('store');

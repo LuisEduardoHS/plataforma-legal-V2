@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDraft, createSession, appendExchange, matchesSession, validateContext } from '../../resources/js/lexa/state.js';
+import { createDraft, createSession, appendExchange, matchesSession, validateContext, normalizeLexaSession, formatApiError } from '../../resources/js/lexa/state.js';
 
 test('history search ignores accents and case', () => {
     const session = { title: 'Orientación sobre mi renta' };
@@ -51,4 +51,22 @@ test('LEXA validates document/image context and rejects videos or oversized file
     assert.ok(validateContext(file('clip.mp4', 'video/mp4'), []));
     assert.ok(validateContext(file('archivo.exe', ''), []));
     assert.ok(validateContext(file('foto.jpg', 'image/jpeg', 10 * 1024 ** 2 + 1), []));
+});
+
+test('normalizeLexaSession normalizes persisted backend conversation DTOs', () => {
+    const normalized = normalizeLexaSession({ id: 42, title: 'Consulta laboral', mode: 'contract' });
+    assert.equal(normalized.id, '42');
+    assert.equal(normalized.title, 'Consulta laboral');
+    assert.equal(normalized.mode, 'contract');
+    assert.deepEqual(normalized.messages, []);
+    assert.equal(normalized.loaded, false);
+    assert.equal(normalized.draft.mode, 'contract');
+});
+test('formatApiError maps auth, conflict, missing, rate, and retryable states safely', () => {
+    assert.equal(formatApiError(401).kind, 'auth');
+    assert.equal(formatApiError(419).kind, 'auth');
+    assert.equal(formatApiError(404).kind, 'missing');
+    assert.equal(formatApiError(409, 'Conflicto').kind, 'conflict');
+    assert.equal(formatApiError(429).kind, 'rate');
+    assert.equal(formatApiError(503).kind, 'retryable');
 });

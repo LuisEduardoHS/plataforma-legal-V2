@@ -240,4 +240,29 @@ class LexaConversationTest extends TestCase
 
         $this->assertSame(0, LexaConversation::where('user_id', $user->id)->count());
     }
+
+    public function test_lexa_page_hydrates_only_own_persisted_conversations_without_example_responses(): void
+    {
+        $owner = User::factory()->create(['status' => 'active']);
+        $other = User::factory()->create(['status' => 'active']);
+
+        $this->actingAs($owner)->postJson('/lexa/conversaciones', [
+            'mode' => 'orientation',
+            'content' => 'Mi consulta privada persistida',
+        ])->assertCreated();
+
+        $this->actingAs($other)->postJson('/lexa/conversaciones', [
+            'mode' => 'contract',
+            'content' => 'Consulta ajena confidencial',
+        ])->assertCreated();
+
+        $response = $this->actingAs($owner)->get('/lexa')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private');
+
+        $html = $response->getContent();
+        $this->assertStringContainsString('Mi consulta privada persistida', $html);
+        $this->assertStringNotContainsString('Consulta ajena confidencial', $html);
+        $this->assertStringNotContainsString('example_responses', $html);
+    }
 }

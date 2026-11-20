@@ -193,3 +193,15 @@
 @media (prefers-reduced-motion: reduce) {
     .lexa *, .lexa *::before, .lexa *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.lexa-thread-list { display: flex; flex-direction: column; gap: 26px; width: 100%; }
+.lexa-load-more { align-self: center; min-height: 36px; padding: 6px 14px; border: 1px solid var(--lexa-border); border-radius: 999px; background: var(--lexa-soft); color: var(--lexa-muted); font-size: 12px; font-weight: 500; margin: 4px 0; }
+.lexa-load-more:hover { background: var(--lexa-tint); color: var(--lexa-link); }
+.lexa-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; padding: 12px 14px; border-radius: var(--radius-ui); border: 1px solid var(--lexa-border); background: var(--lexa-soft); color: var(--lexa-text); font-size: 13px; }
+.lexa-banner.is-error { border-color: color-mix(in srgb, #b42318 35%, var(--lexa-border)); }
+.lexa-banner p { margin: 0; flex: 1; min-width: 180px; }
+.lexa-banner-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lexa-banner-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 6px 12px; border: 0; border-radius: var(--radius-ui); background: var(--lexa-tint); color: var(--lexa-link); font-size: 12.5px; font-weight: 600; text-decoration: none; }
+.lexa-banner-btn.is-danger { background: #b42318; color: #fff; }
+.lexa-delete-copy { margin: 8px 0 18px; font-size: 13.5px; color: var(--lexa-muted); }
+.lexa-delete-actions { display: flex; justify-content: flex-end; gap: 10px; }
