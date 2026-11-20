@@ -1,5 +1,6 @@
 import { onPage } from './ui/navigation.js';
 import { createDraft, matchesSession, normalizeLexaSession, formatApiError } from './lexa/state.js';
+import { renderMarkdownToFragment } from './lexa/markdown.js';
 import { takeHandoff } from './ui/handoff.js';
 
 onPage('[data-lexa]', (root, { listen, onCleanup }) => {
@@ -175,10 +176,24 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
         for (const message of session.messages) {
             const article = clone('message');
             const own = message.role === 'user';
+            const text = message.content ?? message.text ?? '';
             article.classList.toggle('is-user', own);
             $('[data-message-author]', article).textContent = own ? data.current_user.name : 'LEXA';
             $('[data-answer-icon]', article).toggleAttribute('hidden', own);
-            $('[data-message-text]', article).textContent = message.content ?? message.text ?? '';
+            const copyBtn = $('[data-copy-message]', article);
+            if (copyBtn) {
+                copyBtn.hidden = own || !text;
+                if (!own) copyBtn.dataset.copyText = text;
+            }
+            const body = $('[data-message-text]', article);
+            body.replaceChildren();
+            if (own) {
+                const p = document.createElement('p');
+                p.textContent = text;
+                body.append(p);
+            } else {
+                body.append(renderMarkdownToFragment(text));
+            }
             threadList.append(article);
         }
         if (scrollToBottom) {
@@ -521,6 +536,12 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             currentDraft().mode = target.dataset.mode;
             renderComposer();
             focusPrompt();
+        }
+        if (target.matches('[data-copy-message]')) {
+            const copyText = target.dataset.copyText || '';
+            if (copyText && navigator.clipboard?.writeText) {
+                navigator.clipboard.writeText(copyText).then(() => announce('Respuesta copiada al portapapeles.')).catch(() => {});
+            }
         }
     });
 

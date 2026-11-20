@@ -74,8 +74,12 @@
         <template data-session-template><button type="button" class="lexa-history-item"><x-lucide-message-square aria-hidden="true" /><span></span></button></template>
         <template data-message-template>
             <article class="lexa-message">
-                <div class="lexa-message-author"><x-lucide-sparkles data-answer-icon aria-hidden="true" /><strong data-message-author></strong></div>
-                <p data-message-text></p><div class="lexa-message-files" data-message-files></div>
+                <div class="lexa-message-author">
+                    <x-lucide-sparkles data-answer-icon aria-hidden="true" />
+                    <strong data-message-author></strong>
+                    <button type="button" class="lexa-copy-btn" data-copy-message aria-label="Copiar respuesta" title="Copiar respuesta" hidden><x-lucide-copy aria-hidden="true" /></button>
+                </div>
+                <div class="lexa-markdown" data-message-text></div><div class="lexa-message-files" data-message-files></div>
             </article>
         </template>
         <template data-file-template><button type="button" class="lexa-file"><x-lucide-file-text data-file-icon aria-hidden="true" /><span><strong data-file-name></strong><small data-file-meta></small></span></button></template>
