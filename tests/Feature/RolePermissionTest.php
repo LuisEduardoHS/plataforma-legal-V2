@@ -6,6 +6,7 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class RolePermissionTest extends TestCase
@@ -14,7 +15,7 @@ class RolePermissionTest extends TestCase
     {
         // Verificar que utilizamos la base exclusiva de pruebas.
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 
@@ -53,7 +54,7 @@ class RolePermissionTest extends TestCase
     public function test_regular_user_has_limited_permissions(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 
@@ -85,7 +86,7 @@ class RolePermissionTest extends TestCase
     public function test_admin_has_all_defined_permissions(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 
@@ -139,7 +140,7 @@ class RolePermissionTest extends TestCase
     public function test_role_permission_seeder_is_idempotent(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 

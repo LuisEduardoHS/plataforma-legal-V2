@@ -23,6 +23,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class BackendAuditConcurrencyTest extends TestCase
@@ -61,7 +62,7 @@ class BackendAuditConcurrencyTest extends TestCase
         app(ProfileService::class)->saveUserProfile($this->owner, $this->owner->id, ['visibility' => 'public', 'display_name' => 'Alias público anterior']);
         config(['database.connections.audit_reader' => config('database.connections.'.$this->default)]);
         $this->reader = DB::connection('audit_reader');
-        $this->assertSame('plataforma_legal_v2_test', $this->reader->selectOne('SELECT DATABASE() db')->db);
+        $this->assertSame(TestingIsolation::database(), $this->reader->selectOne('SELECT DATABASE() db')->db);
         $this->assertSame('REPEATABLE-READ', $this->reader->selectOne('SELECT @@transaction_isolation level')->level);
         $this->reader->statement('SET SESSION innodb_lock_wait_timeout = 2');
     }

@@ -29,6 +29,7 @@ use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class IntegrationAuditFixesTest extends TestCase
@@ -39,7 +40,7 @@ class IntegrationAuditFixesTest extends TestCase
         DB::beginTransaction();
         Storage::fake('attachments');
         Event::listen('eloquent.creating: '.Attachment::class, function () {
-            $this->assertSame('plataforma_legal_v2_test', DB::selectOne('SELECT DATABASE() db')->db);
+            $this->assertSame(TestingIsolation::database(), DB::selectOne('SELECT DATABASE() db')->db);
             $root = str_replace('\\', '/', Storage::disk(config('attachments.disk'))->path(''));
             $this->assertStringStartsWith(str_replace('\\', '/', storage_path('framework/testing/disks/attachments')).'/', $root);
         });

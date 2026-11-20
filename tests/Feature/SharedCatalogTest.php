@@ -11,6 +11,7 @@ use Database\Seeders\TagSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class SharedCatalogTest extends TestCase
@@ -24,8 +25,8 @@ class SharedCatalogTest extends TestCase
         // No RefreshDatabase: usar únicamente MySQL de pruebas y transacciones.
         $this->assertSame('testing', app()->environment());
         $this->assertSame('mysql', DB::connection()->getDriverName());
-        $this->assertSame('plataforma_legal_v2_test', DB::connection()->getDatabaseName());
-        $this->assertSame('plataforma_legal_v2_test', DB::selectOne('SELECT DATABASE() AS db')->db);
+        $this->assertSame(TestingIsolation::database(), DB::connection()->getDatabaseName());
+        $this->assertSame(TestingIsolation::database(), DB::selectOne('SELECT DATABASE() AS db')->db);
 
         DB::beginTransaction();
         $this->transactionStarted = true;

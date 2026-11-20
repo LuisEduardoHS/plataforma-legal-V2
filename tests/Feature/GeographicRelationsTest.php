@@ -3,11 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Country;
-use App\Models\State;
 use App\Models\Municipality;
-use Illuminate\Support\Facades\DB;
-use Tests\TestCase;
+use App\Models\State;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Tests\Support\TestingIsolation;
+use Tests\TestCase;
 
 class GeographicRelationsTest extends TestCase
 {
@@ -15,7 +16,7 @@ class GeographicRelationsTest extends TestCase
     {
         // Garantizar que no utilizamos la base de desarrollo.
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 
@@ -73,7 +74,7 @@ class GeographicRelationsTest extends TestCase
     public function test_state_cannot_reference_nonexistent_country(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 
@@ -101,7 +102,7 @@ class GeographicRelationsTest extends TestCase
     public function test_state_code_must_be_unique_within_country(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 
@@ -157,7 +158,7 @@ class GeographicRelationsTest extends TestCase
     public function test_municipality_cannot_reference_nonexistent_state(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 
@@ -197,7 +198,7 @@ class GeographicRelationsTest extends TestCase
     public function test_country_cannot_be_deleted_while_it_has_states(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 
@@ -252,7 +253,7 @@ class GeographicRelationsTest extends TestCase
     public function test_state_cannot_be_deleted_while_it_has_municipalities(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 
@@ -313,7 +314,7 @@ class GeographicRelationsTest extends TestCase
     public function test_municipality_code_must_be_unique_within_state(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 

@@ -39,6 +39,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
+use Tests\Support\TestingIsolation;
 use Tests\Support\VerificationFixtures;
 use Tests\TestCase;
 
@@ -61,8 +62,8 @@ class ContentLibraryTest extends TestCase
         parent::setUp();
         $this->assertSame('testing', app()->environment());
         $this->assertSame('mysql', DB::connection()->getDriverName());
-        $this->assertSame('plataforma_legal_v2_test', DB::connection()->getDatabaseName());
-        $this->assertSame('plataforma_legal_v2_test', DB::selectOne('SELECT DATABASE() db')->db);
+        $this->assertSame(TestingIsolation::database(), DB::connection()->getDatabaseName());
+        $this->assertSame(TestingIsolation::database(), DB::selectOne('SELECT DATABASE() db')->db);
         DB::beginTransaction();
         $this->started = true;
         Storage::fake('attachments');

@@ -6,6 +6,7 @@ use App\Models\LegalSpecialty;
 use Database\Seeders\LegalSpecialtySeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class LegalSpecialtyTest extends TestCase
@@ -13,7 +14,7 @@ class LegalSpecialtyTest extends TestCase
     private function withinTransaction(callable $callback): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 

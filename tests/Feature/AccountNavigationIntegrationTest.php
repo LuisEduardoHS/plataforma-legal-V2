@@ -18,6 +18,7 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\EnforcedCsrfToken;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class NavigationIsolationProbe
@@ -27,8 +28,8 @@ class NavigationIsolationProbe
         $db = DB::connection();
         $root = str_replace('\\', '/', config('filesystems.disks.attachments.root'));
         if (! app()->environment('testing') || $db->getDriverName() !== 'mysql'
-            || $db->getDatabaseName() !== 'plataforma_legal_v2_test'
-            || $db->selectOne('SELECT DATABASE() db')->db !== 'plataforma_legal_v2_test'
+            || $db->getDatabaseName() !== TestingIsolation::database()
+            || $db->selectOne('SELECT DATABASE() db')->db !== TestingIsolation::database()
             || $root !== str_replace('\\', '/', storage_path('framework/testing/disks/09b-private'))
             || config('cache.default') !== 'array' || config('session.driver') !== 'array') {
             throw new \RuntimeException('Navegación 09B requiere SQL y almacenamiento aislados.');

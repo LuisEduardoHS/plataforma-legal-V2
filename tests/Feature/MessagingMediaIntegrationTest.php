@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class MessagingMediaIntegrationTest extends TestCase
@@ -40,7 +41,7 @@ class MessagingMediaIntegrationTest extends TestCase
         $root = str_replace('\\', '/', $disk->path(''));
         $this->assertStringStartsWith(str_replace('\\', '/', storage_path('framework/testing/disks/attachments')), $root);
         $this->assertStringNotContainsString('/storage/app/attachments', $root);
-        $this->assertSame('plataforma_legal_v2_test', DB::selectOne('SELECT DATABASE() db')->db);
+        $this->assertSame(TestingIsolation::database(), DB::selectOne('SELECT DATABASE() db')->db);
     }
 
     protected function tearDown(): void

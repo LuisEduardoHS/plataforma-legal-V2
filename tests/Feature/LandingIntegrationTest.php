@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class LandingIsolationProbe
@@ -23,8 +24,8 @@ class LandingIsolationProbe
         $root = str_replace('\\', '/', config('filesystems.disks.attachments.root'));
         $storage = str_replace('\\', '/', storage_path());
         if (! app()->environment('testing') || $db->getDriverName() !== 'mysql'
-            || $db->getDatabaseName() !== 'plataforma_legal_v2_test'
-            || $db->selectOne('SELECT DATABASE() db')->db !== 'plataforma_legal_v2_test'
+            || $db->getDatabaseName() !== TestingIsolation::database()
+            || $db->selectOne('SELECT DATABASE() db')->db !== TestingIsolation::database()
             || config('cache.default') !== 'array' || config('session.driver') !== 'array'
             || ! str_starts_with($root, $storage.'/framework/testing/disks/09c-private')
             || str_starts_with($storage, str_replace('\\', '/', base_path()).'/')) {

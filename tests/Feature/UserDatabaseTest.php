@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class UserDatabaseTest extends TestCase
@@ -11,7 +12,7 @@ class UserDatabaseTest extends TestCase
     public function test_user_status_is_saved_and_loaded_from_mysql(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
 

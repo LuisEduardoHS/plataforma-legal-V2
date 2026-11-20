@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class OperationsConcurrencyTest extends TestCase
@@ -23,7 +24,7 @@ class OperationsConcurrencyTest extends TestCase
         Storage::fake('attachments');
         $default = DB::getDefaultConnection();
         $db = DB::connection();
-        $this->assertSame('plataforma_legal_v2_test', $db->selectOne('SELECT DATABASE() db')->db);
+        $this->assertSame(TestingIsolation::database(), $db->selectOne('SELECT DATABASE() db')->db);
         $users = [];
         $permission = null;
         $createdPermission = false;
@@ -39,7 +40,7 @@ class OperationsConcurrencyTest extends TestCase
             $version = $account->detail($actor, $target->id)['account']['version'];
             config(['database.connections.operations_race' => config('database.connections.'.$default)]);
             $other = DB::connection('operations_race');
-            $this->assertSame('plataforma_legal_v2_test', $other->selectOne('SELECT DATABASE() db')->db);
+            $this->assertSame(TestingIsolation::database(), $other->selectOne('SELECT DATABASE() db')->db);
             $other->statement('SET SESSION innodb_lock_wait_timeout = 1');
 
             $db->beginTransaction();

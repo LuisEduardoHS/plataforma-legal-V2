@@ -12,12 +12,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class AttachmentService
 {
-    public function __construct(private AttachmentValidator $validator) {}
+    public function __construct(private AttachmentValidator $validator, private AttachmentQuota $quota) {}
 
     public function store(User $actor, UploadedFile $file): Attachment
     {
@@ -35,15 +36,25 @@ class AttachmentService
             $disk = config('attachments.disk');
             $this->assertPrivateDisk($disk);
             $name = Str::uuid().'.'.$metadata['extension'];
-            $attachment = new Attachment;
-            $attachment->forceFill($metadata + [
-                'user_id' => $actor->getKey(),
-                'storage_name' => $name,
-                'path' => 'attachments/'.now()->format('Y/m').'/'.$name,
-                'disk' => $disk,
-                'visibility' => 'private',
-                'status' => AttachmentStatus::PendingUpload,
-            ])->save();
+            $attachment = DB::transaction(function () use ($actor, $metadata, $name, $disk) {
+                $current = User::whereKey($actor->id)->lockForUpdate()->first();
+                if (! $current || ! $current->isActive()) {
+                    throw new AuthorizationException;
+                }
+                Gate::forUser($current)->authorize('create', Attachment::class);
+                $this->quota->assertCapacity($current, $metadata['size_bytes']);
+                $attachment = new Attachment;
+                $attachment->forceFill($metadata + [
+                    'user_id' => $actor->getKey(),
+                    'storage_name' => $name,
+                    'path' => 'attachments/'.now()->format('Y/m').'/'.$name,
+                    'disk' => $disk,
+                    'visibility' => 'private',
+                    'status' => AttachmentStatus::PendingUpload,
+                ])->save();
+
+                return $attachment;
+            });
 
             $stream = fopen($file->getRealPath(), 'rb');
             if (! is_resource($stream)) {
@@ -51,6 +62,8 @@ class AttachmentService
             }
 
             DB::transaction(function () use ($attachment, $stream): void {
+                // Match the reservation lock order: owner first, then attachment.
+                User::whereKey($attachment->user_id)->sharedLock()->firstOrFail();
                 $record = Attachment::whereKey($attachment->id)->lockForUpdate()->firstOrFail();
                 if ($record->status !== AttachmentStatus::PendingUpload
                     || ! Storage::disk($record->disk)->put($record->path, $stream, ['visibility' => 'private'])) {
@@ -60,6 +73,11 @@ class AttachmentService
             });
 
             return $attachment->fresh();
+        } catch (AuthorizationException|ValidationException $error) {
+            if ($attachment?->exists) {
+                $this->cleanupFailedUpload($attachment);
+            }
+            throw $error;
         } catch (Throwable $error) {
             report($error);
             if ($attachment?->exists) {
@@ -213,6 +231,7 @@ class AttachmentService
         // If cleanup itself fails, the reservation keeps the exact key for a retry.
         try {
             DB::transaction(function () use ($record): void {
+                User::whereKey($record->user_id)->sharedLock()->firstOrFail();
                 $current = Attachment::whereKey($record->id)->lockForUpdate()->first();
                 // Never compensate a committed upload or an evidence retained after it.
                 if (! $current || $current->status === AttachmentStatus::Available

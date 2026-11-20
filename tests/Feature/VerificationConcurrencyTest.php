@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Support\TestingIsolation;
 use Tests\Support\VerificationFixtures;
 use Tests\TestCase;
 
@@ -36,8 +37,8 @@ class VerificationConcurrencyTest extends TestCase
     {
         $this->assertSame('testing', app()->environment());
         $this->assertSame('mysql', DB::connection()->getDriverName());
-        $this->assertSame('plataforma_legal_v2_test', DB::connection()->getDatabaseName());
-        $this->assertSame('plataforma_legal_v2_test', DB::selectOne('SELECT DATABASE() AS db')->db);
+        $this->assertSame(TestingIsolation::database(), DB::connection()->getDatabaseName());
+        $this->assertSame(TestingIsolation::database(), DB::selectOne('SELECT DATABASE() AS db')->db);
         $disk = Storage::fake('attachments');
         $owner = null;
         $temporary = null;
@@ -80,8 +81,8 @@ class VerificationConcurrencyTest extends TestCase
     {
         $this->assertSame('testing', app()->environment());
         $this->assertSame('mysql', DB::connection()->getDriverName());
-        $this->assertSame('plataforma_legal_v2_test', DB::connection()->getDatabaseName());
-        $this->assertSame('plataforma_legal_v2_test', DB::selectOne('SELECT DATABASE() AS db')->db);
+        $this->assertSame(TestingIsolation::database(), DB::connection()->getDatabaseName());
+        $this->assertSame(TestingIsolation::database(), DB::selectOne('SELECT DATABASE() AS db')->db);
 
         // These fixtures must be committed so the second connection can see them.
         // Cleanup is selective and runs even when a test assertion fails.
@@ -119,7 +120,7 @@ class VerificationConcurrencyTest extends TestCase
 
             config(['database.connections.verification_race' => config('database.connections.'.$default)]);
             $other = DB::connection('verification_race');
-            $this->assertSame('plataforma_legal_v2_test', $other->selectOne('SELECT DATABASE() AS db')->db);
+            $this->assertSame(TestingIsolation::database(), $other->selectOne('SELECT DATABASE() AS db')->db);
             $other->statement('SET SESSION innodb_lock_wait_timeout = 1');
             $reportedCode = null;
             Log::listen(function (MessageLogged $event) use (&$reportedCode): void {
