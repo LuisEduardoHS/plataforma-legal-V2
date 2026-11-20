@@ -17,16 +17,46 @@ abstract class TestCase extends BaseTestCase
         return parent::be($user, $guard);
     }
 
-    protected function setUp(): void
+    protected function setUpTraits()
     {
-        parent::setUp();
+        $this->assertIsolatedTestEnvironment();
 
-        // Stop before any subclass creates fixtures, even with stale config or DB_URL.
+        return parent::setUpTraits();
+    }
+
+    private function assertIsolatedTestEnvironment(): void
+    {
+        $storagePath = (string) (getenv('LARAVEL_STORAGE_PATH') ?: env('LARAVEL_STORAGE_PATH', ''));
+        if ($storagePath !== '') {
+            $this->app->useStoragePath($storagePath);
+        }
+
+        // Stop before RefreshDatabase or any subclass trait runs destructive migrations.
+        $expectedDb = (string) (getenv('EXPECTED_TEST_DB') ?: env('EXPECTED_TEST_DB', env('DB_DATABASE', '')));
         $connection = DB::connection();
-        if (! app()->environment('testing') || $connection->getDriverName() !== 'mysql'
-            || $connection->getDatabaseName() !== 'plataforma_legal_v2_test'
-            || $connection->selectOne('SELECT DATABASE() db')->db !== 'plataforma_legal_v2_test') {
-            throw new \RuntimeException('Las pruebas requieren exclusivamente plataforma_legal_v2_test en MySQL.');
+        $actualDb = $connection->selectOne('SELECT DATABASE() db')->db ?? null;
+
+        if (! app()->environment('testing')
+            || $connection->getDriverName() !== 'mysql'
+            || $expectedDb === ''
+            || $expectedDb === 'plataforma_legal_v2'
+            || ! str_ends_with($expectedDb, '_test')
+            || $connection->getDatabaseName() !== $expectedDb
+            || $actualDb !== $expectedDb) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Aislamiento de testing inválido: esperado=[%s], config=[%s], SELECT DATABASE()=[%s].',
+                    $expectedDb,
+                    $connection->getDatabaseName(),
+                    (string) $actualDb
+                )
+            );
+        }
+
+        if (config('cache.default') !== 'array'
+            || config('session.driver') !== 'array'
+            || config('queue.default') !== 'sync') {
+            throw new \RuntimeException('Las pruebas requieren cache=array, session=array y queue=sync aislados.');
         }
     }
 }
