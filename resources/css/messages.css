@@ -14,6 +14,8 @@
     --messages-own: var(--color-dark-accent);
     --messages-received: #fff;
     --messages-nav-height: 0px;
+    display: flex;
+    flex-direction: column;
     height: calc(var(--messages-viewport, 100dvh) - 72px);
     background: var(--messages-surface);
     color: var(--messages-text);
@@ -33,7 +35,7 @@
 .messages :is(button, a, input, textarea) { transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease; }
 .messages button:not(:disabled):hover, .messages a:hover { background: var(--messages-hover); }
 .messages svg { width: 19px; height: 19px; flex-shrink: 0; stroke-width: 1.7; }
-.messages-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr) 280px; width: 100%; height: 100%; margin: auto; }
+.messages-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 280px minmax(0, 1fr) 280px; width: 100%; height: 100%; margin: auto; }
 .messages-conversations { min-width: 0; min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--messages-border); background: var(--messages-surface); }
 .messages-list-heading { padding: 22px 16px 18px; }
 .messages-list-heading h2 { font-weight: 600; font-size: 18px; text-align: center; margin-bottom: 24px; color: var(--messages-muted); }
@@ -246,3 +248,19 @@
 .messages-edit textarea { width:100%; padding:14px; background:var(--color-bg); color:inherit; border:1px solid var(--color-control-border); border-radius:var(--radius-ui); }
 @media(prefers-color-scheme:dark) { .messages-edit textarea { background:var(--color-surface-dark); border-color:var(--color-focus-dark); } .messages-edit .messages-action { background:var(--color-accent-bg-dark); color:var(--color-accent-text-dark); } }
 @media(max-width:639px) { .messages-action,.messages-filters a { min-height:44px; } .messages-prepared-file .messages-action { font-size:11px; padding:4px 8px; } }
+
+.messages-recovery {
+    flex-shrink: 0;
+    font-size: 1rem;
+    padding: 1.25rem;
+    background: var(--messages-surface);
+    color: var(--messages-text);
+    border-bottom: 1px solid var(--messages-border);
+    overflow-wrap: anywhere;
+}
+.messages-recovery[hidden], .messages-recovery [hidden] { display: none; }
+.messages-recovery h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: .5rem; }
+.messages-recovery-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
+.messages-recovery-actions .messages-action { min-height: 44px; white-space: normal; text-align: center; font-size: .875rem; }
+.messages.messages-is-recovery { height: auto; min-height: 50vh; }
+.messages-is-recovery .messages-recovery { max-width: 48rem; margin: 0 auto; }

@@ -44,7 +44,10 @@ class PublicProfileController extends Controller
         } catch (QueryException $error) {
             report($error);
 
-            return response('El perfil no está disponible temporalmente.', 503)->header('Content-Type', 'text/plain; charset=UTF-8');
+            $message = 'El perfil no está disponible temporalmente.';
+
+            return (request()->expectsJson() ? response()->json(['message' => $message], 503)
+                : response()->view('errors.503', compact('message'), 503))->header('Cache-Control', 'private, no-store');
         }
     }
 

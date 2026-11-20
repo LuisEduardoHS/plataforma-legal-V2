@@ -3,6 +3,7 @@
 @section('page-assets') @vite(['resources/css/messages.css']) @endsection
 @section('content')
 <section class="messages" data-messaging data-view="{{ $context ? 'chat' : 'list' }}" @if ($context) data-poll-url="{{ route('messages.updates', ['conversation' => $context['id']] + $filters) }}" data-can-send="{{ $context['can_send'] ? 'true' : 'false' }}" @endif data-historical="{{ $historical || request()->filled('cursor') ? 'true' : 'false' }}" aria-label="Mensajes">
+    @if ($context)@include('pages.messages.partials.recovery')@endif
     <div class="messages-layout">
         <x-messages.conversations :inbox="$inbox" :context="$context" :archived="$archived" :filters="$filters" />
         <section class="messages-chat" aria-labelledby="messages-contact-name">

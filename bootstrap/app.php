@@ -62,7 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 : 'El servicio no está disponible temporalmente. Inténtalo nuevamente.';
 
             return ($request->expectsJson() ? response()->json(['message' => $message], 503)
-                : response($message, 503)->header('Content-Type', 'text/plain; charset=UTF-8'))
+                : response()->view('errors.503', compact('message'), 503))
                 ->header('Cache-Control', 'private, no-store');
         });
         $exceptions->render(function (Throwable $error, Request $request) {
@@ -178,6 +178,31 @@ return Application::configure(basePath: dirname(__DIR__))
             return ($request->expectsJson() ? response()->json(['message' => $message], $status)
                 : response()->view('pages.community.error', compact('status', 'message'), $status))
                 ->header('Cache-Control', 'private, no-store');
+        });
+        // Keep framework JSON errors minimal even with local debug enabled. Module contracts above take precedence.
+        $exceptions->render(function (HttpExceptionInterface $error, Request $request) {
+            $status = $error->getStatusCode();
+            if (! $request->expectsJson() || ! in_array($status, [401, 403, 404, 409, 419, 429, 503], true)) {
+                return null;
+            }
+            $message = match ($status) {
+                401 => 'Inicia sesión para continuar.',
+                403 => 'La acción no está disponible para tu cuenta.',
+                404 => 'La página o el contenido no están disponibles.',
+                409 => 'El estado cambió. Consulta los datos actuales antes de volver a enviar.',
+                419 => 'La sesión o el formulario caducó. Abre una pantalla actual.',
+                429 => 'Se alcanzó el límite de solicitudes. Espera antes de volver a intentarlo.',
+                default => 'El servicio no está disponible temporalmente.',
+            };
+
+            return response()->json(['message' => $message], $status, $error->getHeaders());
+        });
+        $exceptions->respond(function ($response) {
+            if (in_array($response->getStatusCode(), [401, 403, 404, 409, 419, 429, 503], true)) {
+                $response->headers->set('Cache-Control', 'private, no-store');
+            }
+
+            return $response;
         });
         // Covers handled report($error) calls and unhandled QueryExceptions alike.
         $exceptions->report(function (QueryException $error): void {

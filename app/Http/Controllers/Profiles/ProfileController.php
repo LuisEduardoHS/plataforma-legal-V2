@@ -190,7 +190,10 @@ class ProfileController extends Controller
         } catch (QueryException $error) {
             report($error);
 
-            return response('Los perfiles no están disponibles temporalmente.', 503)->header('Content-Type', 'text/plain; charset=UTF-8');
+            $message = 'Los perfiles no están disponibles temporalmente.';
+
+            return (request()->expectsJson() ? response()->json(['message' => $message], 503)
+                : response()->view('errors.503', compact('message'), 503))->header('Cache-Control', 'private, no-store');
         }
     }
 }

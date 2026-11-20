@@ -4,7 +4,7 @@ import { createSendAttempt } from './messages/attempt.js';
 import { createPoller } from './messages/polling.js';
 import { localizeMessageTimes } from './messages/dates.js';
 
-onPage('[data-messaging]', (root, { listen, onCleanup }) => {
+export function setupMessages(root, { listen, onCleanup }) {
     const $ = (selector) => root.querySelector(selector);
     const history = $('[data-history]');
     const form = $('[data-composer]');
@@ -13,10 +13,13 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
     const desktop = matchMedia('(min-width:1200px)');
     const requests = new AbortController();
     const attempt = createSendAttempt();
+    let revoked = false;
+    let disposed = false;
     let sending = false;
     let uploading = false;
     let uploadAmbiguous = false;
     let refreshing = false;
+    let readGeneration = 0;
     let canSend = root.dataset.canSend === 'true';
     let opener;
     const viewport = () => root.style.setProperty('--messages-viewport', `${window.visualViewport?.height || innerHeight}px`);
@@ -30,9 +33,13 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
     const status = $('[data-send-status]');
     const pollStatus = $('[data-poll-status]');
     const rules = JSON.parse($('[data-file-rules]').textContent);
-    const say = (message) => { status.textContent = message; };
+    const recovery = $('[data-messaging-recovery]');
+    const retry = recovery.querySelector('[data-read-retry]');
+    const access = recovery.querySelector('[data-recovery-access]');
+    const say = (message) => { if (!revoked && !disposed) status.textContent = message; };
     const atEnd = () => history.scrollHeight - history.scrollTop - history.clientHeight < 80;
     function controls() {
+        if (revoked || disposed) return;
         input.readOnly = !!attempt.current() || uploadAmbiguous;
         input.disabled = !canSend;
         form.querySelector('[data-send]').disabled = !canSend || sending || uploading || uploadAmbiguous;
@@ -46,14 +53,57 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
         template.innerHTML = html; // Same-origin Blade fragments, with escaped DTO fields.
         return template.content;
     }
-    function revoke() {
+    function pauseReads(statusCode) {
+        if (revoked || disposed) return;
+        readGeneration++;
+        poller.pause();
+        recovery.hidden = false;
+        recovery.querySelector('[data-recovery-title]').textContent = 'La actualización está en pausa';
+        recovery.querySelector('[data-recovery-message]').textContent = statusCode === 429
+            ? 'Se alcanzó el límite de solicitudes. Espera antes de volver a consultar. Conservamos el historial accesible y el borrador; no reenviamos mensajes ni archivos.'
+            : statusCode === 409 ? 'El estado cambió. Consulta la versión actual antes de decidir qué hacer. Conservamos el borrador y no reenviamos mensajes ni archivos.'
+            : 'No pudimos consultar la conversación. Conservamos el historial accesible y el borrador. Consulta de nuevo cuando quieras; esta acción no envía mensajes ni archivos.';
+        retry.hidden = false;
+        access.hidden = true;
+    }
+    function revoke(statusCode) {
+        if (revoked || disposed) return;
+        revoked = true;
         canSend = false;
+        poller.stop();
+        requests.abort();
+        attempt.rejected();
+        input.value = '';
+        root.querySelectorAll('input').forEach(field => { field.value = ''; field.checked = false; });
+        // Empty held nodes as well as the visible tree, including dialogs and drafts.
         history.replaceChildren();
         $('[data-conversation-list]').replaceChildren();
         $('[data-information-body]')?.replaceChildren();
-        pollStatus.textContent = 'La conversación o sesión ya no está disponible. Vuelve a iniciar sesión.';
-        controls();
-        poller.stop();
+        info.replaceChildren();
+        if (dialog.open) dialog.close();
+        form.replaceChildren();
+        uploadForm.replaceChildren();
+        root.querySelector('.messages-chat-header')?.replaceChildren();
+        delete root.dataset.pollUrl;
+        recovery.hidden = false;
+        const sessionLost = statusCode === 401 || statusCode === 419;
+        recovery.querySelector('[data-recovery-title]').textContent = sessionLost ? 'Necesitamos comprobar tu sesión' : 'La conversación no está disponible';
+        recovery.querySelector('[data-recovery-message]').textContent = sessionLost
+            ? 'Retiramos el contenido privado. Revisa tu acceso para continuar desde la bandeja de Mensajes. Ningún mensaje se reenviará automáticamente.'
+            : 'Retiramos el contenido de esta conversación. Puedes consultar tu bandeja para ver las conversaciones disponibles.';
+        retry.hidden = true;
+        access.hidden = false;
+        if (sessionLost) {
+            // The old identity and its capability links must not remain on screen.
+            document.querySelectorAll('.platform-header, .platform-mobile-nav').forEach(header => { header.replaceChildren(); header.remove(); });
+            document.getElementById('app')?.classList.add('public-shell');
+        }
+        root.replaceChildren(recovery);
+        root.classList.add('messages-is-recovery');
+        const heading = recovery.querySelector('[data-recovery-title]');
+        heading.setAttribute('aria-level', '1');
+        heading.tabIndex = -1;
+        heading.focus();
     }
     const errorText = (statusCode) => statusCode === 401 || statusCode === 419 ? 'Tu sesión venció. Recarga la página e inicia sesión.'
         : statusCode === 404 || statusCode === 403 ? 'Esta operación ya no está disponible por acceso, bloqueo o estado de cuenta.'
@@ -61,27 +111,36 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
         : statusCode === 422 ? 'Revisa el texto y los archivos. Conserva el identificador y el contenido original del envío; recarga para revisar un identificador ya utilizado.'
         : 'No pudimos confirmar la operación. Reintenta el mismo envío.';
     async function post(target, body) {
-        const response = await fetch(target, { method: 'POST', body, credentials: 'same-origin', signal: requests.signal,
+        const response = await fetch(target, { method: 'POST', body, credentials: 'same-origin', signal: requests.signal, redirect: 'error',
             headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-        const data = await response.json().catch(() => null);
+        if (revoked || disposed || requests.signal.aborted) throw new DOMException('Request cancelled', 'AbortError');
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403 || response.status === 404) revoke();
+            if ([401,403,404,419].includes(response.status)) revoke(response.status);
+            else if (response.status !== 422) pauseReads(response.status);
             const error = new Error(errorText(response.status)); error.status = response.status; throw error;
         }
+        const data = await response.json().catch(() => null);
+        if (revoked || disposed || requests.signal.aborted) throw new DOMException('Request cancelled', 'AbortError');
         return data;
     }
     async function update() {
-        if (refreshing || requests.signal.aborted) return;
+        if (refreshing || revoked || disposed || requests.signal.aborted) return;
         refreshing = true;
+        const generation = readGeneration;
         try {
-            const response = await fetch(root.dataset.pollUrl, { credentials: 'same-origin', signal: requests.signal, headers: { Accept: 'application/json' } });
+            const response = await fetch(root.dataset.pollUrl, { credentials: 'same-origin', signal: requests.signal, redirect: 'error', headers: { Accept: 'application/json' } });
+            if (revoked || disposed || requests.signal.aborted) return;
+            // A paused read generation is still part of this live access context.
+            // Definitive denial takes priority over discarding its stale results.
+            if ([401,403,404,419].includes(response.status)) { revoke(response.status); return; }
+            if (generation !== readGeneration) return;
             if (!response.ok) {
-                if ([401,403,404].includes(response.status)) revoke();
-                else pollStatus.textContent = 'La actualización no está disponible. Se reintentará mientras esta conversación esté activa.';
+                pauseReads(response.status);
                 return;
             }
             const data = await response.json();
-            if (typeof data.history_html !== 'string' || typeof data.can_send !== 'boolean') throw new Error('Invalid response');
+            if (revoked || disposed || requests.signal.aborted || generation !== readGeneration) return;
+            if (typeof data.history_html !== 'string' || typeof data.inbox_html !== 'string' || typeof data.information_html !== 'string' || typeof data.can_send !== 'boolean') throw new Error('Invalid response');
             const bottom = atEnd();
             if (!history.contains(document.activeElement) && !history.querySelector('details[open]')) {
                 history.replaceChildren(fragment(data.history_html));
@@ -92,27 +151,33 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
             const information = $('[data-information-body]');
             if (!information.contains(document.activeElement) && !information.querySelector('details[open]')) information.replaceChildren(fragment(data.information_html));
             localizeMessageTimes(root);
+            recovery.hidden = true;
+            poller.resume();
             canSend = data.can_send;
             controls();
             pollStatus.textContent = canSend ? '' : 'El envío y la edición no están disponibles. El historial accesible se conserva.';
         } catch (error) {
-            if (error.name !== 'AbortError') pollStatus.textContent = 'Sin actualización por el momento. Se reintentará al recuperar la conexión.';
+            if (error.name !== 'AbortError' && generation === readGeneration) pauseReads();
         } finally { refreshing = false; }
     }
     const poller = createPoller({ run: update, active: () => root.dataset.historical !== 'true' && document.visibilityState === 'visible' && document.hasFocus() && atEnd() && !history.contains(document.activeElement) && !history.querySelector('details[open]') });
+    listen(retry, 'click', async () => {
+        retry.disabled = true;
+        try { await update(); } finally { if (!revoked && !disposed) retry.disabled = false; }
+    });
     poller.start();
     listen(document, 'visibilitychange', () => { if (document.visibilityState === 'visible') poller.wake(); });
     listen(window, 'focus', () => poller.wake());
-    onCleanup(() => { poller.stop(); requests.abort(); if (dialog?.open) dialog.close(); });
+    onCleanup(() => { disposed = true; poller.stop(); requests.abort(); if (dialog?.open) dialog.close(); });
     // A browser history cache can preserve a document without disposing the
     // shared page controller. Do not restore stale private chat content.
     listen(window, 'pagehide', event => {
-        if (event.persisted) { poller.stop(); requests.abort(); root.replaceChildren(); }
+        if (event.persisted) { disposed = true; poller.stop(); requests.abort(); root.replaceChildren(); }
     });
     listen(window, 'pageshow', event => { if (event.persisted) window.location.reload(); });
     listen(form, 'submit', async event => {
         event.preventDefault();
-        if (sending || uploading || uploadAmbiguous || !canSend) return;
+        if (revoked || disposed || sending || uploading || uploadAmbiguous || !canSend) return;
         const data = attempt.begin({ token: form.elements.client_token.value, content: input.value,
             ids: [...form.querySelectorAll('[name="attachment_ids[]"]:checked')].map(item => item.value) });
         const body = new FormData(form);
@@ -132,7 +197,8 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
             history.scrollTop = history.scrollHeight;
             await update();
         } catch (error) {
-            if (error.name === 'AbortError') return;
+            if (error.name === 'AbortError' || revoked || disposed) return;
+            if (error instanceof TypeError || error.message === 'Invalid acknowledgement' || error.message === 'Invalid response') pauseReads();
             if (error.status === 422) attempt.rejected();
             say(error instanceof TypeError ? 'No se pudo confirmar el envío. Pulsa Reintentar; se conservarán el identificador, texto y archivos originales.' : error.message === 'Invalid acknowledgement' ? 'No se pudo confirmar el envío. Reintenta la misma operación.' : error.message);
         } finally { sending = false; controls(); }
@@ -140,7 +206,7 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
     listen(input, 'input', () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight,128)}px`; });
     listen(uploadForm, 'submit', async event => {
         event.preventDefault();
-        if (uploading || sending || attempt.current() || uploadAmbiguous || !canSend) return;
+        if (revoked || disposed || uploading || sending || attempt.current() || uploadAmbiguous || !canSend) return;
         const files = [...uploadForm.querySelector('[data-attach]').files];
         const staged = [...root.querySelectorAll('[data-prepared-id]')].map(() => ({ size: 0 }));
         const errors = [];
@@ -162,7 +228,8 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
             }
             uploadForm.reset(); uploadForm.closest('details').open = false; say('Archivos listos para enviar.');
         } catch (error) {
-            if (error.name === 'AbortError') return;
+            if (error.name === 'AbortError' || revoked || disposed) return;
+            if (error instanceof TypeError || error.message === 'Invalid acknowledgement' || error.message === 'Invalid response') pauseReads();
             if (error.status !== 422 && error.status !== 429) uploadAmbiguous = true;
             say('No se pudo confirmar la carga. Recarga para recuperar los archivos preparados antes de volver a adjuntar.');
         } finally { uploading = false; controls(); }
@@ -171,7 +238,7 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
         const remove = event.target.closest('[data-prepared-id] form');
         if (!remove) return;
         event.preventDefault();
-        if (attempt.current() || sending || uploading || uploadAmbiguous) return;
+        if (revoked || disposed || !canSend || attempt.current() || sending || uploading || uploadAmbiguous) return;
         const row = remove.closest('[data-prepared-id]');
         const id = row.dataset.preparedId;
         uploading = true; controls();
@@ -179,7 +246,7 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
             await post(remove.action,new FormData(remove)); row.remove();
             form.querySelectorAll('[name="attachment_ids[]"]').forEach(item => { if (item.value === id) item.closest('label').remove(); });
             say('Archivo retirado del borrador.');
-        } catch (error) { if (error.name !== 'AbortError') say('No se pudo confirmar la retirada. Recarga para consultar el borrador.'); }
+        } catch (error) { if (error.name !== 'AbortError') { pauseReads(); say('No se pudo confirmar la retirada. Recarga para consultar el borrador.'); } }
         finally { uploading = false; controls(); }
     });
     listen(root, 'click', event => {
@@ -189,9 +256,11 @@ onPage('[data-messaging]', (root, { listen, onCleanup }) => {
         }
         if (event.target.closest('[data-close-info]')) dialog.close();
     });
-    listen(dialog, 'close', () => { root.querySelector('.messages-layout')?.append(info); opener?.focus(); });
+    listen(dialog, 'close', () => { if (revoked || disposed) return; root.querySelector('.messages-layout')?.append(info); if (opener?.isConnected) opener.focus(); });
     listen(desktop, 'change', () => { if (desktop.matches && dialog.open) dialog.close(); });
     history.scrollTop = history.scrollHeight;
     info.querySelector('h2').tabIndex = -1;
     controls();
-});
+}
+
+onPage('[data-messaging]', setupMessages);

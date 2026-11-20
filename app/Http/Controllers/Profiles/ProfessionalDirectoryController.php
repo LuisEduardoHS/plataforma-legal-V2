@@ -31,7 +31,10 @@ class ProfessionalDirectoryController extends Controller
         } catch (QueryException $error) {
             report($error);
 
-            return response()->view('pages.professionals.index', ['unavailable' => true], 503);
+            $message = 'No pudimos cargar los perfiles. Inténtalo más tarde.';
+
+            return ($request->expectsJson() ? response()->json(['message' => $message], 503)
+                : response()->view('errors.503', compact('message'), 503))->header('Cache-Control', 'private, no-store');
         }
     }
 }
