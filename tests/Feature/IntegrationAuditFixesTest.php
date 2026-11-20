@@ -297,15 +297,15 @@ class IntegrationAuditFixesTest extends TestCase
             ->assertSee('&lt;script&gt;escape&lt;/script&gt;', false)->assertDontSee('<script>escape</script>', false)
             ->assertDontSee('PRIVATE-HOME-MARKER')->assertDontSee('Ana Martínez')->assertDontSee('Baldemar')
             ->assertDontSee('#perfil-')->assertDontSee('#baldemar')->assertDontSee('14 respuestas')->assertDontSee('data-home-data')
-            ->assertSee(route('community.show', $public->id))->assertSee('Demostración local');
-        $this->assertSame(1, $this->dom($response->getContent())->query('//article[@data-home-post="'.$public->id.'"]/h4')->length);
-        $this->get('/lexa')->assertOk()->assertSee('Demostración local');
+            ->assertSee(route('community.show', $public->id))->assertSee(route('lexa'));
+        $this->assertSame(1, $this->dom($response->getContent())->query('//article[@data-home-post="'.$public->id.'"]//h3')->length);
+        $this->get('/lexa')->assertOk()->assertSee('Tus consultas se guardan en tu historial privado');
     }
 
     public function test_home_empty_state_does_not_fabricate_activity(): void
     {
         $this->actingAs(User::factory()->create())->get('/inicio')->assertOk()->assertSee('No hay publicaciones públicas disponibles')
-            ->assertSee('No hay artículos publicados')->assertDontSee('Esperando respuesta')->assertDontSee('Hace 2 días');
+            ->assertSee('Aún no hay artículos publicados')->assertDontSee('Esperando respuesta')->assertDontSee('Hace 2 días');
     }
 
     public function test_messaging_html_and_polling_keep_iso_utc_fallback_without_changing_storage(): void

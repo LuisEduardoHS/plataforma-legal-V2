@@ -52,8 +52,46 @@
     background-color: var(--color-bg);
 }
 
+.lefenda-logo {
+    display: block;
+    aspect-ratio: 773 / 205;
+    background-color: #7F1842;
+    -webkit-mask: url("../svg/lefenda-logo.svg") center / contain no-repeat;
+    mask: url("../svg/lefenda-logo.svg") center / contain no-repeat;
+}
+
+.public-brand-logo {
+    height: 32px;
+    aspect-ratio: 150 / 40;
+}
+
+.platform-brand-logo {
+    height: 32px;
+    aspect-ratio: 140 / 37;
+}
+
+@media (max-width: 1023px) {
+    .platform-brand-logo { width: 115px; height: 30px; }
+}
+
+@media (max-width: 639px) {
+    .platform-brand-logo { width: 103px; height: 27px; }
+}
+
+.platform-brand-logo-mobile { display: none; }
+
+@media (max-width: 1023px) {
+    .platform-brand-logo-desktop { display: none; }
+    .platform-brand-logo-mobile { display: block; }
+}
+
+@media (min-width: 1024px) {
+    .platform-brand-logo-desktop { display: inline-block; }
+}
+
 @media (prefers-color-scheme: dark) {
     :root { color-scheme: dark; }
+    .lefenda-logo { background-color: #BE2562; }
     .html {
         color: var(--color-text-dark);
         background-color: var(--color-bg-dark);

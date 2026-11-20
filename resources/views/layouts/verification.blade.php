@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Verificación profesional | Plataforma Legal')
+@section('title', 'Verificación profesional | Lefenda')
 @section('page-assets') @vite(['resources/css/professionals.css']) @endsection
 @section('content')
 <div class="profile-editor min-h-screen bg-bg dark:bg-bg-dark text-text dark:text-text-dark pb-24" data-verification>

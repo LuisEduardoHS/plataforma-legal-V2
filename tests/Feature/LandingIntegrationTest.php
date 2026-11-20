@@ -102,17 +102,16 @@ class LandingIntegrationTest extends TestCase
         $this->assertNotSame(route('articles'), route('resources'));
     }
 
-    public function test_hero_is_an_explicit_example_and_never_a_fake_ai_form(): void
+    public function test_hero_prepares_a_consultation_without_exposing_its_text_in_a_url(): void
     {
         $dom = $this->dom($this->get('/')->getContent());
-        $hero = $dom->query('//section[@aria-labelledby="landing-title"]')->item(0);
-        $this->assertStringContainsString('Pregunta de ejemplo', $hero->textContent);
-        $this->assertStringContainsString('¿Qué información debería reunir antes de consultar a un profesional?', $hero->textContent);
-        $this->assertStringContainsString('IA aún no conectada. Las respuestas actuales son ejemplos y no analizan tu caso.', $hero->textContent);
-        $this->assertStringContainsString('La demostración requiere iniciar sesión.', $hero->textContent);
-        $this->assertSame(0, $dom->query('//form | //textarea | //input | //*[@contenteditable="true"]')->length);
+        $this->assertSame(1, $dom->query('//form[@data-landing-lexa-composer]')->length);
+        $this->assertSame(route('lexa'), $dom->evaluate('string(//form[@data-landing-lexa-composer]/@action)'));
+        $this->assertSame(1, $dom->query('//textarea[@data-landing-lexa-question and not(@name)]')->length);
+        $this->assertSame(0, $dom->query('//form[@data-landing-lexa-composer]//*[@name]')->length);
+        $this->assertSame(1, $dom->query('//button[@data-landing-lexa-send and @disabled]')->length);
+        $this->assertSame(1, $dom->query('//*[@id="landing-lexa-composer-help"]')->length);
         $this->assertSame(0, $dom->query('//*[@data-lexa] | //*[@data-composer]')->length);
-        $this->assertSame(route('lexa'), $dom->evaluate('string(//a[contains(@class,"landing-button-lexa")]/@href)'));
     }
 
     public function test_document_has_unique_ids_valid_fragments_and_no_unpublished_legal_destinations(): void
@@ -225,7 +224,7 @@ class LandingIntegrationTest extends TestCase
         $this->get('/')->assertOk()->assertSessionMissing('url.intended');
         $this->get(route('lexa'))->assertRedirect(route('login'))->assertSessionHas('url.intended', route('lexa'));
         $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password'])->assertRedirect(route('lexa'));
-        $this->get(route('lexa'))->assertOk()->assertSee('data-lexa', escape: false)->assertSee('Demostración local');
+        $this->get(route('lexa'))->assertOk()->assertSee('data-lexa', escape: false)->assertSee('Tus consultas se guardan en tu historial privado');
         $this->get('/')->assertRedirect(route('home'));
     }
 

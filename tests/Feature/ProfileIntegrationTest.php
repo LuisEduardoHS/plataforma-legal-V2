@@ -61,6 +61,25 @@ class ProfileIntegrationTest extends TestCase
         return $user;
     }
 
+    public function test_integrated_directory_accepts_multiple_specialties_and_preserves_legacy_filter(): void
+    {
+        $first = $this->specialty();
+        $second = LegalSpecialty::create(['name' => 'Otra especialidad sintética', 'slug' => 'otra-sintetica', 'is_active' => true]);
+        $a = $this->professional('Profesional Alfa', ['specialty_ids' => [$first->id]]);
+        $b = $this->professional('Profesional Beta', ['specialty_ids' => [$second->id]]);
+        $this->professional('Profesional sin categoría');
+
+        $this->get('/profesionales?'.http_build_query(['specialty_ids' => [$first->id, $second->id]]))
+            ->assertOk()->assertViewHas('profiles', fn ($page) => $page->total() === 2)
+            ->assertSee('Profesional Alfa')->assertSee('Profesional Beta')->assertDontSee('Profesional sin categoría');
+        $this->get('/profesionales?specialty_id='.$first->id)->assertOk()
+            ->assertViewHas('profiles', fn ($page) => $page->count() === 1 && $page->first()['user_id'] === $a->id);
+        $this->getJson('/profesionales?'.http_build_query(['specialty_ids' => [$first->id, $first->id]]))->assertUnprocessable();
+        $this->getJson('/profesionales?specialty_ids[]=999999999')->assertUnprocessable();
+        $second->update(['is_active' => false]);
+        $this->getJson('/profesionales?specialty_ids[]='.$second->id)->assertUnprocessable();
+    }
+
     private function municipality(): Municipality
     {
         $country = Country::create(['name' => 'País de prueba', 'iso_code' => 'ZZ']);

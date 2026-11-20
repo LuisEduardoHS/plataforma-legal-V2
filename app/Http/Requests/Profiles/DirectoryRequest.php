@@ -19,6 +19,8 @@ class DirectoryRequest extends FormRequest
         return [
             'q' => ['nullable', 'string', 'max:160'],
             'specialty_id' => ['nullable', 'integer', Rule::exists('legal_specialties', 'id')->where('is_active', true)],
+            'specialty_ids' => ['sometimes', 'array', 'max:20'],
+            'specialty_ids.*' => ['required', 'integer', 'distinct', Rule::exists('legal_specialties', 'id')->where('is_active', true)],
             'state_id' => ['nullable', 'integer', 'exists:states,id'],
             'municipality_id' => ['nullable', 'integer', Rule::exists('municipalities', 'id')->when($this->filled('state_id'), fn ($rule) => $rule->where('state_id', $this->input('state_id')))],
             'page' => ['nullable', 'integer', 'min:1', 'max:10000'],

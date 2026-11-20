@@ -9,6 +9,7 @@
             <a href="{{ route('resources') }}" @if ($kind->value === 'resource') aria-current="page" @endif>Recursos jurídicos</a>
             @auth<a href="{{ route('saved') }}">Mis guardados</a><a href="{{ route($kind->permission().'.workspace') }}">Mi espacio editorial</a>@endauth
         </nav>
+        @hasSection('library-title')<h1 class="content-heading">@yield('library-title')</h1>@endif
         @if (session('status'))<p class="content-notice" role="status">{{ session('status') }}</p>@endif
         @hasSection('library-errors') @yield('library-errors') @else <x-ui.error-summary /> @endif
         @yield('library-content')

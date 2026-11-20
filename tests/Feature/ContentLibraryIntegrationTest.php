@@ -114,7 +114,7 @@ class ContentLibraryIntegrationTest extends TestCase
         $this->get('/recursos')->assertOk()->assertSee('No hay recursos disponibles');
         $this->get('/guardados')->assertRedirect(route('login'));
         $this->actingAs($this->member())->get('/guardados')->assertOk()->assertSee('No hay guardados disponibles')->assertSee('Vinculada a tu cuenta')->assertDontSee('En este dispositivo');
-        $this->get('/inicio')->assertOk()->assertSee('No hay artículos publicados')->assertDontSee('¿Qué hacer si no recibes tu finiquito correctamente?');
+        $this->get('/inicio')->assertOk()->assertSee('Aún no hay artículos publicados')->assertDontSee('¿Qué hacer si no recibes tu finiquito correctamente?');
     }
 
     public function test_public_head_requests_keep_read_authorization_and_validation_semantics(): void

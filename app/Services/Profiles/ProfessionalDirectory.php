@@ -26,6 +26,9 @@ class ProfessionalDirectory
             if (! empty($filters['specialty_id'])) {
                 $query->whereHas('specialties', fn ($q) => $q->active()->whereKey($filters['specialty_id']));
             }
+            if (! empty($filters['specialty_ids'])) {
+                $query->whereHas('specialties', fn ($q) => $q->active()->whereIn('legal_specialties.id', $filters['specialty_ids']));
+            }
             if (! empty($filters['state_id'])) {
                 $query->whereHas('municipality', fn ($q) => $q->where('state_id', $filters['state_id']));
             }

@@ -2,15 +2,24 @@
 
 @extends('layouts.guest')
 
-@section('title', 'Iniciar sesión | LEXA')
+@section('title', 'Iniciar sesión | Lefenda')
 
 @section('content')
-<main class="flex flex-row min-h-screen items-center justify-center bg-bg dark:bg-bg-dark">
-    <section class="bg-white dark:bg-surface-dark flex w-full sm:w-4xl min-h-164 h-auto rounded-lg overflow-clip">
+<a href="{{ route('landing') }}" class="auth-back-link hidden sm:inline-flex" aria-label="Regresar a la Landing Page">
+    <x-lucide-arrow-left class="size-4" stroke-width="1.8" />
+    <span>Volver</span>
+</a>
+<main class="auth-page flex flex-row min-h-screen items-center justify-center bg-bg dark:bg-bg-dark">
+    <section class="auth-card bg-white dark:bg-surface-dark flex w-full sm:w-4xl min-h-164 h-auto rounded-lg overflow-clip">
 
         {{-- Banner side --}}
         <div class="sm:basis-1/2 hidden sm:flex relative flex-col justify-center">
-            <div class="absolute bg-linear-to-l from-dark-accent to-light-accent size-full"></div>
+            <img src="{{ asset('img/loginbanner.png') }}" alt="" class="absolute inset-0 size-full object-cover object-left-top" />
+            <div class="absolute top-16 left-[8%] z-10 text-[40px] leading-[1.15] font-bold text-white">
+                <span class="block">Tu tranquilidad</span>
+                <span class="block">comienza con una</span>
+                <span class="block">buena <span class="text-light-accent">orientación</span></span>
+            </div>
         </div>
 
         {{-- Form side --}}
@@ -28,7 +37,6 @@
                 @csrf
                 @if ($hasReadingReturn ?? false)<p role="status" class="mb-4 text-sm">Al entrar intentaremos volver al contenido que elegiste. Después podrás decidir si guardar o contactar; esa acción todavía no se ha realizado.</p>@endif
 
-                <p class="mb-4 text-sm"><a class="underline" href="{{ route('password.request') }}">¿Olvidaste tu contraseña?</a></p>
                 {{-- Email --}}
                 <div class="mb-4">
                     <label for="email" class="login-input-label">Correo electrónico</label>
@@ -62,8 +70,11 @@
                 </div>
 
                 {{-- Submit Button --}}
-                <button type="submit" :disabled="submitting" class="bg-text/90 dark:bg-text-dark/90 hover:bg-text/85 dark:hover:bg-text-dark/85 transition-colors duration-200 cursor-pointer text-white dark:text-black text-base w-full font-medium py-3 px-4 rounded-xl">
-                    <span x-text="submitting ? 'Ingresando…' : 'Iniciar sesión'">Iniciar sesión</span>
+                <button type="submit" :disabled="submitting" class="auth-submit-button bg-text/90 dark:bg-text-dark/90 hover:bg-text/85 dark:hover:bg-text-dark/85 transition-colors duration-200 cursor-pointer text-white dark:text-black text-base w-full font-medium py-3 px-4 rounded-xl" :class="{ 'is-loading': submitting }">
+                    <span x-show="!submitting">Iniciar sesión</span>
+                    <span x-show="submitting" x-cloak class="auth-loading-label" role="status" aria-live="polite">
+                        <span>Ingresando</span><span class="auth-loading-dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span>
+                    </span>
                 </button>
             </form>
 

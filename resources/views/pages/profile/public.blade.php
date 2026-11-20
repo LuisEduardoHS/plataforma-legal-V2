@@ -10,7 +10,7 @@
 <div class="min-h-screen bg-bg dark:bg-bg-dark text-text dark:text-text-dark pb-24">
     <div class="max-w-[1080px] mx-auto px-4 sm:px-6 pt-6 space-y-5">
         <a class="inline-block underline" href="{{ route('professionals') }}">← Directorio de profesionales</a>
-        <x-profiles.card :name="$name" :username="$profile['username'] ?? null" :biography="$profile['biography'] ?? null" :location="$place" :website="$profile['website'] ?? null" />
+        <x-profiles.card :visibility="$profile ? 'public' : 'private'" :name="$name" :username="$profile['username'] ?? null" :biography="$profile['biography'] ?? null" :location="$place" :website="$profile['website'] ?? null" />
         <x-messages.start :recipient="$publicUserId" :profile-type="request()->routeIs('profiles.show') ? 'user' : 'professional'" />
         @if ($profile)<nav class="flex flex-wrap gap-4" aria-label="Actividad pública"><a class="underline" href="{{ route('community.user', $publicUserId) }}">Publicaciones en Comunidad</a><a class="underline" href="{{ route('community.connections', $publicUserId) }}">Conexiones y seguimiento</a></nav>@endif
         @if ($professional)

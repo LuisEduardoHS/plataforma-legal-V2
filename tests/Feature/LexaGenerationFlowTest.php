@@ -182,6 +182,31 @@ class LexaGenerationFlowTest extends TestCase
         $this->assertSame(0, $calls);
     }
 
+    public function test_provider_outage_does_not_prevent_loading_previously_saved_conversation_and_messages(): void
+    {
+        $calls = 0;
+        $this->bindFakeProvider(function () use (&$calls) {
+            if (++$calls > 1) {
+                throw new LexaUnavailableException('Fallo sintético del proveedor.');
+            }
+
+            return new LexaCompletion('Respuesta sintética previamente guardada.', 'fake', 'test-model');
+        });
+        $user = User::factory()->create(['status' => 'active']);
+        $id = $this->actingAs($user)->postJson('/lexa/conversaciones', ['content' => 'Primera consulta sintética.'])
+            ->assertCreated()->json('conversation.id');
+        $this->postJson("/lexa/conversaciones/{$id}/generar", ['attempt_token' => (string) Str::uuid()])->assertCreated();
+        $this->postJson("/lexa/conversaciones/{$id}/mensajes", ['content' => 'Seguimiento sintético.'])->assertCreated();
+        $this->postJson("/lexa/conversaciones/{$id}/generar", ['attempt_token' => (string) Str::uuid()])->assertStatus(503);
+
+        $this->get('/lexa')->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+            ->assertViewHas('lexa', fn ($data) => $data['sessions'][0]['id'] === $id);
+        $this->getJson('/lexa/conversaciones')->assertOk()->assertJsonPath('conversations.0.id', $id);
+        $this->getJson("/lexa/conversaciones/{$id}/mensajes")->assertOk()->assertJsonCount(3, 'messages')
+            ->assertJsonPath('messages.1.content', 'Respuesta sintética previamente guardada.');
+        $this->assertSame(2, $calls, 'Page/history reads must not retry the failing provider.');
+    }
+
     public function test_pending_generation_blocks_concurrent_generate_and_new_user_messages(): void
     {
         $user = User::factory()->create(['status' => 'active']);

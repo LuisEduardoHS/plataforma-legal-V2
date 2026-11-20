@@ -6,7 +6,10 @@ use App\Models\LexaConversation;
 use App\Models\LexaMessage;
 use App\Models\User;
 use App\Services\Lexa\Contracts\AiProvider;
+use App\Services\Lexa\Data\LexaCompletion;
+use App\Services\Lexa\Data\LexaPrompt;
 use App\Services\Lexa\Providers\NullAiProvider;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
@@ -226,7 +229,7 @@ class LexaConversationTest extends TestCase
     public function test_mutations_enforce_csrf_protection(): void
     {
         $user = User::factory()->create(['status' => 'active']);
-        $this->app->bind(ValidateCsrfToken::class, fn ($app) => new class($app, $app->make(\Illuminate\Contracts\Encryption\Encrypter::class)) extends ValidateCsrfToken
+        $this->app->bind(ValidateCsrfToken::class, fn ($app) => new class($app, $app->make(Encrypter::class)) extends ValidateCsrfToken
         {
             protected function runningUnitTests(): bool
             {
@@ -239,6 +242,33 @@ class LexaConversationTest extends TestCase
             ->assertStatus(419);
 
         $this->assertSame(0, LexaConversation::where('user_id', $user->id)->count());
+    }
+
+    public function test_disabled_generation_still_loads_page_and_saved_history_without_consulting_provider(): void
+    {
+        config(['lexa.enabled_generation' => false, 'lexa.provider' => 'gemini']);
+        $this->app->bind(AiProvider::class, fn () => new class implements AiProvider
+        {
+            public function isConfigured(): bool
+            {
+                throw new \RuntimeException('Reading history must not consult the provider.');
+            }
+
+            public function generate(LexaPrompt $prompt): LexaCompletion
+            {
+                throw new \RuntimeException('Reading history must not generate content.');
+            }
+        });
+        $user = User::factory()->create(['status' => 'active']);
+        $id = $this->actingAs($user)->postJson('/lexa/conversaciones', [
+            'content' => 'Historial sintético con generación deshabilitada.',
+        ])->assertCreated()->json('conversation.id');
+
+        $this->get('/lexa')->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+            ->assertViewHas('lexa', fn ($data) => $data['generation_enabled'] === false && $data['sessions'][0]['id'] === $id);
+        $this->getJson("/lexa/conversaciones/{$id}/mensajes")->assertOk()
+            ->assertJsonPath('messages.0.content', 'Historial sintético con generación deshabilitada.');
+        $this->assertSame(0, LexaMessage::where('role', 'assistant')->where('lexa_conversation_id', $id)->count());
     }
 
     public function test_lexa_page_hydrates_only_own_persisted_conversations_without_example_responses(): void
