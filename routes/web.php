@@ -12,6 +12,7 @@ use App\Http\Controllers\ContentLibrary\EditorialController;
 use App\Http\Controllers\ContentLibrary\HomeContentController;
 use App\Http\Controllers\ContentLibrary\SavedController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\Lexa\LexaConversationController;
 use App\Http\Controllers\Messaging\AttachmentController as MessagingAttachmentController;
 use App\Http\Controllers\Messaging\ConversationController as MessagingConversationController;
 use App\Http\Controllers\Messaging\InboxController;
@@ -148,6 +149,15 @@ Route::middleware('auth')->group(function () {
         });
     });
     Route::view('/lexa', 'pages.lexa.index')->name('lexa');
+    Route::prefix('lexa/conversaciones')->name('lexa.conversations.')->whereNumber('conversation')->group(function () {
+        Route::get('/', [LexaConversationController::class, 'index'])->middleware('throttle:lexa.read')->name('index');
+        Route::post('/', [LexaConversationController::class, 'store'])->middleware('throttle:lexa.write')->name('store');
+        Route::get('/{conversation}', [LexaConversationController::class, 'show'])->middleware('throttle:lexa.read')->name('show');
+        Route::get('/{conversation}/mensajes', [LexaConversationController::class, 'messages'])->middleware('throttle:lexa.read')->name('messages');
+        Route::post('/{conversation}/mensajes', [LexaConversationController::class, 'storeMessage'])->middleware('throttle:lexa.write')->name('messages.store');
+        Route::post('/{conversation}/generar', [LexaConversationController::class, 'generate'])->middleware('throttle:lexa.generate')->name('generate');
+        Route::delete('/{conversation}', [LexaConversationController::class, 'destroy'])->middleware('throttle:lexa.write')->name('destroy');
+    });
     Route::get('/guardados', [SavedController::class, 'index'])->middleware('throttle:content.read')->name('saved');
     Route::put('/guardados/{type}/{target}', [SavedController::class, 'store'])->where(['type' => 'post|article|resource', 'target' => '[1-9][0-9]{0,17}'])->middleware('throttle:content.write')->name('saved.store');
     Route::delete('/guardados/{type}/{target}', [SavedController::class, 'destroy'])->where(['type' => 'post|article|resource', 'target' => '[1-9][0-9]{0,17}'])->middleware('throttle:content.write')->name('saved.destroy');

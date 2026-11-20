@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\LexaConversation;
 use App\Models\ProfessionalProfile;
 use App\Models\UserProfile;
+use App\Policies\LexaConversationPolicy;
 use App\Policies\ProfilePolicy;
+use App\Services\Lexa\Contracts\AiProvider;
+use App\Services\Lexa\Providers\NullAiProvider;
 use App\Support\CommunityCardIcons;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -20,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(CommunityCardIcons::class);
+        $this->app->bind(AiProvider::class, NullAiProvider::class);
     }
 
     /**
@@ -29,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(UserProfile::class, ProfilePolicy::class);
         Gate::policy(ProfessionalProfile::class, ProfilePolicy::class);
+        Gate::policy(LexaConversation::class, LexaConversationPolicy::class);
 
         RateLimiter::for('operations.read', fn (Request $request) => Limit::perMinute(90)->by((string) $request->user()?->id));
         RateLimiter::for('operations.write', fn (Request $request) => Limit::perMinute(20)->by((string) $request->user()?->id));
@@ -60,5 +66,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('messaging.start', fn (Request $request) => Limit::perMinute(15)->by((string) $request->user()?->id));
         RateLimiter::for('messaging.upload', fn (Request $request) => Limit::perMinute(10)->by((string) $request->user()?->id));
         RateLimiter::for('messaging.files', fn (Request $request) => Limit::perMinute(30)->by((string) $request->user()?->id));
+        RateLimiter::for('lexa.read', fn (Request $request) => Limit::perMinute(90)->by((string) $request->user()?->id));
+        RateLimiter::for('lexa.write', fn (Request $request) => Limit::perMinute(30)->by((string) $request->user()?->id));
+        RateLimiter::for('lexa.generate', fn (Request $request) => Limit::perMinute(10)->by((string) $request->user()?->id));
     }
 }

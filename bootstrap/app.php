@@ -3,6 +3,7 @@
 use App\Exceptions\AttachmentException;
 use App\Exceptions\CommunityException;
 use App\Exceptions\ContentLibraryException;
+use App\Exceptions\LexaUnavailableException;
 use App\Exceptions\MessagingException;
 use App\Exceptions\PasswordRecoveryUnavailable;
 use App\Exceptions\VerificationException;
@@ -177,6 +178,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return ($request->expectsJson() ? response()->json(['message' => $message], $status)
                 : response()->view('pages.community.error', compact('status', 'message'), $status))
+                ->header('Cache-Control', 'private, no-store');
+        });
+        $exceptions->render(function (LexaUnavailableException $error, Request $request) {
+            $message = 'La generación con IA real aún no está habilitada.';
+
+            return ($request->expectsJson() ? response()->json(['message' => $message], 503)
+                : response()->view('errors.503', compact('message'), 503))
                 ->header('Cache-Control', 'private, no-store');
         });
         // Keep framework JSON errors minimal even with local debug enabled. Module contracts above take precedence.
