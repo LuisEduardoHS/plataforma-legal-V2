@@ -32,10 +32,10 @@
     --color-text-dark: #F2F2F2;
     --color-light-text-dark: #B6B3BA;
 
-    --color-bg-dark: #1A1A1A;
-    --color-surface-dark: #242424;
-    --color-accent-bg-dark: #2E2E30;
-    --color-accent-bg-hover-dark: #363636;
+    --color-bg-dark: #111112;
+    --color-surface-dark: #18181a;
+    --color-accent-bg-dark: #202022;
+    --color-accent-bg-hover-dark: #29292c;
     --color-light-hover-dark: var(--color-accent-bg-dark);
     --color-raised-dark: #303030;
     --color-border-dark: #38383C;
@@ -110,6 +110,10 @@
 .platform-mobile-nav nav > * { margin-inline: 0; }
 
 .home-bookmark[aria-pressed="true"] svg { fill:currentColor; fill-opacity:.18; }
+.landing-lexa-wordmark { background:linear-gradient(110deg,var(--color-dark-accent),var(--color-lexa-rose) 45%,var(--color-lexa)); background-clip:text; -webkit-background-clip:text; color:transparent; font-size:11px; font-weight:650; letter-spacing:.2em; }
+@media (prefers-color-scheme:dark) {
+    .landing-lexa-wordmark { background-image:linear-gradient(110deg,color-mix(in srgb,var(--color-dark-accent) 50%,white),color-mix(in srgb,var(--color-lexa-rose) 60%,white) 45%,var(--color-lexa-dark)); }
+}
 /* Sidebar scrollbars follow the shared brand palette. */
 .home-sidebar, .community-sidebar {
     scrollbar-width: thin;

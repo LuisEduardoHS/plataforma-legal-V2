@@ -8,7 +8,6 @@
                 <div class="bg-white dark:bg-surface-dark rounded-2xl p-5 sm:p-6 shadow-xs border border-gray-100/50 dark:border-border-dark/50 flex flex-col justify-between min-h-[520px]">
                     <div>
                         {{-- Title --}}
-                        <h1 class="font-bold text-base sm:text-lg text-text dark:text-text-dark">Configuración</h1>
 
                         {{-- Search Bar --}}
                         <div class="relative mt-3.5 mb-5">

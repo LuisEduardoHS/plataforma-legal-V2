@@ -5,9 +5,8 @@
 @endsection
 @section('content')
 @php($questions = require resource_path('views/pages/help/questions.php'))
-<section class="personal-page" data-help aria-labelledby="help-title">
+<section class="personal-page" data-help aria-label="Ayuda">
     <div class="personal-wrap">
-        <header class="personal-intro"><div><span class="personal-eyebrow">A tu ritmo</span><h1 id="help-title">¿Cómo podemos ayudarte?</h1><p>Encuentra respuestas para moverte por la plataforma.</p></div><x-lucide-life-buoy class="personal-intro-icon" aria-hidden="true" /></header>
         <div class="personal-layout">
             <div>
                 <div data-help-tools hidden>

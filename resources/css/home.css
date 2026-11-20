@@ -144,7 +144,31 @@
 .home-share-note .home-action { background:var(--color-dark-accent); color:#fff; }
 .home-share-note .home-action:hover { background:var(--color-accent); }
 
-@media (prefers-color-scheme:dark) { .home-dashboard { --home-page:var(--color-bg-dark); --home-surface:var(--color-surface-dark); --home-soft:var(--color-accent-bg-dark); --home-text:var(--color-text-dark); --home-muted:var(--color-light-text-dark); --home-focus:var(--color-focus-dark); --home-link:var(--color-accent-text-dark); --home-lexa:var(--color-lexa-dark); --home-tint:var(--color-selected-dark); color-scheme:dark; } }
+@media (prefers-color-scheme:dark) {
+    .home-dashboard {
+        --home-page:var(--color-bg-dark);
+        --home-surface:rgb(24 24 26 / 88%);
+        --home-soft:rgb(32 32 34 / 82%);
+        --home-text:var(--color-text-dark);
+        --home-muted:var(--color-light-text-dark);
+        --home-focus:var(--color-focus-dark);
+        --home-link:var(--color-accent-text-dark);
+        --home-lexa:var(--color-lexa-dark);
+        --home-tint:var(--color-selected-dark);
+        color-scheme:dark;
+    }
+    .home-dashboard .home-card,
+    .home-dashboard .home-start,
+    .home-dashboard .home-sidebar .home-card {
+        border:1px solid rgb(255 255 255 / 4%);
+        backdrop-filter:blur(10px);
+    }
+    .platform-header {
+        background:rgb(24 24 26 / 92%) !important;
+        backdrop-filter:blur(12px);
+        border-bottom:1px solid rgb(255 255 255 / 4%);
+    }
+}
 @media (max-width:1023px) { .home-grid { grid-template-columns:minmax(0,1fr) 250px; gap:20px; } .home-dashboard { padding:24px 20px 108px; } .home-share > a { font-size:14px; } }
 @media (max-width:767px) { .home-grid { display:flex; flex-direction:column; gap:20px; } .home-main,.home-sidebar { width:100%; } .home-sidebar { padding-top:0; } .home-dashboard { padding:20px 12px 96px; } .home-post,.home-reading { padding:18px; } .home-post h4 { font-size:16px; } .home-sidebar :is(button,a,select),.home-icon,.home-post footer :is(a,span),.home-reading-footer button,.home-section-heading a { min-height:44px; } }
 @media (prefers-reduced-motion:reduce) { .home-dashboard * { transition:none!important; animation:none!important; scroll-behavior:auto!important; } }

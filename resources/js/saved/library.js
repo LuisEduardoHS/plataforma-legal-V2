@@ -3,8 +3,31 @@ import { savedResponse } from './store.js';
 
 onPage('#main-content', (root, { listen, onCleanup }) => {
     const pending = new Set();
+    const timers = new WeakMap();
+    const activeMessages = new Set();
     const requests = new AbortController();
-    onCleanup(() => requests.abort());
+    const showMessage = (message, text, duration = 3000) => {
+        if (!message) return;
+        const previous = timers.get(message);
+        if (previous) clearTimeout(previous);
+        message.textContent = text;
+        message.hidden = false;
+        activeMessages.add(message);
+        timers.set(message, setTimeout(() => {
+            message.hidden = true;
+            message.textContent = '';
+            timers.delete(message);
+            activeMessages.delete(message);
+        }, duration));
+    };
+    onCleanup(() => {
+        requests.abort();
+        activeMessages.forEach((message) => {
+            const timer = timers.get(message);
+            if (timer) clearTimeout(timer);
+        });
+        activeMessages.clear();
+    });
     listen(root, 'submit', async (event) => {
         const form = event.target.closest('[data-save-form]');
         if (!form) return;
@@ -31,8 +54,7 @@ onPage('#main-content', (root, { listen, onCleanup }) => {
                 control.title = control.getAttribute('aria-label');
                 control.classList.toggle('is-saved', result.saved);
             });
-            message.textContent = result.message;
-            message.hidden = false;
+            showMessage(message, result.message);
             const card = form.closest('[data-library-item]');
             if (card && !result.saved) {
                 // Refresh the server page so counts, cursors and revoked visibility
@@ -41,8 +63,7 @@ onPage('#main-content', (root, { listen, onCleanup }) => {
             }
         } catch (error) {
             if (error.name === 'AbortError') return;
-            message.textContent = error instanceof TypeError ? 'No se pudo conectar. Inténtalo nuevamente.' : error.message;
-            message.hidden = false;
+            showMessage(message, error instanceof TypeError ? 'No se pudo conectar. Inténtalo nuevamente.' : error.message, 4000);
         } finally {
             pending.delete(key);
             button.disabled = false;

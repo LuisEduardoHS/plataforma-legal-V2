@@ -49,7 +49,7 @@
             >
                 <x-dynamic-component 
                     :component="'lucide-' . $item['icon']" 
-                    class="w-6 h-6 text-center {{ $active ? 'text-dark-accent dark:text-accent-text-dark' : 'text-text dark:text-text-dark' }}"
+                    class="w-6 h-6 text-center {{ $active ? 'header-active-icon text-dark-accent' : 'text-text dark:text-text-dark' }}"
                     stroke-width="2" 
                 />
                 {{ $item['label'] }}
@@ -76,7 +76,7 @@
     <a href="{{ route('lexa') }}" @if (request()->routeIs('lexa')) aria-current="page" @endif
        class="lg:hidden inline-flex min-h-11 items-center gap-1.5 rounded-ui bg-accent-bg-hover dark:bg-accent-bg-dark dark:hover:bg-accent-bg-hover-dark px-3 py-2 text-xs font-semibold text-lexa dark:text-lexa-dark focus-visible:outline-2 focus-visible:outline-offset-2"
        aria-label="Abrir LEXA">
-        <x-lucide-sparkles class="size-4" aria-hidden="true" /> LEXA
+        <span class="landing-lexa-wordmark">LEXA</span>
     </a>
 
 </header>

@@ -16,5 +16,8 @@
     <x-public.header />
     <main id="main-content" tabindex="-1">@yield('content')</main>
     <x-public.footer />
+    <button type="button" class="landing-back-to-top" data-back-to-top aria-label="Volver al inicio" title="Volver al inicio">
+        <x-lucide-arrow-up aria-hidden="true" />
+    </button>
 </body>
 </html>

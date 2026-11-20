@@ -1,16 +1,17 @@
 <section class="landing-hero" aria-labelledby="landing-title">
     <div class="landing-hero-halo" aria-hidden="true"></div>
     <div class="landing-container landing-hero-content">
-        <p class="landing-lexa-identity"><x-lucide-sparkles aria-hidden="true" /><span>LEXA <span aria-hidden="true">·</span> Demostración</span></p>
-        <h1 id="landing-title">Un punto de partida para tus dudas legales.</h1>
-        <p class="landing-hero-description">Conoce la experiencia de LEXA y explora información y profesionales en México.</p>
-        <div class="landing-example" aria-labelledby="landing-example-title">
-            <p id="landing-example-title" class="landing-example-label"><x-lucide-message-square-text aria-hidden="true" />Pregunta de ejemplo</p>
-            <blockquote><p>¿Qué información debería reunir antes de consultar a un profesional?</p></blockquote>
-            <p class="landing-example-note">Una muestra de la experiencia. No se envía ninguna pregunta.</p>
-        </div>
-        <div class="landing-hero-actions"><a class="landing-button landing-button-lexa" href="{{ route('lexa') }}">Conocer la demostración <x-lucide-arrow-up-right aria-hidden="true" /></a><a class="landing-text-link" href="#posibilidades">Explorar la plataforma <x-lucide-arrow-down aria-hidden="true" /></a></div>
-        <p class="landing-demo-notice">IA aún no conectada. Las respuestas actuales son ejemplos y no analizan tu caso.</p>
+        <p class="landing-lexa-identity"><span class="landing-lexa-wordmark">LEXA</span></p>
+        <h1 id="landing-title"><span data-landing-typewriter>Un punto de partida para tus dudas legales.</span></h1>
+        <p class="landing-hero-description">Explora información y profesionales en México.</p>
+        <form class="landing-example landing-lexa-composer" data-landing-lexa-composer action="{{ route('lexa') }}" aria-label="Preparar una consulta en LEXA">
+            <label class="landing-sr" for="landing-lexa-question">Describe tu situación legal</label>
+            <textarea id="landing-lexa-question" name="question" data-landing-lexa-question rows="1" maxlength="5000" placeholder="Escribe una duda legal…" aria-describedby="landing-lexa-composer-help"></textarea>
+            <div class="landing-lexa-composer-tools">
+                <button type="submit" data-landing-lexa-send disabled aria-label="Continuar consulta en LEXA"><x-lucide-arrow-up aria-hidden="true" /></button>
+            </div>
+        </form>
         <p class="landing-demo-access">La demostración requiere iniciar sesión.</p>
+        <div class="landing-hero-actions"><a class="landing-button landing-button-brand" href="{{ route('lexa') }}">Conocer la demostración</a><a class="landing-button landing-button-white" href="#posibilidades">Explorar la plataforma</a></div>
     </div>
 </section>

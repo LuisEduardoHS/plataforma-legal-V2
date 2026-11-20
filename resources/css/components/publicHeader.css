@@ -1,16 +1,19 @@
 /* Shared public navigation; the authenticated header keeps its existing styles. */
 #app.public-shell { padding-top: 0; }
-.public-header { --public-surface: #fff; --public-text: var(--color-text); --public-border: #e6e3eb; --public-hover: var(--color-light-hover); --public-brand: var(--color-dark-accent); position: relative; z-index: 60; border-bottom: 1px solid var(--public-border); background: var(--public-surface); color: var(--public-text); font-family: var(--font-sans), sans-serif; line-height: 1.5; overflow-wrap: anywhere; }
-.public-header-inner { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.5rem; width: min(1200px, calc(100% - 40px)); min-height: 88px; margin-inline: auto; padding-block: .625rem; }
-.public-brand { display: inline-flex; align-items: center; gap: .625rem; max-width: 100%; min-height: 44px; color: var(--public-brand, var(--landing-brand, var(--color-dark-accent))); font-size: 1.25rem; font-weight: 700; letter-spacing: -.035em; text-decoration: none; }
-.public-brand-mark { flex-shrink: 0; width: 20px; height: 24px; border-radius: 7px 7px 7px 1px; background: currentColor; }
-.public-navigation { min-width: 0; margin-left: auto; font-size: .875rem; font-weight: 500; }
-.public-desktop-links { display: none; flex-wrap: wrap; align-items: center; gap: .25rem 1rem; }
+body:not(.landing-page) { scroll-padding-top: 80px; }
+body:not(.landing-page) :is([id], main) { scroll-margin-top: 80px; }
+.public-header { --public-surface: transparent; --public-text: var(--color-text); --public-border: transparent; --public-hover: var(--color-light-hover); --public-brand: var(--color-dark-accent); position: relative; top: 0; z-index: 60; border: 0; background: transparent; color: var(--public-text); font-family: var(--font-sans), sans-serif; line-height: 1.5; overflow-wrap: anywhere; }
+.public-header-inner { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.5rem; width: min(1200px, calc(100% - 40px)); min-height: 64px; margin-inline: auto; }
+.public-brand { display: inline-flex; align-items: center; max-width: 100%; min-height: 44px; color: var(--public-brand, var(--landing-brand, var(--color-dark-accent))); font-size: 1.125rem; font-weight: 700; letter-spacing: -.025em; text-decoration: none; }
+.public-navigation { min-width: 0; margin-left: auto; font-size: .8125rem; font-weight: 500; }
+.public-desktop-links { display: none; flex-wrap: wrap; align-items: center; gap: .125rem .25rem; }
+.public-desktop-links > a { min-height: 40px; padding-inline: .625rem; border-radius: 6px; }
+.public-desktop-links > a:hover { background: var(--public-hover); }
 .public-header a { text-decoration: none; }
 .public-header :is(a, summary) { -webkit-tap-highlight-color: transparent; }
 .public-header :is(a, summary):focus-visible { outline: 2px solid var(--color-lexa); outline-offset: 3px; border-radius: 3px; }
 .public-disclosure { position: relative; }
-.public-disclosure summary { display: flex; align-items: center; gap: .5rem; min-height: 44px; cursor: pointer; list-style: none; }
+.public-disclosure summary { display: flex; align-items: center; gap: .375rem; min-height: 44px; cursor: pointer; list-style: none; }
 .public-disclosure summary::-webkit-details-marker { display: none; }
 .public-disclosure summary svg { width: 16px; height: 16px; flex-shrink: 0; }
 .public-disclosure[open] summary svg { transform: rotate(180deg); }
@@ -20,14 +23,41 @@
 .public-dropdown a:hover { background: var(--public-hover); }
 .public-header a[aria-current="page"] { color: var(--public-brand); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; }
 .public-dropdown-account { border-top: 1px solid var(--public-border); margin-top: .5rem; padding-top: .5rem; }
-.public-account-actions { display: none; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; font-size: .875rem; font-weight: 500; }
-.public-desktop-links > a, .public-account-actions > a { display: inline-flex; align-items: center; min-height: 44px; }
-.public-account-actions .public-register { justify-content: center; padding: .625rem 1.125rem; border-radius: var(--radius-ui); background: var(--color-dark-accent); color: #fff; }
+.public-account-actions { display: none; flex-wrap: wrap; align-items: center; gap: .375rem .75rem; font-size: .8125rem; font-weight: 500; }
+.public-desktop-links > a, .public-account-actions > a { display: inline-flex; align-items: center; min-height: 36px; }
+.public-account-actions > a:not(.public-register) { padding: .375rem .75rem; border: 0; border-radius: 7px; background: rgb(255 255 255 / .10); }
+.public-account-actions .public-register { justify-content: center; min-height: 36px; padding: .375rem .875rem; border-radius: 7px; background: var(--color-dark-accent); color: #fff; }
 .public-account-actions .public-register:hover { background: var(--color-accent); color: #fff; }
 @media (min-width: 1280px) { .public-desktop-links, .public-account-actions { display: flex; } .public-disclosure { display: none; } }
-@media (max-width: 767px) { .public-header-inner { min-height: 76px; gap: .5rem .75rem; } .public-brand { font-size: 1.125rem; } .public-brand-mark { width: 16px; height: 20px; } }
-@media (max-width: 390px) { .public-brand { font-size: 1rem; gap: .5rem; } }
+@media (max-width: 767px) { .public-header-inner { min-height: 60px; gap: .5rem .75rem; } .public-brand { font-size: 1.0625rem; } }
+@media (max-width: 390px) { .public-brand { font-size: 1rem; } }
+.landing-page .public-brand,
+.landing-page .public-brand[aria-current="page"] { color: var(--color-dark-accent); text-decoration: none; }
+.landing-page .public-desktop-links > a,
+.landing-page .public-account-actions > a:not(.public-register),
+.landing-page .public-disclosure summary { color: var(--color-text); }
+.landing-page .public-desktop-links > a[aria-current="page"] { color: var(--color-dark-accent); text-decoration: none; background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
+.landing-page .public-desktop-links > a:hover,
+.landing-page .public-account-actions > a:not(.public-register):hover,
+.landing-page .public-disclosure summary:hover { color: var(--color-dark-accent); background: color-mix(in srgb, var(--color-accent) 6%, transparent); }
+.landing-page .public-dropdown { --public-surface: #fff; --public-border: #e6e3eb; --public-hover: var(--color-light-hover); }
+.landing-page .public-dropdown a { color: var(--color-text); }
+.landing-page .public-dropdown a:hover { color: var(--color-dark-accent); }
 @media (prefers-color-scheme: dark) {
     .public-header { --public-surface: var(--color-surface-dark); --public-text: var(--color-text-dark); --public-border: var(--color-border-dark); --public-hover: var(--color-accent-bg-dark); --public-brand: var(--color-accent-text-dark); }
     .public-header :is(a, summary):focus-visible { outline-color: var(--color-lexa-dark); }
+    body:not(.landing-page) .public-brand,
+    body:not(.landing-page) .public-brand[aria-current="page"] { color: #fff; text-decoration: none; }
+    .landing-page .public-brand,
+    .landing-page .public-brand[aria-current="page"],
+    .landing-page .public-desktop-links > a,
+    .landing-page .public-account-actions > a:not(.public-register),
+    .landing-page .public-disclosure summary { color: #fff; }
+    .landing-page .public-desktop-links > a[aria-current="page"] { color: #fff; background: rgb(255 255 255 / .10); }
+    .landing-page .public-desktop-links > a:hover,
+    .landing-page .public-account-actions > a:not(.public-register):hover,
+    .landing-page .public-disclosure summary:hover { color: #fff; background: rgb(255 255 255 / .08); }
+    .landing-page .public-dropdown { --public-surface: var(--color-surface-dark); --public-border: var(--color-border-dark); --public-hover: var(--color-accent-bg-dark); }
+    .landing-page .public-dropdown a { color: var(--color-text-dark); }
+    .landing-page .public-dropdown a:hover { color: var(--color-accent-text-dark); }
 }

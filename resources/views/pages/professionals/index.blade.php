@@ -4,10 +4,9 @@
     @vite(['resources/css/professionals.css'])
 @endsection
 @section('content')
-<section class="professionals" data-professional-directory aria-labelledby="professionals-title">
+<section class="professionals" data-professional-directory aria-label="Directorio profesional">
     <div class="professionals-container">
         <header class="professionals-heading">
-            <div class="professionals-intro"><div><span class="professionals-eyebrow">Directorio profesional</span><h1 id="professionals-title">Encuentra el apoyo legal que necesitas.</h1><p>Conoce sus áreas de atención y elige con quién dar tu siguiente paso.</p></div></div>
             @if (! $unavailable)
                 <form method="GET" action="{{ route('professionals') }}" class="professionals-search-panel">
                     <h2>Busca según tu situación</h2>

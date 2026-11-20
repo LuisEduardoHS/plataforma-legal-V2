@@ -8,7 +8,6 @@
         <p class="home-error" data-home-error role="alert" hidden></p>
         <div class="home-grid">
             <div class="home-main">
-                <h1 class="home-page-title">Inicio</h1>
                 <section class="home-card home-start" aria-label="Comenzar una consulta en LEXA">
                     <div class="home-start-title"><span class="home-lexa-wordmark">LEXA</span><h2>¿Qué necesitas entender?</h2></div>
                         <form class="home-composer" data-home-composer>
@@ -23,7 +22,6 @@
                         </form>
                         <div class="home-starters" aria-label="Ideas para comenzar">@foreach (['Mi finiquito' => 'Quiero entender qué información reunir sobre mi finiquito.', 'Un contrato' => 'Quiero preparar las preguntas para revisar un contrato.', 'Mi renta' => 'Tengo una duda sobre mi contrato de renta.'] as $label => $prompt)<button type="button" data-home-prompt="{{ $prompt }}">{{ $label }}</button>@endforeach</div>
 
-                    <p class="home-disclaimer">Demostración local de LEXA: respuestas de ejemplo, sin historial persistente. Orientación informativa; no sustituye la asesoría profesional.</p>
                 </section>
                 <section aria-labelledby="home-pending-title">
                     <div class="home-section-heading"><h2 id="home-pending-title">Continuar</h2></div>

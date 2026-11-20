@@ -2,9 +2,8 @@
 @section('title', 'Guardados | Plataforma Legal')
 @section('page-assets') @vite(['resources/css/library-help.css', 'resources/css/articles.css']) @endsection
 @section('content')
-<section class="personal-page" aria-labelledby="saved-title">
+<section class="personal-page" aria-label="Tus guardados">
     <div class="personal-wrap">
-        <header class="personal-intro"><div><span class="personal-eyebrow">Tu biblioteca</span><h1 id="saved-title">Tus guardados</h1><p>Publicaciones, artículos y recursos para volver cuando los necesites.</p></div><x-lucide-bookmark class="personal-intro-icon" aria-hidden="true" /></header>
         @if (session('status'))<p class="content-notice" role="status">{{ session('status') }}</p>@endif
         <div class="personal-layout"><div>
             <nav class="content-tabs" aria-label="Tipo de contenido guardado">@foreach (['' => 'Todo', 'post' => 'Publicaciones', 'article' => 'Artículos', 'resource' => 'Recursos jurídicos'] as $key => $label)<a href="{{ route('saved', $key ? ['type' => $key] : []) }}" @if (($type?->value ?? '') === $key) aria-current="page" @endif>{{ $label }}</a>@endforeach</nav>
