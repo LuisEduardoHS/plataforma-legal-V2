@@ -4,7 +4,7 @@ import { createSendAttempt } from './messages/attempt.js';
 import { createPoller } from './messages/polling.js';
 import { localizeMessageTimes } from './messages/dates.js';
 
-export function setupMessages(root, { listen, onCleanup }) {
+export function setupMessages(root, { listen, onCleanup, onBeforeVisit, isVisiting = () => false }) {
     const $ = (selector) => root.querySelector(selector);
     const history = $('[data-history]');
     const form = $('[data-composer]');
@@ -12,6 +12,7 @@ export function setupMessages(root, { listen, onCleanup }) {
     const dialog = $('[data-info-dialog]');
     const desktop = matchMedia('(min-width:1200px)');
     const requests = new AbortController();
+    let pollRequests = new AbortController();
     const attempt = createSendAttempt();
     let revoked = false;
     let disposed = false;
@@ -65,10 +66,18 @@ export function setupMessages(root, { listen, onCleanup }) {
         applied.set(key, { node, html }); // Record applied HTML, never a deferred response.
         return true;
     }
+    function abortPollOnVisit() {
+        if (revoked || disposed) return;
+        readGeneration++;
+        poller.pause();
+        pollRequests.abort();
+        pollRequests = new AbortController();
+    }
     function dispose() {
         disposed = true;
         applied.clear();
         poller.stop();
+        pollRequests.abort();
         requests.abort();
         if (dialog?.open) dialog.close();
     }
@@ -96,6 +105,7 @@ export function setupMessages(root, { listen, onCleanup }) {
         applied.clear();
         canSend = false;
         poller.stop();
+        pollRequests.abort();
         requests.abort();
         attempt.rejected();
         input.value = '';
@@ -150,12 +160,13 @@ export function setupMessages(root, { listen, onCleanup }) {
         return data;
     }
     async function update() {
-        if (refreshing || revoked || disposed || requests.signal.aborted || !currentContext()) return;
+        if (refreshing || revoked || disposed || requests.signal.aborted || pollRequests.signal.aborted || !currentContext()) return;
         refreshing = true;
         const generation = readGeneration;
+        const activePollSignal = pollRequests.signal;
         try {
-            const response = await fetch(pollUrl, { credentials: 'same-origin', signal: requests.signal, redirect: 'error', headers: { Accept: 'application/json' } });
-            if (revoked || disposed || requests.signal.aborted || !currentContext()) return;
+            const response = await fetch(pollUrl, { credentials: 'same-origin', signal: activePollSignal, redirect: 'error', headers: { Accept: 'application/json' } });
+            if (revoked || disposed || requests.signal.aborted || activePollSignal.aborted || !currentContext()) return;
             // A paused read generation is still part of this live access context.
             // Definitive denial takes priority over discarding its stale results.
             if ([401,403,404,419].includes(response.status)) { revoke(response.status); return; }
@@ -165,7 +176,7 @@ export function setupMessages(root, { listen, onCleanup }) {
                 return;
             }
             const data = await response.json();
-            if (revoked || disposed || requests.signal.aborted || generation !== readGeneration || !currentContext()) return;
+            if (revoked || disposed || requests.signal.aborted || activePollSignal.aborted || generation !== readGeneration || !currentContext()) return;
             if (!data || !conversationId || String(data.conversation_id) !== conversationId || typeof data.history_html !== 'string' || typeof data.inbox_html !== 'string' || typeof data.information_html !== 'string' || typeof data.can_send !== 'boolean') throw new Error('Invalid response');
             const bottom = atEnd();
             if (!history.contains(document.activeElement) && !history.querySelector('details[open]')) {
@@ -183,17 +194,19 @@ export function setupMessages(root, { listen, onCleanup }) {
             controls();
             pollStatus.textContent = canSend ? '' : 'El envío y la edición no están disponibles. El historial accesible se conserva.';
         } catch (error) {
-            if (error.name !== 'AbortError' && generation === readGeneration) pauseReads();
+            if (error.name !== 'AbortError' && !activePollSignal.aborted && generation === readGeneration) pauseReads();
         } finally { refreshing = false; }
     }
-    const poller = createPoller({ run: update, active: () => root.dataset.historical !== 'true' && document.visibilityState === 'visible' && document.hasFocus() && atEnd() && !history.contains(document.activeElement) && !history.querySelector('details[open]') });
+    const poller = createPoller({ run: update, active: () => !isVisiting() && root.dataset.historical !== 'true' && document.visibilityState === 'visible' && document.hasFocus() && atEnd() && !history.contains(document.activeElement) && !history.querySelector('details[open]') });
     listen(retry, 'click', async () => {
         retry.disabled = true;
         try { await update(); } finally { if (!revoked && !disposed) retry.disabled = false; }
     });
     poller.start();
-    listen(document, 'visibilitychange', () => { if (document.visibilityState === 'visible') poller.wake(); });
-    listen(window, 'focus', () => poller.wake());
+    listen(document, 'visibilitychange', () => { if (document.visibilityState === 'visible' && !isVisiting()) poller.wake(); });
+    listen(window, 'focus', () => { if (!isVisiting()) poller.wake(); });
+    onBeforeVisit?.(abortPollOnVisit);
+    listen(document, 'turbo:visit', abortPollOnVisit);
     onCleanup(dispose);
     // A browser history cache can preserve a document without disposing the
     // shared page controller. Do not restore stale private chat content.
@@ -214,12 +227,16 @@ export function setupMessages(root, { listen, onCleanup }) {
             const result = await post(form.action, body);
             form.elements.client_token.value = attempt.acknowledge(result);
             input.value = '';
+            input.style?.setProperty?.('height', 'auto');
             data.ids.forEach(id => {
                 root.querySelectorAll('[data-prepared-id]').forEach(item => { if (item.dataset.preparedId === id) item.remove(); });
                 form.querySelectorAll('[name="attachment_ids[]"]').forEach(item => { if (item.value === id) item.closest('label').remove(); });
             });
             say('Mensaje guardado.');
-            if (root.dataset.historical === 'true') { window.location.assign(result.redirect); return; }
+            if (root.dataset.historical === 'true') {
+                if (!isVisiting()) window.location.assign(result.redirect);
+                return;
+            }
             history.scrollTop = history.scrollHeight;
             await update();
         } catch (error) {

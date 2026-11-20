@@ -6,7 +6,7 @@ import { setupProfessionalEditor } from './profiles/professional.js';
 onPage('[data-profile-location]', setupProfileLocation);
 onPage('[data-profile-location]', setupProfessionalEditor);
 
-onPage('[data-help]', (root) => {
+onPage('[data-help]', (root, { listen }) => {
     root.querySelector('[data-help-tools]').hidden = false;
     const search = root.querySelector('[data-help-search]');
     const questions = [...root.querySelectorAll('[data-help-question]')];
@@ -24,8 +24,8 @@ onPage('[data-help]', (root) => {
         root.querySelector('[data-help-guides]').hidden = Boolean(search.value.trim()) || category !== 'all';
         root.querySelectorAll('[data-help-category]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.helpCategory === category)));
     }
-    search.addEventListener('input', render);
-    root.addEventListener('click', (event) => {
+    listen(search, 'input', render);
+    listen(root, 'click', (event) => {
         const filter = event.target.closest('[data-help-category]');
         if (filter) { category = filter.dataset.helpCategory; render(); }
         if (event.target.closest('[data-help-reset]')) { search.value = ''; category = 'all'; render(); search.focus(); }

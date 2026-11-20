@@ -35,7 +35,10 @@ test('inbox and newly polled timestamps localize repeatedly from the immutable I
     assert.equal(time.textContent, '01:49');
     assert.equal(invalid.textContent, 'UTC fallback');
     nodes.push({ dataset: { messageTime: 'full' }, textContent: '', getAttribute: () => '2026-11-15T07:49:00Z' });
+    nodes.push({ dataset: { messageTime: 'day' }, textContent: '', getAttribute: () => '2026-11-15T07:49:00Z' });
     localizeMessageTimes(root, options);
     assert.match(nodes[2].textContent, /01:49/);
+    assert.match(nodes[3].textContent, /15 Nov 2026/);
+    assert.doesNotMatch(nodes[3].textContent, /01:49/);
     assert.equal(time.getAttribute('datetime'), '2026-11-15T07:49:00+00:00');
 });

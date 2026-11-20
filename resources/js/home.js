@@ -1,8 +1,7 @@
 import { onPage, navigate } from './ui/navigation.js';
 import { writeHandoff } from './ui/handoff.js';
 
-
-onPage('[data-home]', (root) => {
+onPage('[data-home]', (root, { listen }) => {
     const $ = (selector) => root.querySelector(selector);
     const question = $('[data-home-question]');
     function forward(target, value, url) {
@@ -17,22 +16,22 @@ onPage('[data-home]', (root) => {
     function toLexa(context = false) {
         forward('lexa', { text: question.value.trim(), mode: $('[data-home-mode]').value, context }, root.querySelector('[data-add-context]').href);
     }
-    question.addEventListener('input', () => {
+    listen(question, 'input', () => {
         $('[data-home-send]').disabled = !question.value.trim();
         question.style.height = 'auto';
         question.style.height = Math.min(question.scrollHeight, 180) + 'px';
     });
-    question.addEventListener('keydown', (event) => {
+    listen(question, 'keydown', (event) => {
         if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
             event.preventDefault();
             if (question.value.trim()) toLexa();
         }
     });
-    $('[data-home-composer]').addEventListener('submit', (event) => {
+    listen($('[data-home-composer]'), 'submit', (event) => {
         event.preventDefault();
         if (question.value.trim()) toLexa();
     });
-    root.addEventListener('click', (event) => {
+    listen(root, 'click', (event) => {
         if (event.target.closest('[data-home-share]')) {
             event.preventDefault();
             forward('community', { text: '' }, event.target.closest('[data-home-share]').href);

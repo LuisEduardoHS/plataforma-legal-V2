@@ -516,3 +516,17 @@ test('pause during an in-flight poll cannot reschedule, and stop cannot be resum
     poll.resume(); poll.resume(); assert.equal(tasks.size, 1); assert.equal([...tasks.values()][0].delay, 10000);
     poll.stop(); poll.resume(); assert.equal(tasks.size, 0);
 });
+
+test('turbo:visit immediately aborts an in-flight poll and pauses polling before turbo:before-render arrives', async () => {
+    const f = fixture({ managed: true });
+    try {
+        await f.tick();
+        assert.equal(f.requests.length, 1);
+        assert.equal(f.requests[0].options.signal.aborted, false);
+        document.dispatchEvent(new Event('turbo:visit'));
+        assert.equal(f.requests[0].options.signal.aborted, true, 'in-flight poll must abort immediately on turbo:visit');
+        assert.equal(f.timers.size, 0, 'poller must pause immediately on turbo:visit');
+        await f.respond(0);
+        assert.equal(f.nodes.history.textContent, 'HISTORIAL PRIVADO', 'late response after turbo:visit must be ignored');
+    } finally { f.restore(); }
+});

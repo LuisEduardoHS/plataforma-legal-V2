@@ -9,7 +9,8 @@
         <header class="professionals-heading">
             <h1 class="sr-only">Directorio profesional</h1>
             @if (! $unavailable)
-                <form method="GET" action="{{ route('professionals') }}" class="professionals-search-panel" x-data="{ filtersOpen: {{ ! empty($filters['state_id']) || ! empty($filters['municipality_id']) || ! empty($filters['specialty_id']) || ! empty($filters['specialty_ids']) ? 'true' : 'false' }} }">
+                @php($hasActiveFilters = ! empty($filters['state_id']) || ! empty($filters['municipality_id']) || ! empty($filters['specialty_id']) || ! empty($filters['specialty_ids']))
+                <form method="GET" action="{{ route('professionals') }}" class="professionals-search-panel" x-data="{ filtersOpen: {{ $hasActiveFilters ? 'true' : 'false' }} }">
                     <h2>Busca según tu situación</h2>
                     @if ($errors->any())<p role="alert" class="professionals-error">Revisa los filtros de búsqueda.</p>@endif
                     <div class="flex items-center gap-2 rounded-[10px] bg-[var(--professionals-soft)] p-2">
@@ -19,6 +20,7 @@
                         </button>
                     </div>
                     <div id="professional-directory-filters"
+                        @if (! $hasActiveFilters) style="display: none;" @endif
                         x-show="filtersOpen"
                         x-transition:enter="transition ease-out duration-180"
                         x-transition:enter-start="opacity-0 -translate-y-2 scale-[0.99]"
