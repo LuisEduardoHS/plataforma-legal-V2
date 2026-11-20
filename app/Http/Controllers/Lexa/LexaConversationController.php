@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Lexa;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Lexa\GenerateLexaReplyRequest;
 use App\Http\Requests\Lexa\LexaIndexRequest;
 use App\Http\Requests\Lexa\StoreLexaConversationRequest;
 use App\Http\Requests\Lexa\StoreLexaMessageRequest;
@@ -79,9 +80,17 @@ class LexaConversationController extends Controller
         return response()->json($result, 201)->header('Cache-Control', 'private, no-store');
     }
 
-    public function generate(Request $request, int $conversation): JsonResponse
+    public function generate(GenerateLexaReplyRequest $request, int $conversation): JsonResponse
     {
-        $this->service->generateReply($request->user(), $conversation);
+        $result = $this->service->generateReply(
+            $request->user(),
+            $conversation,
+            $request->validated('attempt_token'),
+        );
+
+        $status = ($result['replayed'] ?? false) ? 200 : 201;
+
+        return response()->json($result, $status)->header('Cache-Control', 'private, no-store');
     }
 
     public function destroy(Request $request, int $conversation): JsonResponse
