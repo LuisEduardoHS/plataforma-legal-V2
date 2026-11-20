@@ -11,10 +11,14 @@ use App\Models\User;
 use App\Services\Lexa\Contracts\AiProvider;
 use App\Services\Lexa\Data\LexaCompletion;
 use App\Services\Lexa\Data\LexaPrompt;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 class LexaConversationService
@@ -23,6 +27,7 @@ class LexaConversationService
         private LexaAccess $access,
         private LexaQuery $query,
         private AiProvider $provider,
+        private LexaLegalContext $legalContext,
     ) {}
 
     public function create(User $actor, string $mode = 'orientation', ?string $title = null, ?string $initialContent = null): array
@@ -94,7 +99,7 @@ class LexaConversationService
         }, lock: true);
     }
 
-    public function generateReply(User $actor, int $conversationId, ?string $clientAttemptToken = null): array
+    public function generateReply(User $actor, int $conversationId, ?string $clientAttemptToken = null, ?int $stateId = null): array
     {
         // Phase 1: short transaction with row locks to reserve the turn and build bounded prompt.
         $reserved = $this->access->ownedConversation($actor, $conversationId, function (User $current, LexaConversation $conversation) use ($clientAttemptToken) {
@@ -194,6 +199,7 @@ class LexaConversationService
                 'generation_id' => $generationId,
                 'attempt_token' => $attemptToken,
                 'user_message_id' => $latestMessage->id,
+                'query' => $latestMessage->content,
                 'prompt' => new LexaPrompt(
                     mode: $conversation->mode,
                     messages: $history,
@@ -208,7 +214,18 @@ class LexaConversationService
 
         // Phase 2: external AI provider call strictly OUTSIDE any SQL transaction or lock.
         try {
-            $completion = $this->provider->generate($reserved['prompt']);
+            $snapshot = $this->legalContext->retrieve($reserved['query'], $stateId);
+            $this->access->ownedConversation($actor, $conversationId, function (User $current, LexaConversation $conversation) use ($reserved, $snapshot) {
+                $generation = LexaGeneration::whereKey($reserved['generation_id'])->lockForUpdate()->firstOrFail();
+                if ($conversation->status !== 'active' || $generation->status !== 'pending' || $generation->attempt_token !== $reserved['attempt_token']) {
+                    throw new LexaConflictException('El contexto de generación dejó de estar disponible.');
+                }
+                $generation->retrieval_json = $snapshot;
+                $generation->save();
+            }, lock: true);
+            $basePrompt = $reserved['prompt'];
+            $completion = $this->provider->generate(new LexaPrompt($basePrompt->mode, $basePrompt->messages, $basePrompt->maxOutputTokens, $snapshot['sources'], $stateId, $snapshot['state_name']));
+            $citations = $this->legalContext->citations($completion, $snapshot);
         } catch (Throwable $error) {
             $this->markGenerationFailed(
                 $actor,
@@ -218,7 +235,11 @@ class LexaConversationService
                 $error instanceof LexaUnavailableException ? 'provider_unavailable' : 'provider_error',
             );
 
-            if ($error instanceof LexaUnavailableException) {
+            if ($error instanceof LexaUnavailableException || $error instanceof LexaConflictException
+                || $error instanceof AuthorizationException
+                || $error instanceof AuthenticationException
+                || $error instanceof ModelNotFoundException
+                || $error instanceof HttpExceptionInterface) {
                 throw $error;
             }
 
@@ -233,6 +254,8 @@ class LexaConversationService
             $reserved['attempt_token'],
             $reserved['user_message_id'],
             $completion,
+            $citations,
+            $snapshot,
         );
     }
 
@@ -255,12 +278,16 @@ class LexaConversationService
         string $attemptToken,
         int $expectedUserMessageId,
         LexaCompletion $completion,
+        array $citations,
+        array $snapshot,
     ): array {
         return $this->access->ownedConversation($actor, $conversationId, function (User $current, LexaConversation $conversation) use (
             $generationId,
             $attemptToken,
             $expectedUserMessageId,
             $completion,
+            $citations,
+            $snapshot,
         ) {
             Gate::forUser($current)->authorize('update', $conversation);
 
@@ -303,7 +330,8 @@ class LexaConversationService
             $assistantMessage->prompt_tokens = $completion->promptTokens;
             $assistantMessage->completion_tokens = $completion->completionTokens;
             $assistantMessage->latency_ms = $completion->latencyMs;
-            $assistantMessage->citations_json = $completion->citations !== [] ? $completion->citations : null;
+            $assistantMessage->citations_json = $citations;
+            $assistantMessage->grounding_json = ['state_id' => $snapshot['state_id'], 'state_name' => $snapshot['state_name'], 'scope' => $snapshot['scope'], 'retrieved_at' => $snapshot['retrieved_at'], 'retrieved_count' => count($snapshot['sources']), 'cited_count' => count($citations)];
             $assistantMessage->save();
 
             $now = now();

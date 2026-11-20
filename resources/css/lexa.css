@@ -227,3 +227,12 @@
 .lexa-banner-btn.is-danger { background: #b42318; color: #fff; }
 .lexa-delete-copy { margin: 8px 0 18px; font-size: 13.5px; color: var(--lexa-muted); }
 .lexa-delete-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+.lexa-jurisdiction { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .75rem; font-size: .875rem; }
+.lexa-jurisdiction select { max-width: 100%; min-width: 0; min-height: 44px; background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 8px; padding: .4rem; }
+.lexa-scope-help { padding: 0 .75rem .75rem; font-size: .75rem; }
+.lexa-citations { margin-top: 1rem; border-top: 1px solid currentColor; padding-top: .75rem; font-size: .8rem; overflow-wrap: anywhere; }
+.lexa-citations a { text-decoration: underline; }
+.lexa-citations a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.lexa-citations ul { padding-inline-start: 1.25rem; list-style: disc; }
+.lexa-citations li { margin-block: .75rem; }

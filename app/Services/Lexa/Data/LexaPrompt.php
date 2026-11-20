@@ -11,5 +11,8 @@ final readonly class LexaPrompt
         public string $mode,
         public array $messages,
         public int $maxOutputTokens = 1024,
+        public array $legalSources = [],
+        public ?int $stateId = null,
+        public ?string $stateName = null,
     ) {}
 }

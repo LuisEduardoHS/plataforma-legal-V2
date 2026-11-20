@@ -72,6 +72,7 @@ class LexaQuery
             'content' => $message->content,
             'status' => $message->status,
             'citations' => $message->citations_json ?? [],
+            'grounding' => $message->grounding_json,
             'created_at' => $message->created_at?->toIso8601String(),
         ];
     }

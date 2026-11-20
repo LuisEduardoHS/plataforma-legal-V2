@@ -20,6 +20,7 @@ class LexaGeneration extends Model
             'completion_tokens' => 'integer',
             'latency_ms' => 'integer',
             'started_at' => 'datetime',
+            'retrieval_json' => 'array',
             'completed_at' => 'datetime',
         ];
     }

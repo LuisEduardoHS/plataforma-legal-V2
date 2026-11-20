@@ -18,6 +18,7 @@ class LexaMessage extends Model
             'completion_tokens' => 'integer',
             'latency_ms' => 'integer',
             'citations_json' => 'array',
+            'grounding_json' => 'array',
         ];
     }
 

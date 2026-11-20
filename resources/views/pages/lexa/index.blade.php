@@ -36,10 +36,10 @@
                                 <a class="lexa-banner-btn" href="{{ $lexa['endpoints']['login'] ?? route('login') }}" data-lexa-banner-login hidden data-turbo="false">Iniciar sesión</a>
                             </div>
                         </div>
-                        <x-lexa.composer :modes="$lexa['modes']" />
+                        <x-lexa.composer :modes="$lexa['modes']" :states="$lexa['states'] ?? []" />
                         <p class="lexa-disclaimer" data-lexa-disclaimer>
                             @if ($lexa['generation_enabled'] ?? false)
-                                Orientación informativa automatizada. Todavía no consulta fuentes jurídicas oficiales verificadas ni sustituye la asesoría profesional.
+                                Orientación informativa automatizada. Las fuentes recuperadas y sus límites se muestran en cada respuesta. No sustituye la asesoría profesional.
                             @else
                                 Tus consultas se guardan en tu historial privado. La generación automática con IA está desactivada en esta configuración.
                             @endif

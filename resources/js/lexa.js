@@ -1,5 +1,6 @@
 import { onPage } from './ui/navigation.js';
 import { createDraft, matchesSession, normalizeLexaSession, formatApiError } from './lexa/state.js';
+import { renderLegalCitations } from './lexa/citations.js';
 import { renderMarkdownToFragment } from './lexa/markdown.js';
 import { takeHandoff } from './ui/handoff.js';
 
@@ -192,6 +193,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
                 body.append(p);
             } else {
                 body.append(renderMarkdownToFragment(text));
+                body.append(renderLegalCitations(message.citations, message.grounding));
             }
             threadList.append(article);
         }
@@ -338,7 +340,7 @@ onPage('[data-lexa]', (root, { listen, onCleanup }) => {
             const attemptToken = crypto.randomUUID();
             const { ok, status, json } = await apiFetch(`${baseUrl}/${session.id}/generar`, {
                 method: 'POST',
-                body: JSON.stringify({ attempt_token: attemptToken }),
+                body: JSON.stringify({ attempt_token: attemptToken, state_id: $('[data-legal-state]')?.value ? Number($('[data-legal-state]').value) : null }),
             });
             if (!ok) {
                 handleApiFailure(status, json?.message, session);

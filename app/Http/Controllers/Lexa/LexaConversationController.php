@@ -7,6 +7,7 @@ use App\Http\Requests\Lexa\GenerateLexaReplyRequest;
 use App\Http\Requests\Lexa\LexaIndexRequest;
 use App\Http\Requests\Lexa\StoreLexaConversationRequest;
 use App\Http\Requests\Lexa\StoreLexaMessageRequest;
+use App\Models\State;
 use App\Services\Lexa\LexaConversationService;
 use App\Services\Lexa\LexaQuery;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +33,7 @@ class LexaConversationController extends Controller
                 'id' => $user->id,
                 'name' => $displayName !== '' ? $displayName : 'Tú',
             ],
+            'states' => State::orderBy('name')->get(['id', 'name'])->toArray(),
             'generation_enabled' => (bool) config('lexa.enabled_generation', false),
             'modes' => [
                 ['id' => 'orientation', 'label' => 'Orientación', 'note' => 'Orientación jurídica general en México.'],
@@ -123,6 +125,7 @@ class LexaConversationController extends Controller
             $request->user(),
             $conversation,
             $request->validated('attempt_token'),
+            $request->filled('state_id') ? (int) $request->validated('state_id') : null,
         );
 
         $status = ($result['replayed'] ?? false) ? 200 : 201;

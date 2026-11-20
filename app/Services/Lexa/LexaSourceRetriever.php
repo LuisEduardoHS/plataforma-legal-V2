@@ -24,6 +24,7 @@ class LexaSourceRetriever
 
         $rows = LexaLegalChunk::query()
             ->join('lexa_legal_sources as sources', 'sources.id', '=', 'lexa_legal_chunks.lexa_legal_source_id')
+            ->leftJoin('states as source_states', 'source_states.id', '=', 'sources.state_id')
             ->where('sources.is_verified', true)
             ->whereNull('sources.superseded_by')
             ->where(function ($q) {
@@ -49,6 +50,13 @@ class LexaSourceRetriever
             ->whereRaw('MATCH(lexa_legal_chunks.article_ref, lexa_legal_chunks.heading, lexa_legal_chunks.content) AGAINST (? IN NATURAL LANGUAGE MODE)', [$clean])
             ->select([
                 'lexa_legal_chunks.id',
+                'sources.id as source_id',
+                'sources.published_at',
+                'sources.consulted_at',
+                'sources.valid_from',
+                'sources.valid_to',
+                'sources.verified_at',
+                'lexa_legal_chunks.content_hash',
                 'lexa_legal_chunks.article_ref',
                 'lexa_legal_chunks.heading',
                 'lexa_legal_chunks.content',
@@ -57,6 +65,7 @@ class LexaSourceRetriever
                 'sources.norm_type',
                 'sources.jurisdiction_scope',
                 'sources.state_id',
+                'source_states.name as state_name',
                 'sources.source_name',
                 'sources.source_url',
                 'sources.last_reformed_at',
@@ -71,6 +80,14 @@ class LexaSourceRetriever
 
         return $rows->map(fn ($row) => [
             'chunk_id' => (int) $row->id,
+            'source_id' => (int) $row->source_id,
+            'state_name' => $row->state_name,
+            'chunk_hash' => $row->content_hash,
+            'published_at' => $row->published_at,
+            'consulted_at' => $row->consulted_at,
+            'valid_from' => $row->valid_from,
+            'valid_to' => $row->valid_to,
+            'validity_confirmed' => $row->verified_at !== null && $row->valid_from !== null,
             'version_key' => $row->version_key,
             'document_hash' => $row->document_hash,
             'part' => $row->part,
@@ -84,7 +101,7 @@ class LexaSourceRetriever
             'source_name' => $row->source_name,
             'source_url' => $row->source_url,
             'last_reformed_at' => $row->last_reformed_at,
-            'excerpt' => Str::limit($row->content, 500),
+            'excerpt' => Str::limit($row->content, 1200, ''),
         ])->all();
     }
 }
