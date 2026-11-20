@@ -1033,3 +1033,64 @@ Se implementa la reutilización por petición de los iconos SVG estáticos en la
 - El ahorro medido en PHP (`-18.85 ms` en 20 `post-card`, `-14.39 ms` en vista completa) es estable y reproducible en el renderizado Blade, pero en mediciones de Kernel HTTP completo de ~105 ms la varianza puntual de MySQL local (~2-3 ms) y middleware puede amortiguar el porcentaje percibido.
 - Siguen sin optimizar (fuera de alcance): los `~33.4 ms` restantes de `post-card` (`avatar`, `content/save`, `Carbon::diffForHumans()`, `route()` y los 60 `<form>` por página de 20 tarjetas).
 - No se añaden dependencias; `LEXA`, `Mensajes`, paginación, permisos y contratos permanecen intactos.
+
+
+---
+
+## Diagnóstico 09P-B.5-A — Consultas duplicadas en polling de Mensajes (2026-11-20)
+
+Se audita el endpoint de polling `GET /mensajes/{conversation}/actualizaciones` (`InboxController::updates` → `InboxController::data` → `MessagingQuery` + `MessagingAccess`) en `main` (`e18c77e`), sin modificar código funcional, locks, permisos ni contratos.
+
+### Entorno y medición reproducible
+
+- Medido en `APP_ENV=testing`, `SELECT DATABASE() = plataforma_legal_v2_test`, `SESSION_DRIVER=array`, `CACHE_STORE=array` y `LARAVEL_STORAGE_PATH` externo al repositorio, con 2 usuarios sintéticos y 1 conversación de 2 mensajes revertidos al finalizar.
+- Promedio de 5 iteraciones tras calentamiento previo:
+  - **Kernel HTTP total (`/mensajes/{id}/actualizaciones`)**: **`17.87 ms`**
+  - **Consultas SQL totales**: **`22` consultas** en **`7.15 ms`**
+
+### Origen exacto de las consultas duplicadas
+
+`InboxController::data()` ejecuta dos transacciones secuenciales intencionales (`InboxController.php:27-36`):
+
+1. **Transacción 1 — `MessagingQuery::inbox()` (`7` consultas, `2.33 ms` incluyendo middleware)**:
+   - `EnsureActiveAccount` (`users ... lock in share mode`, `0.35 ms`) + `MessagingAccess::viewer()` (`users ... lock in share mode`, `0.27 ms`).
+   - Consulta de bandeja `conversations` + `conversation_participants` con subconsultas `latest_message_id` / `unread_count` (`0.91 ms`) y carga eager de `otherParticipant`, `user_profiles`, `latestVisibleMessage` y `attachments` (`0.88 ms` combinados, todos `lock in share mode`).
+   - **Garantía**: libera los locks compartidos del inbox antes de tomar locks exclusivos (`FOR UPDATE`) sobre el par seleccionado.
+
+2. **Transacción 2 — `MessagingQuery::state()` + `MessagingQuery::history()` (`15` consultas, `4.19 ms`)**:
+   - `state()` llama a `MessagingAccess::conversation($actor, $id, ...)`:
+     1. `Conversation::find($id)` sin lock para resolver `user_low_id`/`user_high_id` (`0.24 ms`).
+     2. `MessagingAccess::pair()` (con `DB::transaction` / `SAVEPOINT`): `users WHERE id IN (?, ?) ORDER BY id ASC FOR UPDATE` (`0.28 ms`).
+     3. `conversations WHERE id = ? FOR UPDATE` (`0.28 ms`).
+     4. `conversation_participants WHERE conversation_id = ? ORDER BY user_id ASC FOR UPDATE` (`0.49 ms`).
+     5. `Gate::authorize('view', $conversation)` (`exists` en `conversation_participants`, `0.26 ms`).
+     6. `user_profiles` del destinatario (`lock in share mode`, `0.27 ms`).
+     7. `MessagingAccess::unblocked()`: `user_blocks ... FOR UPDATE` (`0.31 ms`).
+     8. `blocked_by_me`: `exists` en `user_blocks ... lock in share mode` (`0.23 ms`).
+   - **Inmediatamente después, dentro de la misma `DB::transaction`**, `history()` vuelve a invocar `MessagingAccess::conversation($actor, $id, ...)`, repitiendo íntegramente las **5 consultas de autorización/locking**:
+     - `Conversation::find($id)` (`0.21 ms`)
+     - `users ... ORDER BY id ASC FOR UPDATE` (`0.22 ms`)
+     - `conversations ... FOR UPDATE` (`0.25 ms`)
+     - `conversation_participants ... ORDER BY user_id ASC FOR UPDATE` (`0.27 ms`)
+     - `Gate::authorize('view', $conversation)` (`0.24 ms`)
+   - Seguido de las `2` consultas propias del historial: `messages ... limit 21 lock in share mode` (`0.51 ms`) y `attachments ... lock in share mode` (`0.43 ms`).
+
+### Evaluación de contexto compartido y ahorro potencial
+
+- **Qué se puede y qué no se puede compartir**:
+  - **No debe fusionarse** la Transacción 1 (`inbox`) con la Transacción 2 (`state` + `history`), ya que `InboxController` libera explícitamente los locks compartidos del inbox antes de adquirir `FOR UPDATE` sobre el par activo para prevenir deadlocks cruzados entre conversaciones.
+  - **No debe cachearse autorización entre peticiones**: `MessagingAccess::conversation()` valida estado activo de ambos usuarios y pertenencia actual en cada petición.
+  - **Sí es técnicamente posible** compartir el resultado ya bloqueado (`FOR UPDATE`) de `MessagingAccess::conversation()` entre `state()` y `history()` dentro de la Transacción 2 (una sola invocación en `InboxController::data` o un método `conversationSnapshot()`), dado que ambos se ejecutan ya dentro del mismo bloque `DB::transaction`.
+- **Ahorro real medido**:
+  - Eliminación de **5 consultas duplicadas** (`1.19 ms` en total: `0.21 + 0.22 + 0.25 + 0.27 + 0.24 ms`), más opcionalmente **1 consulta** si `blocked_by_me` reutilizara el resultado de `unblocked()` (`0.23 ms`).
+  - Reducción estimada: **`~1.19–1.42 ms` por petición de polling** (**~6.7 %–7.9 %** del tiempo total del Kernel de `17.87 ms`).
+
+### Riesgos identificados
+
+1. **Orden de locks y deadlocks**: `MessagingAccess::conversation()` impone un orden estricto (`users` asc → `conversations` → `conversation_participants` asc → `user_blocks`). Alterar ese orden o mezclar Transacción 1 y Transacción 2 podría introducir deadlocks bajo concurrencia (validado actualmente por `MessagingConcurrencyTest`).
+2. **Lecturas inconsistentes**: el comentario en `MessagingQuery::history()` advierte que las lecturas `sharedLock` posteriores a los `FOR UPDATE` garantizan lecturas actuales y evitan que un snapshot `REPEATABLE READ` resucite mensajes editados o eliminados.
+3. **Privacidad y regresiones**: exponer un método interno sin el wrapper `MessagingAccess::conversation()` aumentaría la superficie de error si otro llamador lo invocara fuera de la transacción con locks ya adquiridos.
+
+### Decisión recomendada: **Opción B — Posponer la optimización y continuar con LEXA**
+
+- **Justificación**: el endpoint de polling ya responde en **`17.87 ms`** de Kernel (`7.15 ms` SQL) y la optimización `09P-B.3-B` ya eliminó las reconstrucciones DOM redundantes en el cliente. El ahorro máximo de `~1.2–1.4 ms` (`5–6` consultas dentro de una misma transacción local) no justifica intervenir un camino crítico de concurrencia y locks `FOR UPDATE` en esta etapa. Se recomienda priorizar **LEXA** y conservar este diagnóstico como referencia si en producción la latencia de red/DB hiciera relevante ahorrar esos 5 round-trips dentro de la Transacción 2.
