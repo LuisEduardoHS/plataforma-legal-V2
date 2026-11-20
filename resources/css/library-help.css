@@ -88,6 +88,7 @@
     .personal-sidebar, .help-guides { grid-template-columns: minmax(0,1fr); }
     .help-guide { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 2px 12px; padding: 16px; }
     .help-guide > svg { grid-row: span 2; align-self: center; margin: 0; }
+    .help-guide:has(> .landing-lexa-wordmark) { grid-template-columns: minmax(0,1fr); gap: 6px; }
     .saved-item { padding: 16px; gap: 10px; } .saved-item-icon { display: none; } .saved-item h3 { font-size: 16px; }
     .saved-item-footer { flex-wrap: wrap; } .personal-filters { gap: 6px; } .personal-filters button { padding: 8px 11px; }
 }
