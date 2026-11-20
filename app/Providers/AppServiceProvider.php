@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\ProfessionalProfile;
 use App\Models\UserProfile;
 use App\Policies\ProfilePolicy;
+use App\Support\CommunityCardIcons;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -18,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(CommunityCardIcons::class);
     }
 
     /**

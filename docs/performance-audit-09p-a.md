@@ -923,3 +923,113 @@ deduplicación inicial con SSR. La respuesta mínima B, el ahorro de servidor/re
 pruebas de despliegue con sesiones reales y medidas de CPU siguen fuera de este
 alcance. El cambio mantiene los guards de foco previos y las autorizaciones de
 cada acción; no promete actualización de un fragmento mientras esté aplazado.
+
+
+---
+
+## Diagnóstico 09P-B.4-A — Renderizado del feed de Comunidad (2026-11-20)
+
+Se retoma y completa el diagnóstico del feed de Comunidad (`GET /comunidad`, `FeedController@index` → `pages/community/index.blade.php` → `components/community/post-card.blade.php`) sobre el diseño 09F ya integrado en `main` (`fd673f9`). No se modifica código funcional, vistas, CSS, JS ni paginación.
+
+### Entorno y aislamiento de medición
+
+- Proceso ejecutado con `APP_ENV=testing`, `DB_CONNECTION=mysql`, `SELECT DATABASE() = plataforma_legal_v2_test`, `SESSION_DRIVER=array`, `CACHE_STORE=array` y `LARAVEL_STORAGE_PATH` externo al repositorio (`%TEMP%\plv2-integracion-storage`).
+- Fixtures sintéticos temporales: 1 usuario lector activo, 1 autor activo y 20 publicaciones sintéticas publicadas (`status='published'`, `visibility='public'`), revertidos al finalizar el script (`0` filas residuales).
+- Promedios calculados sobre 5 iteraciones tras 1 calentamiento previo.
+
+### Medición por número de publicaciones visibles (1, 12 y 20)
+
+| Métrica | 1 publicación | 12 publicaciones | 20 publicaciones (actual) |
+| --- | ---: | ---: | ---: |
+| Consultas SQL (`CommunityQuery` + `Presentation`) | 16 | 16 | 20 (con catálogos en Kernel) |
+| Tiempo SQL (`DB::listen`) | 6.09 ms | 6.74 ms | 7.64 ms |
+| `CommunityQuery` + `CommunityPresentation` | 9.38 ms | 19.11 ms | 24.76 ms |
+| Renderizado exclusivo de tarjetas (`post-card`) | 2.96 ms | 32.51 ms | 52.29 ms |
+| Renderizado completo `pages/community/index` | 21.87 ms | 55.17 ms | 73.18 ms |
+| Manejo completo HTTP Kernel (`/comunidad`) | — | — | **104.62 ms** |
+| HTML de tarjetas | 5,385 B | 64,637 B | 107,741 B (`~5,387 B/tarjeta`) |
+| HTML total de página | 29,243 B | 88,495 B | **131,338 B** |
+| Etiquetas DOM abiertas en tarjetas | 53 | 636 | 1,060 (`53/tarjeta`) |
+| `<svg>` en tarjetas (cantidad / bytes) | 5 / 1,632 B | 60 / 19,584 B | 100 / 32,640 B (`30.3 %` del HTML de tarjetas) |
+| `<form>` en tarjetas (cantidad / bytes) | 3 / 2,332 B | 36 / 27,984 B | 60 / 46,640 B (`43.3 %` del HTML de tarjetas) |
+
+### Desglose de costo y componentes más costosos
+
+1. **Renderizado Blade (`73.18 ms` de `104.62 ms`, ~70 % del Kernel)**:
+   - El 71.5 % del tiempo de vista (`52.29 ms` de `73.18 ms`) corresponde al bucle de 20 `<x-community.post-card>` (`~2.61 ms` por tarjeta).
+   - Cada tarjeta instancia múltiples subcomponentes Blade por iteración: `<x-community.avatar>`, `<x-content.save>` y 5 iconos `<x-lucide-*>` (`plus`/`check`, `thumbs-up`, `message-circle`, `bookmark`, `share-2`), además de `Carbon::parse(...)->locale('es')->diffForHumans()` y 3 llamadas a `route(...)` + `@csrf` + `@method`.
+2. **HTML repetido por tarjeta (`5,387 B` promedio con 09F)**:
+   - **3 formularios por tarjeta (`2,332 B`, 43.3 %)**: seguir/dejar de seguir, me gusta/retirar y guardar/quitar, cada uno con inputs ocultos `@csrf` (`_token`) y `@method`.
+   - **5 SVG inline por tarjeta (`1,632 B`, 30.3 %)**: `100` SVG inline en 20 tarjetas (`32,640 B`). Sumados, formularios y SVG representan el **73.6 % (`79,280 B` de `107,741 B`)** del HTML de las tarjetas.
+3. **Consultas SQL y costo de la paginación actual (`7.64 ms`, ~7.3 % del Kernel)**:
+   - La paginación por cursor (`CommunityQuery::recent` con `cursorPaginate(20, ['posts.*'])`) mantiene un número acotado y constante de consultas (sin N+1 al escalar de 1 a 20 tarjetas: `6.09 ms` → `7.64 ms`).
+   - El costo de usar `20` vs `12` publicaciones por página no está en MySQL (`+0.90 ms`), sino en el renderizado Blade (`+19.78 ms`) y el tamaño de respuesta (`+42,843 B`, `+424` nodos DOM de apertura).
+
+### Comparativa de alternativa para renderizado SVG (sin alterar el HTML final)
+
+Se midió el renderizado de los 100 iconos correspondientes a 20 tarjetas (5 iconos × 20):
+
+| Mecanismo | Tiempo (100 iconos) | HTML generado |
+| --- | ---: | --- |
+| `<x-lucide-*>` mediante directiva de componente Blade (`Blade::render`) | **18.406 ms** | 32,640 B |
+| `view('components.lucide-*')` individual por icono (100 llamadas) | 39.343 ms | 32,640 B |
+| Mapa estático en memoria / helper cacheado por request | **0.008 ms** | 32,640 B (idéntico byte a byte) |
+
+- **Beneficio cuantificable**: sustituir la instanciación repetida de componentes Blade `<x-lucide-*>` dentro de `post-card` por un mapa estático/cacheado en memoria que devuelva exactamente el mismo `<svg>...</svg>` ahorra **`~18.4 ms` de CPU PHP** por petición de 20 tarjetas (**~35 % del tiempo de `post-card`** y **~17.6 % del tiempo total del Kernel**), manteniendo el HTML final 100 % idéntico.
+
+### Limitaciones y riesgos
+
+- **Limitaciones**: medición ejecutada en entorno local Windows/MySQL de testing con publicaciones sintéticas sin adjuntos ni etiquetas múltiples (las tarjetas reales con adjuntos y etiquetas aumentan el tamaño HTML y el número de SVG/nodos). No se midió compresión gzip ni tiempo de parseo/pintado en navegador.
+- **Riesgos de optimizaciones futuras**:
+  - Un mapa cacheado de SVG debe conservar exactamente los atributos (`aria-hidden`, clases como `community-verified-icon` o `!size-4`) para no romper accesibilidad ni estilos.
+  - Reducir el tamaño de página de `20` a `12` ahorraría `~20 ms` y `~43 KB` adicionales, pero cambiaría contratos de paginación/tests existentes que esperan páginas de `20`.
+  - Reducir los 3 formularios por tarjeta exigiría cambios de progresive enhancement / JS y contratos CSRF, por lo que conlleva mayor riesgo que optimizar el renderizado SVG.
+
+### Recomendación concreta para 09P-B.4-B
+
+1. **Prioridad 1 (bajo riesgo, HTML idéntico)**: introducir un helper/cache estático en PHP para los iconos Lucide repetidos en el feed de Comunidad (`post-card` y `content/save`), eliminando los `~18.4 ms` de resolución de componentes Blade por petición sin cambiar HTML, CSS, JS ni contratos.
+2. **Prioridad 2 (opcional, bajo riesgo)**: precalcular `published_at_human` y las iniciales/atributos simples del autor en `CommunityPresentation` (o evitar instanciar componentes Blade triviales como `avatar` dentro del bucle de 20 tarjetas) para recortar parte de los `~33.9 ms` restantes de `post-card`.
+3. Mantener `cursorPaginate(20)` intacto en `09P-B.4-B` para no alterar contratos funcionales.
+
+
+---
+
+## Resultados de 09P-B.4-B — Optimización de SVG en Comunidad (2026-11-20)
+
+Se implementa la reutilización por petición de los iconos SVG estáticos en las tarjetas del feed de Comunidad (`post-card.blade.php` y `content/save.blade.php`), manteniendo intactos el diseño 09F, los formularios, el token CSRF, la paginación (`cursorPaginate(20)`), los permisos, el CSS y el JavaScript.
+
+### Estrategia de reutilización de SVG
+
+- Se añade `app/Support/CommunityCardIcons.php`, registrado como binding `scoped` por petición en `App\Providers\AppServiceProvider::register()`.
+- Cada llamada a `CommunityCardIcons::svg(string $key): HtmlString` valida `$key` contra una lista cerrada (`match`) de las 9 variantes estáticas utilizadas en las tarjetas:
+  - `badge-check` (con `class="community-verified-icon"`, `aria-label` y `title`)
+  - `check`, `plus`, `download`, `thumbs-up`, `message-circle`, `share-2`, `bookmark` (con `aria-hidden="true"`)
+  - `file-text` (sin atributos propios)
+- Cualquier clave fuera de la lista lanza `InvalidArgumentException` (no se interpolan atributos externos).
+- En el primer uso dentro de la petición, el icono se renderiza una vez mediante `Blade::render('<x-lucide-... />')` y se memoriza en memoria de instancia para las tarjetas siguientes; al finalizar la petición (o `forgetScopedInstances()`), el contenedor descarta la instancia sin persistencia ni compartición entre usuarios.
+
+### Comparación antes / después (mismos fixtures sintéticos, 5 iteraciones)
+
+| Escenario | Métrica | Antes (`09P-B.4-A`) | Después (`09P-B.4-B`) | Diferencia |
+| --- | --- | ---: | ---: | ---: |
+| **1 tarjeta** | Renderizado de tarjeta (`post-card`) | 2.96 ms | 2.75 ms | -0.21 ms (-7.1 %) |
+| **12 tarjetas** | Renderizado de tarjetas (`post-card`) | 32.51 ms | **22.61 ms** | **-9.90 ms (-30.5 %)** |
+| **12 tarjetas** | Vista completa (`community/index`) | 55.17 ms | **45.41 ms** | **-9.76 ms (-17.7 %)** |
+| **20 tarjetas** | Renderizado de tarjetas (`post-card`) | 52.29 ms | **33.44 ms** | **-18.85 ms (-36.0 %)** |
+| **20 tarjetas** | Vista completa (`community/index`) | 73.18 ms | **58.79 ms** | **-14.39 ms (-19.7 %)** |
+| **20 tarjetas** | Consultas SQL (`Kernel`, 20 tarjetas) | 20 (`7.64 ms`) | 20 (`10.60 ms`) | 0 consultas (+2.96 ms varianza DB local) |
+| **20 tarjetas** | Kernel HTTP total (`/comunidad`) | 104.62 ms | 105.99 ms | +1.37 ms (enmascarado por varianza SQL/arranque) |
+| **20 tarjetas** | Bytes de `<svg>` (`100` iconos) | 32,640 B | **32,640 B** | **0 B (100 % idéntico)** |
+| **20 tarjetas** | HTML total (`community/index`) | 131,338 B | 131,418 B | +80 B (`+4 B/tarjeta` por `\n` de `@inject`/`Blade::render`) |
+
+### Equivalencia del HTML y pruebas
+
+- `tests/Feature/CommunityCardIconsTest.php` verifica byte a byte que los 9 iconos devueltos por `CommunityCardIcons::svg($key)` coinciden exactamente con `Blade::render('<x-lucide-... />')`, rechazan claves no permitidas con `InvalidArgumentException` y aíslan la instancia por petición (`forgetScopedInstances()`).
+- Pruebas focalizadas ejecutadas en `APP_ENV=testing` (`plataforma_legal_v2_test`, almacenamiento externo): `CommunityCardIconsTest`, `CommunityIntegrationTest` y `CommunityTest`.
+- `git diff --check`: limpio.
+
+### Limitaciones y riesgos pendientes
+
+- El ahorro medido en PHP (`-18.85 ms` en 20 `post-card`, `-14.39 ms` en vista completa) es estable y reproducible en el renderizado Blade, pero en mediciones de Kernel HTTP completo de ~105 ms la varianza puntual de MySQL local (~2-3 ms) y middleware puede amortiguar el porcentaje percibido.
+- Siguen sin optimizar (fuera de alcance): los `~33.4 ms` restantes de `post-card` (`avatar`, `content/save`, `Carbon::diffForHumans()`, `route()` y los 60 `<form>` por página de 20 tarjetas).
+- No se añaden dependencias; `LEXA`, `Mensajes`, paginación, permisos y contratos permanecen intactos.

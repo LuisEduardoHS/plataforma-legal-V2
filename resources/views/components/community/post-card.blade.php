@@ -1,4 +1,5 @@
 @props(['post', 'detail' => false])
+@inject('cardIcons', 'App\Support\CommunityCardIcons')
 @php
     $authorName = $post['author']['display_name'];
     $authorInitial = mb_strtoupper(mb_substr($authorName, 0, 1));
@@ -20,7 +21,7 @@
                         <span>{{ $authorName }}</span>
                     @endif
                     @if ($post['author']['professional_verified'] ?? false)
-                        <x-lucide-badge-check class="community-verified-icon" aria-label="Perfil verificado" title="Revisión documental interna vigente; no es una consulta oficial automática ni garantía de calidad." />
+                        {{ $cardIcons->svg('badge-check') }}
                     @endif
                 </div>
                 <div class="community-meta">
@@ -45,10 +46,10 @@
                     @csrf @method($post['following'] ? 'DELETE' : 'PUT')
                     <button class="community-follow-btn {{ $post['following'] ? 'is-following' : '' }}" aria-label="{{ $post['following'] ? 'Dejar de seguir a ' . $authorName : 'Seguir a ' . $authorName }}">
                         @if ($post['following'])
-                            <x-lucide-check aria-hidden="true" />
+                            {{ $cardIcons->svg('check') }}
                             <span>Siguiendo</span>
                         @else
-                            <x-lucide-plus aria-hidden="true" />
+                            {{ $cardIcons->svg('plus') }}
                             <span>Seguir</span>
                         @endif
                     </button>
@@ -82,13 +83,13 @@
 
     @foreach ($post['attachments'] as $file)
         <div class="community-document">
-            <span class="community-document-icon" aria-hidden="true"><x-lucide-file-text /></span>
+            <span class="community-document-icon" aria-hidden="true">{{ $cardIcons->svg('file-text') }}</span>
             <div class="community-document-info">
                 <strong>{{ $file['name'] }}</strong>
                 <span>{{ strtoupper($file['extension']) }} · {{ max(1, (int) ceil($file['size_bytes'] / 1024)) }} KiB</span>
             </div>
             <a class="community-document-download" href="{{ route('community.media', ['post' => $post['id'], 'attachment' => $file['id']]) }}" data-turbo="false">
-                <x-lucide-download aria-hidden="true" />
+                {{ $cardIcons->svg('download') }}
                 <span>Descargar</span>
             </a>
         </div>
@@ -100,23 +101,23 @@
                 <form method="POST" action="{{ route($post['liked'] ? 'community.unreact' : 'community.react', $post['id']) }}">
                     @csrf @method($post['liked'] ? 'DELETE' : 'PUT')
                     <button aria-label="{{ $post['liked'] ? 'Retirar Me gusta' : 'Me gusta' }}" aria-pressed="{{ $post['liked'] ? 'true' : 'false' }}">
-                        <x-lucide-thumbs-up aria-hidden="true" />
+                        {{ $cardIcons->svg('thumbs-up') }}
                         <span>{{ $post['likes_count'] }}</span>
                     </button>
                 </form>
             @else
                 <span class="community-action-static" aria-label="{{ $post['likes_count'] }} Me gusta">
-                    <x-lucide-thumbs-up aria-hidden="true" />
+                    {{ $cardIcons->svg('thumbs-up') }}
                     <span>{{ $post['likes_count'] }}</span>
                 </span>
             @endif
             <a href="{{ route('community.show', $post['id']) }}#comentarios" aria-label="Ver {{ $post['comments_count'] }} comentarios">
-                <x-lucide-message-circle aria-hidden="true" />
+                {{ $cardIcons->svg('message-circle') }}
                 <span>{{ $post['comments_count'] }}</span>
             </a>
             <x-content.save type="post" :id="$post['id']" :saved="$post['saved']" :can-save="$post['can_save'] || (!auth()->check() && $post['status'] === 'published')" />
             <button type="button" data-share-post="{{ route('community.show', $post['id']) }}" aria-label="Copiar enlace" title="Copiar enlace">
-                <x-lucide-share-2 aria-hidden="true" />
+                {{ $cardIcons->svg('share-2') }}
             </button>
         </div>
     </footer>
