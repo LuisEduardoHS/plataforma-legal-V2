@@ -1,5 +1,6 @@
 /* Public presentation only. Reuse app.css tokens without mounting the app shell. */
 .landing-page {
+    --landing-header-height: 88px;
     --landing-bg: #fff;
     --landing-soft: #f7f6f8;
     --landing-text: #25232a;
@@ -36,10 +37,11 @@
 .landing-button-lexa:hover { background: #593aa9; }
 .landing-text-link { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; font-weight: 600; color: var(--landing-brand); }
 .landing-text-link:hover { text-decoration: underline; text-underline-offset: 5px; }
-.landing-hero { position: relative; isolation: isolate; min-height: 100dvh; display: flex; align-items: center; border-bottom: 0; }
+.landing-page .public-header { background: transparent; border: 0; }
+.landing-hero { position: relative; isolation: isolate; min-height: calc(100dvh - var(--landing-header-height)); display: flex; align-items: center; border-bottom: 0; }
 .landing-hero-halo { position: absolute; z-index: -1; inset: 0; pointer-events: none; background: radial-gradient(ellipse 50% 48% at 50% 63%, color-mix(in srgb, var(--color-lexa) 12%, transparent), transparent 90%), radial-gradient(ellipse 36% 36% at 28% 48%, color-mix(in srgb, var(--color-accent) 5%, transparent), transparent 90%); }
 .landing-hero-halo { -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%); mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%); }
-.landing-hero-content { width: 100%; padding-block: 88px 48px; text-align: center; }
+.landing-hero-content { width: 100%; padding-block: 40px; text-align: center; }
 .landing-lexa-identity { display: inline-flex; align-items: center; gap: 10px; color: var(--landing-lexa); font-size: 15px; font-weight: 600; letter-spacing: .035em; }
 .landing-lexa-identity svg { width: 22px; height: 22px; }
 .landing-lexa-wordmark { background: linear-gradient(110deg, var(--color-dark-accent), var(--color-lexa-rose) 45%, var(--color-lexa)); background-clip: text; -webkit-background-clip: text; color: transparent; font-size: 26px; font-weight: 700; line-height: 1; letter-spacing: var(--lexa-tracking); padding-left: var(--lexa-tracking); }
@@ -219,11 +221,12 @@
     .landing-steps { gap: 28px; }
 }
 @media (max-width: 767px) {
+    .landing-page { --landing-header-height: 76px; }
     .landing-lexa-wordmark { font-size: 22px; }
     .landing-container { width: calc(100% - 40px); }
     .landing-page .landing-section { padding-block: 56px; }
     .landing-hero h1 { height: 3.3em; }
-    .landing-hero-content { padding-block: 76px 32px; }
+    .landing-hero-content { padding-block: 32px; }
     .landing-hero h1 { letter-spacing: -.045em; }
     .landing-hero-description { margin-top: 22px; font-size: 17px; }
     .landing-example { margin-top: 28px; padding: 20px; }
@@ -254,7 +257,7 @@
     .landing-example blockquote { font-size: 19px; }
 }
 @media (max-height: 760px) {
-    .landing-hero-content { padding-block: 76px 28px; }
+    .landing-hero-content { padding-block: 28px; }
     .landing-hero h1 { margin-top: 16px; }
     .landing-hero-description { margin-top: 16px; }
     .landing-example { margin-top: 24px; }
