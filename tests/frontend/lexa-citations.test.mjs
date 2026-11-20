@@ -37,3 +37,17 @@ test('missing sources and historical responses are explicit and need no storage'
     assert.match(renderLegalCitations([], null).textContent, /sin trazabilidad documental/);
     assert.match(renderLegalCitations([{ ...source, validity_confirmed: true }], { cited_count: 1 }).textContent, /no implica confirmación de vigencia actual/);
 });
+
+test('multi-part or partial chunks explicitly disclose partial evidence and structural heading', () => {
+    const partial = renderLegalCitations([{
+        ...source,
+        part: 2,
+        total_parts: 4,
+        is_partial: true,
+        heading: 'Capítulo I — Disposiciones Generales',
+        validity_confirmed: true,
+    }], { cited_count: 1 });
+    const item = partial.children[1].children[0];
+    assert.match(item.children[0].textContent, /parte 2 de 4 \(fragmento parcial\) \(Capítulo I — Disposiciones Generales\)/);
+    assert.match(item.children[2].textContent, /Evidencia parcial del artículo: consulta el texto completo en la fuente oficial/);
+});

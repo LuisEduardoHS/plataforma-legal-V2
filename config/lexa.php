@@ -14,6 +14,7 @@ return [
         'messages_per_page' => 30,
         'max_context_messages' => 12,
         'max_context_chars' => 24000,
+        'legal_chunk_chars' => 1200,
         'legal_context_chars' => 6000,
         'max_output_tokens' => 1024,
     ],

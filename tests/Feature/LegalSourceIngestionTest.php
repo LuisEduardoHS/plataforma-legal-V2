@@ -259,4 +259,84 @@ class LegalSourceIngestionTest extends TestCase
         $this->artisan('lexa:sources:import', ['manifest' => 'https://www.diputados.gob.mx/LeyesBiblio/index.htm', 'text' => 'missing.txt', '--apply' => true])->assertFailed();
         $this->artisan('lexa:sources:verify', ['source' => '1'])->assertFailed();
     }
+
+    public function test_structural_headings_are_detached_from_previous_article_and_long_articles_split_coherently(): void
+    {
+        config(['lexa.limits.legal_chunk_chars' => 280]);
+        $p1 = 'Artículo 1.- Disposición inicial de arrendamiento sintético con alcance federal.';
+        $p2 = 'I. Primera fracción extensa sobre obligaciones sintéticas del arrendador para conservar la integridad de cada palabra y evitar cortes arbitrarios a mitad de término;';
+        $p3 = 'II. Segunda fracción extensa sobre derechos sintéticos del arrendatario y reglas de verificación documental controlada.';
+        $raw = "Título Primero\nDisposiciones Generales\n\nCapítulo I\nDel Objeto\n\n{$p1}\n{$p2}\n{$p3}\n\nCapítulo II\nDe los Contratos\n\nArtículo 2.- Segunda disposición sintética.";
+
+        $source = $this->import([], $raw);
+        $chunks = $source->chunks()->orderBy('ordinal')->get();
+        $this->assertCount(3, $chunks);
+        $this->assertSame('Artículo 1', $chunks[0]->article_ref);
+        $this->assertSame(1, (int) $chunks[0]->part);
+        $this->assertSame('Título Primero — Disposiciones Generales / Capítulo I — Del Objeto', $chunks[0]->heading);
+        $this->assertStringNotContainsString('Capítulo II', $chunks[0]->content);
+        $this->assertSame('Artículo 1', $chunks[1]->article_ref);
+        $this->assertSame(2, (int) $chunks[1]->part);
+        $this->assertStringNotContainsString('Capítulo II', $chunks[1]->content);
+        $this->assertSame('Artículo 2', $chunks[2]->article_ref);
+        $this->assertSame(1, (int) $chunks[2]->part);
+        $this->assertSame('Título Primero — Disposiciones Generales / Capítulo II — De los Contratos', $chunks[2]->heading);
+
+        $verified = $this->verify($source);
+        $this->assertTrue($verified->is_verified);
+
+        $retrieved = app(LexaSourceRetriever::class)->retrieve('arrendamiento sintético fracción extensa');
+        $this->assertNotEmpty($retrieved);
+        $art1Chunk = collect($retrieved)->firstWhere('article_ref', 'Artículo 1');
+        $this->assertNotNull($art1Chunk);
+        $this->assertSame(2, $art1Chunk['total_parts']);
+        $this->assertTrue($art1Chunk['is_partial']);
+        $this->assertFalse($art1Chunk['is_transitory']);
+    }
+
+    public function test_conservative_transitorios_and_reform_transitorios_require_explicit_opt_in_and_distinguish_scope(): void
+    {
+        $raw = "Capítulo I\nDisposiciones Generales\n\n"
+            ."Artículo 1.- Arrendamiento sintético sujeto a homologación procesal.\n"
+            ."Párrafo reformado DOF 14-11-2025\n\n"
+            ."Transitorios\n\n"
+            ."Primero.- El presente Decreto entrará en vigor al día siguiente de su publicación.\n"
+            ."Segundo.- Se abroga la disposición sintética anterior.\n\n"
+            ."ARTÍCULOS TRANSITORIOS DE DECRETOS DE REFORMA\n\n"
+            ."Publicado en el Diario Oficial de la Federación el 14 de noviembre de 2025\n\n"
+            ."Transitorios\n\n"
+            ."Primero. El presente Decreto entrará en vigor el día siguiente al de su publicación.\n"
+            ."Segundo. La aplicación en el orden federal entrará en vigor conforme a la Declaratoria de aplicación gradual que emitan las Cámaras.\n\n"
+            ."ARTÍCULOS TRANSITORIOS DE DECRETOS DE REFORMA\n\n"
+            ."Publicado en el Diario Oficial de la Federación el 15 de enero de 2026\n\n"
+            ."Transitorios\n\n"
+            ."Primero. Segunda reforma sintética con ordinal compartido.\n";
+
+        $source = $this->import(['allow_transitorios' => true, 'last_reformed_at' => '2026-01-15'], $raw);
+        $refs = $source->chunks()->orderBy('ordinal')->pluck('article_ref')->all();
+        $this->assertSame([
+            'Artículo 1',
+            'Transitorio Primero',
+            'Transitorio Segundo',
+            'Transitorio Primero (DOF 14-11-2025)',
+            'Transitorio Segundo (DOF 14-11-2025)',
+            'Transitorio Primero (DOF 15-01-2026)',
+        ], $refs);
+
+        $this->assertTrue($this->verify($source)->is_verified);
+
+        $retrieved = app(LexaSourceRetriever::class)->retrieve('Declaratoria de aplicación gradual orden federal');
+        $this->assertNotEmpty($retrieved);
+        $trans = collect($retrieved)->firstWhere('article_ref', 'Transitorio Segundo (DOF 14-11-2025)');
+        $this->assertNotNull($trans);
+        $this->assertTrue($trans['is_transitory']);
+        $this->assertSame('Transitorios de Reforma (DOF 14-11-2025)', $trans['heading']);
+
+        try {
+            $this->import(['version_key' => 'bad-trans', 'allow_transitorios' => true], "Artículo 1.- Texto.\nTransitorios\nTexto suelto sin ordinal.");
+            $this->fail('Expected rejection for malformed transitorio');
+        } catch (ValidationException) {
+            $this->assertSame(1, LexaLegalSource::where('instrument_key', $this->key)->count());
+        }
+    }
 }

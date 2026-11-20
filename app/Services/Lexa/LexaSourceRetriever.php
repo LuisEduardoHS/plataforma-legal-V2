@@ -78,30 +78,52 @@ class LexaSourceRetriever
             ->limit($boundedLimit)
             ->get();
 
-        return $rows->map(fn ($row) => [
-            'chunk_id' => (int) $row->id,
-            'source_id' => (int) $row->source_id,
-            'state_name' => $row->state_name,
-            'chunk_hash' => $row->content_hash,
-            'published_at' => $row->published_at,
-            'consulted_at' => $row->consulted_at,
-            'valid_from' => $row->valid_from,
-            'valid_to' => $row->valid_to,
-            'validity_confirmed' => $row->verified_at !== null && $row->valid_from !== null,
-            'version_key' => $row->version_key,
-            'document_hash' => $row->document_hash,
-            'part' => $row->part,
-            'instrument' => $row->instrument,
-            'short_name' => $row->short_name,
-            'norm_type' => $row->norm_type,
-            'jurisdiction_scope' => $row->jurisdiction_scope,
-            'state_id' => $row->state_id !== null ? (int) $row->state_id : null,
-            'article_ref' => $row->article_ref,
-            'heading' => $row->heading,
-            'source_name' => $row->source_name,
-            'source_url' => $row->source_url,
-            'last_reformed_at' => $row->last_reformed_at,
-            'excerpt' => Str::limit($row->content, 1200, ''),
-        ])->all();
+        $totals = [];
+        foreach ($rows->groupBy('source_id') as $sourceId => $group) {
+            $refs = $group->pluck('article_ref')->unique()->values()->all();
+            $counts = LexaLegalChunk::where('lexa_legal_source_id', $sourceId)
+                ->whereIn('article_ref', $refs)
+                ->selectRaw('article_ref, count(*) as total')
+                ->groupBy('article_ref')
+                ->pluck('total', 'article_ref');
+            foreach ($counts as $ref => $total) {
+                $totals[$sourceId.':'.$ref] = (int) $total;
+            }
+        }
+
+        return $rows->map(function ($row) use ($totals) {
+            $totalParts = max(1, $totals[$row->source_id.':'.$row->article_ref] ?? 1);
+            $excerpt = Str::limit($row->content, 1200, '');
+            $isPartial = $totalParts > 1 || ($row->part !== null && (int) $row->part > 1) || mb_strlen($row->content) > mb_strlen($excerpt);
+
+            return [
+                'chunk_id' => (int) $row->id,
+                'source_id' => (int) $row->source_id,
+                'state_name' => $row->state_name,
+                'chunk_hash' => $row->content_hash,
+                'published_at' => $row->published_at,
+                'consulted_at' => $row->consulted_at,
+                'valid_from' => $row->valid_from,
+                'valid_to' => $row->valid_to,
+                'validity_confirmed' => $row->verified_at !== null && $row->valid_from !== null,
+                'version_key' => $row->version_key,
+                'document_hash' => $row->document_hash,
+                'part' => $row->part !== null ? (int) $row->part : null,
+                'total_parts' => $totalParts,
+                'is_partial' => $isPartial,
+                'is_transitory' => str_starts_with((string) $row->article_ref, 'Transitorio'),
+                'instrument' => $row->instrument,
+                'short_name' => $row->short_name,
+                'norm_type' => $row->norm_type,
+                'jurisdiction_scope' => $row->jurisdiction_scope,
+                'state_id' => $row->state_id !== null ? (int) $row->state_id : null,
+                'article_ref' => $row->article_ref,
+                'heading' => $row->heading,
+                'source_name' => $row->source_name,
+                'source_url' => $row->source_url,
+                'last_reformed_at' => $row->last_reformed_at,
+                'excerpt' => $excerpt,
+            ];
+        })->all();
     }
 }

@@ -19,12 +19,16 @@ export function renderLegalCitations(citations = [], grounding = null) {
         link.href = url.href;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        link.textContent = `${citation.instrument} — ${citation.article_ref}${citation.part ? `, parte ${citation.part}` : ''}`;
+        const partLabel = citation.part
+            ? (citation.total_parts > 1 ? `, parte ${citation.part} de ${citation.total_parts} (fragmento parcial)` : `, parte ${citation.part}`)
+            : (citation.is_partial ? ' (fragmento parcial)' : '');
+        link.textContent = `${citation.instrument} — ${citation.article_ref}${partLabel}${citation.heading ? ` (${citation.heading})` : ''}`;
         const details = document.createElement('p');
         const jurisdiction = citation.jurisdiction_scope === 'state' ? (citation.state_name || 'Entidad no indicada') : 'Federal';
         details.textContent = `${jurisdiction}. Versión: ${citation.version_key || 'no registrada'}. Reforma: ${citation.last_reformed_at || 'no registrada'}. Vigencia revisada: ${citation.valid_from || 'inicio desconocido'} a ${citation.valid_to || 'sin fecha final registrada'}. Recuperada: ${citation.retrieved_at || 'sin fecha'}.`;
         const warning = document.createElement('p');
-        warning.textContent = citation.validity_confirmed ? 'Aplicabilidad revisada al recuperar la fuente; no implica confirmación de vigencia actual.' : 'Advertencia: vigencia no confirmada.';
+        const partialNote = (citation.is_partial || citation.total_parts > 1) ? ' Evidencia parcial del artículo: consulta el texto completo en la fuente oficial.' : '';
+        warning.textContent = (citation.validity_confirmed ? 'Aplicabilidad revisada al recuperar la fuente; no implica confirmación de vigencia actual.' : 'Advertencia: vigencia no confirmada.') + partialNote;
         item.append(link, details, warning);
         list.append(item);
     }

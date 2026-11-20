@@ -274,4 +274,64 @@ class LexaRagIntegrationTest extends TestCase
         $this->postJson("/lexa/conversaciones/$id2/generar", [])->assertStatus(503);
         $this->assertSame(0, LexaMessage::where('lexa_conversation_id', $id2)->where('role', 'assistant')->count());
     }
+
+    public function test_fulltext_retrieves_final_part_and_propagates_partial_and_legacy_citations(): void
+    {
+        config(['lexa.limits.legal_chunk_chars' => 240]);
+        $ingestion = app(LegalSourceIngestion::class);
+        $text = "Capítulo I\nDisposiciones Generales\n\n"
+            .'Artículo 1.- '.str_repeat('Texto inicial común del artículo sintético. ', 6)."\n"
+            .'II. Cláusula terminal exclusiva sobre indemnización extraordinaria arrendaticia.';
+        $meta = [
+            'instrument_key' => 'rag-part-'.bin2hex(random_bytes(8)),
+            'version_key' => 'v1',
+            'instrument' => 'Norma sintética multi-parte',
+            'short_name' => 'MULT',
+            'norm_type' => 'federal_law',
+            'jurisdiction_scope' => 'federal',
+            'source_url' => 'https://www.diputados.gob.mx/LeyesBiblio/index.htm',
+            'published_at' => '2020-01-01',
+            'last_reformed_at' => null,
+            'consulted_at' => today()->toDateString(),
+            'valid_from' => '2020-01-01',
+            'valid_to' => null,
+            'extraction_note' => 'Fixture sintético multi-parte.',
+        ];
+        $source = $ingestion->import($meta, $text);
+        $this->sourceIds[] = $source->id;
+        $ingestion->verify($source->id, $source->document_hash, 'QA', 'Revisión sintética explícita de fragmentos parciales.');
+
+        // Legacy source without instrument_key or part
+        $legacy = $this->source(true, ['instrument' => 'Norma legacy compatible']);
+        $legacyChunk = $legacy->chunks()->first();
+        $legacyChunk->forceFill(['part' => null])->save();
+
+        $user = $this->user();
+        $this->fake(function (LexaPrompt $prompt) {
+            $this->assertCount(1, $prompt->legalSources);
+            $src = $prompt->legalSources[0];
+            $this->assertSame(2, $src['part']);
+            $this->assertSame(2, $src['total_parts']);
+            $this->assertTrue($src['is_partial']);
+            $this->assertFalse($src['is_transitory']);
+            $this->assertSame('Capítulo I — Disposiciones Generales', $src['heading']);
+
+            return new LexaCompletion('Orientación sobre indemnización.', 'fake', 'test', citations: [['chunk_id' => $src['chunk_id']]]);
+        });
+
+        $convId = $this->actingAs($user)->postJson('/lexa/conversaciones', ['content' => 'indemnización extraordinaria arrendaticia'])->assertCreated()->json('conversation.id');
+        $res = $this->postJson("/lexa/conversaciones/$convId/generar", [])->assertCreated();
+        $res->assertJsonPath('message.citations.0.part', 2)
+            ->assertJsonPath('message.citations.0.total_parts', 2)
+            ->assertJsonPath('message.citations.0.is_partial', true)
+            ->assertJsonPath('message.citations.0.is_transitory', false)
+            ->assertJsonPath('message.citations.0.heading', 'Capítulo I — Disposiciones Generales');
+
+        $legacyRetrieved = app(LexaSourceRetriever::class)->retrieve('Arrendamiento contrato sintético');
+        $legacyHit = collect($legacyRetrieved)->firstWhere('source_id', $legacy->id);
+        $this->assertNotNull($legacyHit);
+        $this->assertNull($legacyHit['part']);
+        $this->assertSame(1, $legacyHit['total_parts']);
+        $this->assertFalse($legacyHit['is_partial']);
+    }
 }

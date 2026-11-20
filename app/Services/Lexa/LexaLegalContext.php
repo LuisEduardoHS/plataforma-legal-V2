@@ -24,7 +24,11 @@ class LexaLegalContext
                 || ($source['jurisdiction_scope'] === 'federal' && $source['state_id'] !== null)) {
                 continue;
             }
+            $originalExcerpt = $source['excerpt'];
             $source['excerpt'] = mb_substr($source['excerpt'], 0, $budget);
+            if (mb_strlen($source['excerpt']) < mb_strlen($originalExcerpt)) {
+                $source['is_partial'] = true;
+            }
             // Budget includes citation metadata and JSON escaping, not only the text.
             $size = mb_strlen(json_encode($source, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)) + 1;
             if ($size > $budget || $source['excerpt'] === '') {
