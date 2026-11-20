@@ -139,7 +139,11 @@
 .home-post-stretched-link { position:absolute; inset:0; z-index:1; border-radius:inherit; background:transparent; }
 .home-post-stretched-link:focus-visible { outline:none; }
 .home-post:has(.home-post-stretched-link:focus-visible) { outline:2px solid var(--home-focus); outline-offset:2px; }
-.home-post .content-save-control, .home-post .home-author-role { position:relative; z-index:2; }
+.home-post .content-save-control, .home-post .home-author-role{ position:relative; z-index:2; }
+.home-post .community-media-embed__download { position:absolute; top:10px; right:10px; z-index:2; background:var(--color-text) }
+/* Garantiza que el botón de descarga de media quede sobre el stretched-link */
+.home-post .community-media-embed { margin: 12px 0 14px; }
+.home-post .community-media-embed__download { z-index: 3; }
 .home-community-peek .home-post-header { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
 .home-community-peek .home-post-author { flex:1; min-width:0; }
 .home-community-peek .home-post-author h3 { display:flex; align-items:center; gap:6px; font-size:14.5px; font-weight:650; line-height:1.3; margin:0; }

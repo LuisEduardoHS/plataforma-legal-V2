@@ -1,7 +1,7 @@
 @extends('layouts.app')
-@section('title', 'Inicio | Plataforma Legal')
+@section('title', 'Inicio | Lefenda')
 @section('page-assets')
-    @vite(['resources/css/home.css', 'resources/css/articles.css'])
+    @vite(['resources/css/home.css', 'resources/css/articles.css', 'resources/css/community.css'])
 @endsection
 @section('content')
     <section class="home-dashboard" data-home data-resources-url="{{ route('articles') }}" aria-label="Inicio">

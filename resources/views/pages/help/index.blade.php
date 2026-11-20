@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Ayuda | Plataforma Legal')
+@section('title', 'Ayuda | Lefenda')
 @section('page-assets')
     @vite(['resources/css/library-help.css'])
 @endsection

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Configuración | Plataforma Legal')
+@section('title', 'Configuración | Lefenda')
 @section('content')
 <div x-data="{ activeTab: 'profile', searchQuery: '' }" class="min-h-screen bg-bg dark:bg-bg-dark flex flex-col font-sans pb-24 lg:pb-16 text-text dark:text-text-dark relative" data-dialog-root>
     <div class="w-full max-w-[1080px] mx-auto px-4 sm:px-6 pt-7">

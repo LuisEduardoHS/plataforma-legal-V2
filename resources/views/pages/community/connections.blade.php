@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Conexiones | Plataforma Legal')
+@section('title', 'Conexiones | Lefenda')
 @section('page-assets') @vite(['resources/css/community.css']) @endsection
 @section('content')
 <section class="community" data-community><div class="community-single"><a class="community-text-link" href="{{ route('community') }}">← Volver a Comunidad</a><x-community.feedback /><section class="community-state community-surface"><h1>Conexiones de {{ $summary['author']['display_name'] }}</h1><nav class="community-form-actions" aria-label="Conexiones"><a class="community-secondary" href="{{ route('community.connections', ['user' => $targetId, 'followers' => 1]) }}">{{ $summary['followers'] }} seguidores activos</a><a class="community-secondary" href="{{ route('community.connections', $targetId) }}">{{ $summary['following'] }} cuentas seguidas activas</a></nav>

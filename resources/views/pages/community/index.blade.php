@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Comunidad | Plataforma Legal')
+@section('title', 'Comunidad | Lefenda')
 @section('page-assets') @vite(['resources/css/community.css']) @endsection
 @section('content')
 <section class="community" aria-label="Comunidad" data-community>

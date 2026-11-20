@@ -18,6 +18,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="turbo-cache-control" content="no-cache">
     <meta name="turbo-prefetch" content="false">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('lefenda_icon.svg') }}">
 
     <title>@yield('title', 'Lefenda')</title>
 

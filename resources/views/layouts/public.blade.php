@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Explora Comunidad, profesionales, artículos y recursos jurídicos en México. Conoce la demostración de LEXA en Plataforma Legal.">
+    <meta name="description" content="Explora Comunidad, profesionales, artículos y recursos jurídicos en México. Conoce la demostración de LEXA en Lefenda.">
     <meta name="turbo-visit-control" content="reload">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('lefenda_icon.svg') }}">
     <title>@yield('title', 'Lefenda | Un punto de partida para tus dudas legales')</title>
     @vite(['resources/css/app.css', 'resources/css/landing.css', 'resources/js/public.js'])
     <link rel="preconnect" href="https://fonts.googleapis.com">

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', ($kind->value === 'article' ? 'Artículos' : 'Recursos jurídicos').' | Plataforma Legal')
+@section('title', ($kind->value === 'article' ? 'Artículos' : 'Recursos jurídicos').' | Lefenda')
 @section('page-assets') @vite(['resources/css/articles.css']) @endsection
 @section('content')
 <section class="articles-page content-page">

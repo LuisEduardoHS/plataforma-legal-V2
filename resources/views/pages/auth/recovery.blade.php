@@ -1,5 +1,5 @@
 @extends('layouts.guest')
-@section('title', ($reset ? 'Restablecer contraseña' : 'Recuperar acceso').' | Plataforma Legal')
+@section('title', ($reset ? 'Restablecer contraseña' : 'Recuperar acceso').' | Lefenda')
 @section('content')
 <div class="min-h-screen flex items-center justify-center bg-bg dark:bg-bg-dark px-4 py-8">
     <section class="bg-white dark:bg-surface-dark rounded-2xl w-full max-w-xl p-6 sm:p-10 space-y-5 text-text dark:text-text-dark">

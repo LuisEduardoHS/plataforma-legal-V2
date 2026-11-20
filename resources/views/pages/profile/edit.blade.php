@@ -1,27 +1,41 @@
 @extends('layouts.app')
-@section('title', ($isProfessional ? 'Editar presentación profesional' : 'Editar perfil').' | Plataforma Legal')
+@section('title', ($isProfessional ? 'Editar presentación profesional' : 'Editar perfil').' | Lefenda')
 @section('page-assets')
     @vite(['resources/css/professionals.css'])
 @endsection
 @section('content')
-<div data-profile-location data-location-catalog-state="{{ $selectedState }}" data-municipalities-url="{{ route($isProfessional ? 'profile.professional.edit' : 'profile.edit') }}" class="profile-editor min-h-screen bg-bg dark:bg-bg-dark text-text dark:text-text-dark pb-24">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        <a href="{{ route('profile') }}" class="underline">← Volver a mi perfil</a>
-        <h1 class="text-2xl font-bold">{{ $isProfessional ? 'Presentación profesional' : 'Editar mi perfil' }}</h1>
-        @if ($errors->any())<div role="alert" class="profile-panel"><h2 class="font-semibold">Revisa el formulario</h2><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-        @if ($isProfessional)<p class="text-sm">Crear este perfil no acredita credenciales ni concede permisos. Los cambios de presentación, cédula, experiencia, modalidad, ubicación o especialidades invalidan la verificación existente. <a class="underline" href="{{ route('verification') }}">Consultar mi verificación y solicitudes</a>.</p>@endif
-        <form data-location-form method="GET" class="profile-panel" action="{{ route($isProfessional ? 'profile.professional.edit' : 'profile.edit') }}">
-            <h2 class="font-semibold">Ubicación</h2>
-            <div data-location-fallback class="text-sm space-y-3">
-                <p>Sin JavaScript, cargar municipios recarga la página y descarta los cambios sin guardar, la cédula escrita y los archivos seleccionados. Guarda primero tus cambios, vuelve a editar y carga el catálogo antes de continuar.</p>
-                <button type="submit" form="profile-edit-form" class="profile-button-secondary">Guardar primero mis cambios</button>
-                <label class="flex items-start gap-2"><input data-location-ack type="checkbox" required>Entiendo que cargar municipios y recargar descarta los cambios sin guardar.</label>
+<div data-profile-location data-location-catalog-state="{{ $selectedState }}" data-municipalities-url="{{ route($isProfessional ? 'profile.professional.edit' : 'profile.edit') }}" class="profile-editor min-h-screen bg-bg pb-20 text-text dark:bg-bg-dark dark:text-text-dark">
+    <div class="mx-auto max-w-[1160px] px-4 py-6 sm:px-6 sm:py-8">
+        <a href="{{ route('profile') }}" class="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-white px-3 text-sm font-semibold text-dark-accent shadow-xs dark:bg-surface-dark dark:text-accent-text-dark"><x-lucide-arrow-left class="size-4" />Volver a mi perfil</a>
+        <header class="mt-5 rounded-[10px] bg-white p-5 shadow-xs dark:bg-surface-dark sm:p-6">
+            <div class="flex items-start gap-3">
+                <span class="grid size-11 shrink-0 place-items-center rounded-[10px] bg-accent-bg-hover text-dark-accent dark:bg-accent-bg-hover-dark dark:text-accent-text-dark"><x-lucide-user-round-cog class="size-5" /></span>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold uppercase tracking-[0.12em] text-dark-accent dark:text-accent-text-dark">{{ $isProfessional ? 'Perfil profesional' : 'Configurar perfil' }}</p>
+                    <h1 class="mt-1 text-2xl font-bold sm:text-[28px]">{{ $isProfessional ? 'Información profesional' : 'Editar mi perfil' }}</h1>
+                </div>
+            </div>
+        </header>
+        @if ($errors->any())<div role="alert" class="profile-panel mt-5 rounded-[10px]!"><h2 class="font-semibold">Revisa el formulario</h2><ul class="mt-2 list-disc pl-5">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+        @if ($isProfessional)<div class="mt-5 flex items-start gap-3 rounded-[10px] bg-white p-4 text-sm leading-6 text-light-text shadow-xs dark:bg-surface-dark dark:text-light-text-dark"><x-lucide-info class="mt-0.5 size-5 shrink-0 text-dark-accent dark:text-accent-text-dark" /><p>Crear este perfil no acredita credenciales ni concede permisos. Los cambios materiales invalidan la verificación existente. <a class="font-semibold text-dark-accent underline dark:text-accent-text-dark" href="{{ route('verification') }}">Consultar verificación y solicitudes</a>.</p></div>@endif
+
+        <div class="mt-5 grid items-start gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside class="grid gap-5 lg:sticky lg:top-24">
+        <form data-location-form method="GET" class="profile-panel rounded-[10px]! border-0! p-5! shadow-xs" action="{{ route($isProfessional ? 'profile.professional.edit' : 'profile.edit') }}">
+            <div class="flex items-center gap-2"><x-lucide-map-pin class="size-5 text-dark-accent dark:text-accent-text-dark" /><h2 class="font-semibold">Ubicación</h2></div>
+            <div data-location-fallback class="mt-4 space-y-3 text-sm leading-6 text-light-text dark:text-light-text-dark">
+                <p>Cargar municipios recarga la página y descarta cambios sin guardar.</p>
+                <button type="submit" form="profile-edit-form" class="profile-button-secondary w-full rounded-[10px]!">Guardar primero mis cambios</button>
+                <label class="flex items-start gap-2"><input data-location-ack type="checkbox" required><span>Entiendo que la recarga descarta cambios.</span></label>
             </div>
             <div class="profile-field"><label for="state_id">Estado del catálogo</label><select data-location-state name="state_id" id="state_id" aria-describedby="profile-location-status"><option value="">Seleccionar estado</option>@foreach ($states as $state)<option value="{{ $state->id }}" @selected((string) $selectedState === (string) $state->id)>{{ $state->name }}</option>@endforeach</select></div>
-            <button data-location-load type="submit" class="profile-button-secondary">Cargar municipios y recargar</button>
-            <p id="profile-location-status" data-location-status role="status" aria-live="polite" aria-atomic="true" class="text-sm"></p>
+            <button data-location-load type="submit" class="profile-button-secondary w-full rounded-[10px]!">Cargar municipios</button>
+            <p id="profile-location-status" data-location-status role="status" aria-live="polite" aria-atomic="true" class="mt-3 text-sm"></p>
         </form>
-        <form id="profile-edit-form" data-profile-edit-form @if ($isProfessional) data-professional-edit @endif method="POST" action="{{ route($isProfessional ? 'profile.professional.prepare' : 'profile.update') }}" class="profile-panel space-y-5" @if ($isProfessional) data-turbo="false" @endif>
+        </aside>
+
+        <main class="min-w-0">
+        <form id="profile-edit-form" data-profile-edit-form @if ($isProfessional) data-professional-edit @endif method="POST" action="{{ route($isProfessional ? 'profile.professional.prepare' : 'profile.update') }}" class="profile-panel !rounded-[10px] border-0! p-5! shadow-xs sm:p-6! space-y-5" @if ($isProfessional) data-turbo="false" @endif>
             @csrf
             @if ($isProfessional)<input type="hidden" name="profile_version" value="{{ old('profile_version', $editorVersion) }}">@else @method('PUT') @endif
             @if (! $isProfessional)
@@ -85,6 +99,8 @@
         @else
             <p class="text-sm">La fotografía pertenece al perfil personal. <a class="underline" href="{{ route('profile.edit') }}">Administrar mi fotografía privada</a>.</p>
         @endif
+        </main>
+        </div>
     </div>
 </div>
 @endsection

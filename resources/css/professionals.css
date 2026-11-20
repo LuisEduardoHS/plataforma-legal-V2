@@ -171,7 +171,7 @@
 
 @media (prefers-color-scheme: dark) {
     .professionals { --professionals-page: var(--color-bg-dark); --professionals-surface: var(--color-surface-dark); --professionals-soft: var(--color-accent-bg-dark); --professionals-hover: var(--color-accent-bg-hover-dark); --professionals-text: var(--color-text-dark); --professionals-muted: var(--color-light-text-dark); --professionals-focus: var(--color-focus-dark); --professionals-link: var(--color-accent-text-dark); --professionals-tint: var(--color-selected-dark); color-scheme: dark; }
-    .professionals-search-panel, .professional-card, .professionals-empty, .professionals-guide, .professional-dialog { border: 1px solid var(--color-border-dark); }
+    .professionals-search-panel, .professional-card, .professionals-empty, .professionals-guide, .professional-dialog { }
     .professionals-search { border: 1px solid var(--color-border-dark); }
     .professionals-filters button:not([aria-pressed="true"]) { background: var(--professionals-soft); }
     .professionals-filters button:not([aria-pressed="true"]):hover { background: var(--professionals-hover); color: var(--professionals-text); }
@@ -252,14 +252,14 @@
 .professional-card { overflow-wrap: anywhere; }
 .professional-card > form { margin-top: 8px; }
 .professional-card > form .professional-view { width: 100%; }
-.profile-editor .profile-panel { background: white; padding: 24px; border-radius: 16px; border: 1px solid #eee; }
+.profile-editor .profile-panel { background: white; padding: 24px; border-radius: 10px; border: 1px solid #eee; }
 .profile-editor .profile-field { display: grid; gap: 8px; margin: 16px 0; min-width: 0; }
 .profile-editor .profile-field label { font-size: 14px; font-weight: 600; }
 .profile-editor .profile-field :is(input,textarea,select) { width: 100%; min-width: 0; padding: 10px 12px; min-height: 44px; border: 1px solid var(--color-control-border); border-radius: var(--radius-ui); background: transparent; color: inherit; font: inherit; }
 .profile-editor .profile-field input[type=file] { overflow: hidden; }
 .profile-editor input[type=checkbox] { accent-color: var(--color-dark-accent); margin-top: 4px; flex-shrink: 0; }
 .profile-editor :is(input,textarea,select,button,a):focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
-.profile-editor :is(.profile-button,.profile-button-secondary) { display: inline-block; padding: 10px 20px; border-radius: 999px; min-height: 44px; cursor: pointer; transition: opacity 160ms ease; }
+.profile-editor :is(.profile-button,.profile-button-secondary) { display: inline-block; padding: 10px 20px; border-radius: 10px; min-height: 44px; cursor: pointer; transition: opacity 160ms ease; }
 .profile-editor .profile-button { background: var(--color-dark-accent); color: white; }
 .profile-editor .profile-button-secondary { border: 1px solid currentColor; }
 .profile-editor button:hover { opacity: .85; }

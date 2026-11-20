@@ -30,6 +30,61 @@
         @endif
     </header>
     <p class="home-post-excerpt">{{ Illuminate\Support\Str::limit($post['content'] ?: 'Archivo compartido', 240) }}</p>
+
+    @if (!empty($post['attachments']))
+        @foreach ($post['attachments'] as $file)
+            @php
+                $mediaUrl = route('community.media', ['post' => $post['id'], 'attachment' => $file['id']]);
+                $ext = strtolower($file['extension'] ?? '');
+                $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg']);
+                $isVideo = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv']);
+            @endphp
+
+            @if ($isImage)
+                <div class="community-media-embed community-media-embed--image">
+                    <img
+                        src="{{ $mediaUrl }}"
+                        alt="{{ $file['name'] }}"
+                        loading="lazy"
+                        class="community-media-embed__img"
+                    >
+                    <a
+                        class="community-media-embed__download"
+                        href="{{ $mediaUrl }}"
+                        download="{{ $file['name'] }}"
+                        data-turbo="false"
+                        aria-label="Descargar {{ $file['name'] }}"
+                        title="Descargar"
+                    >
+                        <x-lucide-download aria-hidden="true" />
+                    </a>
+                </div>
+            @elseif ($isVideo)
+                <div class="community-media-embed community-media-embed--video">
+                    <video
+                        controls
+                        preload="metadata"
+                        class="community-media-embed__video"
+                        aria-label="{{ $file['name'] }}"
+                    >
+                        <source src="{{ $mediaUrl }}" type="video/{{ $ext === 'mov' ? 'quicktime' : ($ext === 'mkv' ? 'x-matroska' : $ext) }}">
+                        Tu navegador no soporta la reproducción de video.
+                    </video>
+                    <a
+                        class="community-media-embed__download"
+                        href="{{ $mediaUrl }}"
+                        download="{{ $file['name'] }}"
+                        data-turbo="false"
+                        aria-label="Descargar {{ $file['name'] }}"
+                        title="Descargar"
+                    >
+                        <x-lucide-download aria-hidden="true" />
+                    </a>
+                </div>
+            @endif
+        @endforeach
+    @endif
+
     <footer class="home-post-footer">
         <div class="home-post-actions">
             <span class="home-post-stat"><x-lucide-message-circle aria-hidden="true" /><span>{{ $post['comments_count'] }} {{ $post['comments_count'] === 1 ? 'comentario' : 'comentarios' }}</span></span>

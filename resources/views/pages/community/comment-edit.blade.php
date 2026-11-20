@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Editar comentario | Plataforma Legal')
+@section('title', 'Editar comentario | Lefenda')
 @section('page-assets') @vite(['resources/css/community.css']) @endsection
 @section('content')
 <section class="community" data-community><div class="community-single"><a class="community-text-link" href="{{ route('community.show', $comment['post_id']) }}">← Volver a la publicación</a><h1>Editar comentario</h1><x-community.feedback /><form method="POST" action="{{ route('community.comments.update', $comment['id']) }}" class="community-comment community-surface">@csrf @method('PUT')<input type="hidden" name="version" value="{{ old('version', $comment['version']) }}"><label for="comment-content">Contenido del comentario</label><textarea name="content" id="comment-content" maxlength="{{ config('community.comment_max_length') }}" rows="5" required @if ($errors->has('content')) aria-invalid="true" aria-describedby="comment-content-error" @endif>{{ old('content', $comment['content']) }}</textarea><x-community.field-error field="content" id="comment-content-error" /><button class="community-primary">Guardar comentario</button><p class="community-muted" data-submit-status role="status"></p></form></div></section>

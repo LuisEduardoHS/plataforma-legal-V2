@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Guardados | Plataforma Legal')
+@section('title', 'Guardados | Lefenda')
 @section('page-assets') @vite(['resources/css/library-help.css', 'resources/css/articles.css']) @endsection
 @section('content')
 <section class="personal-page" aria-label="Tus guardados">

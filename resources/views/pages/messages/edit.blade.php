@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Editar mensaje | Plataforma Legal')
+@section('title', 'Editar mensaje | Lefenda')
 @section('page-assets') @vite(['resources/css/messages.css']) @endsection
 @section('content')
 <section class="messages-edit"><h1>Editar mensaje</h1><p>Solo cambia el texto. Los archivos asociados se conservan.</p><x-ui.error-summary :fields="['content' => 'message-edit-content']" />

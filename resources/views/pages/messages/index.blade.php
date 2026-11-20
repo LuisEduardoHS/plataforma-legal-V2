@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Mensajes | Plataforma Legal')
+@section('title', 'Mensajes | Lefenda')
 @section('page-assets') @vite(['resources/css/messages.css']) @endsection
 @section('content')
 <section class="messages" data-messaging data-view="{{ $context ? 'chat' : 'list' }}" @if ($context) data-poll-url="{{ route('messages.updates', ['conversation' => $context['id']] + $filters) }}" data-can-send="{{ $context['can_send'] ? 'true' : 'false' }}" @endif data-historical="{{ $historical || request()->filled('cursor') ? 'true' : 'false' }}" aria-label="Mensajes">

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', ($profile['display_name'] ?? 'Profesional').' | Plataforma Legal')
+@section('title', ($profile['display_name'] ?? 'Profesional').' | Lefenda')
 @section('content')
 @php
     $name = $profile['display_name'] ?? 'Profesional';

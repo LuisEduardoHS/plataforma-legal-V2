@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Profesionales | Plataforma Legal')
+@section('title', 'Profesionales | Lefenda')
 @section('page-assets')
     @vite(['resources/css/professionals.css'])
 @endsection

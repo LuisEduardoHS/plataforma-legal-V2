@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Mi perfil | Plataforma Legal')
+@section('title', 'Mi perfil | Lefenda')
 @section('content')
 <div class="min-h-screen bg-bg dark:bg-bg-dark font-sans pb-16 sm:pb-24 text-text dark:text-text-dark">
     <div class="w-full max-w-[1280px] mx-auto px-4 sm:px-6 pt-6">
@@ -32,7 +32,7 @@
         </x-profiles.card>
 
         <div class="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
-            <section class="min-w-0 rounded-[10px] border border-gray-100/50 bg-white p-5 shadow-xs dark:border-border-dark dark:bg-surface-dark">
+            <section class="min-w-0 rounded-[10px] bg-white p-5 shadow-xs dark:border-border-dark dark:bg-surface-dark">
                     <div class="mb-4 flex items-center gap-2">
                         <x-lucide-briefcase-business class="size-5 text-dark-accent dark:text-accent-text-dark" />
                         <h2 class="text-lg font-bold">Información profesional</h2>
@@ -62,11 +62,11 @@
                     </div>
             </section>
 
-            <section class="min-w-0 rounded-[10px] border border-gray-100/50 bg-white p-5 shadow-xs dark:border-border-dark dark:bg-surface-dark" aria-label="Publicaciones del usuario">
-                <div class="flex min-h-64 flex-col items-center justify-center rounded-[10px] bg-bg-dark px-6 py-10 text-center text-text-dark dark:bg-bg-dark">
-                    <span class="mb-4 grid size-14 place-items-center rounded-[10px] bg-accent-bg-hover-dark text-accent-text-dark"><x-lucide-newspaper class="size-7" /></span>
-                    <h3 class="font-bold">Tu actividad aparecerá aquí</h3>
-                    <p class="mt-2 max-w-md text-sm leading-6 text-light-text-dark">Consulta tus publicaciones y participa en las conversaciones de la comunidad.</p><a class="mt-4 inline-flex min-h-11 items-center rounded-ui bg-dark-accent px-4 py-2 text-white" href="{{ route('community.user', auth()->id()) }}">Mis publicaciones en Comunidad</a>
+            <section class="min-w-0 rounded-[10px] bg-white p-5 shadow-xs dark:border-border-dark dark:bg-surface-dark" aria-label="Publicaciones del usuario">
+                <div class="flex min-h-64 flex-col items-center justify-center rounded-[10px] px-6 py-10 text-center text-text-dark ">
+                    <span class="mb-4 grid size-14 place-items-center rounded-[10px] bg-accent-bg-hover dark:bg-accent-bg-hover-dark text-dark-accent dark:text-accent-text-dark"><x-lucide-newspaper class="size-7" /></span>
+                    <h3 class="font-bold text-text dark:text-white">Tu actividad aparecerá aquí</h3>
+                    <p class="mt-2 max-w-md text-sm leading-6 text-light-text dark:text-light-text-dark">Consulta tus publicaciones y participa en las conversaciones de la comunidad.</p><a class="mt-4 inline-flex min-h-11 items-center rounded-ui bg-dark-accent px-4 py-2 text-white text-xs font-semibold" href="{{ route('community.user', auth()->id()) }}">Mis publicaciones en Comunidad</a>
                 </div>
             </section>
         </div>

@@ -82,17 +82,70 @@
     @endif
 
     @foreach ($post['attachments'] as $file)
-        <div class="community-document">
-            <span class="community-document-icon" aria-hidden="true">{{ $cardIcons->svg('file-text') }}</span>
-            <div class="community-document-info">
-                <strong>{{ $file['name'] }}</strong>
-                <span>{{ strtoupper($file['extension']) }} · {{ max(1, (int) ceil($file['size_bytes'] / 1024)) }} KiB</span>
+        @php
+            $mediaUrl = route('community.media', ['post' => $post['id'], 'attachment' => $file['id']]);
+            $ext = strtolower($file['extension'] ?? '');
+            $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg']);
+            $isVideo = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv']);
+        @endphp
+
+        @if ($isImage)
+            {{-- Imagen embebida con botón de descarga superpuesto --}}
+            <div class="community-media-embed community-media-embed--image">
+                <img
+                    src="{{ $mediaUrl }}"
+                    alt="{{ $file['name'] }}"
+                    loading="lazy"
+                    class="community-media-embed__img"
+                >
+                <a
+                    class="community-media-embed__download community-document-download"
+                    href="{{ $mediaUrl }}"
+                    download="{{ $file['name'] }}"
+                    data-turbo="false"
+                    aria-label="Descargar {{ $file['name'] }}"
+                    title="Descargar"
+                >
+                    {{ $cardIcons->svg('download') }}
+                </a>
             </div>
-            <a class="community-document-download" href="{{ route('community.media', ['post' => $post['id'], 'attachment' => $file['id']]) }}" data-turbo="false">
-                {{ $cardIcons->svg('download') }}
-                <span>Descargar</span>
-            </a>
-        </div>
+        @elseif ($isVideo)
+            {{-- Video embebido con botón de descarga superpuesto --}}
+            <div class="community-media-embed community-media-embed--video">
+                <video
+                    controls
+                    preload="metadata"
+                    class="community-media-embed__video"
+                    aria-label="{{ $file['name'] }}"
+                >
+                    <source src="{{ $mediaUrl }}" type="video/{{ $ext === 'mov' ? 'quicktime' : ($ext === 'mkv' ? 'x-matroska' : $ext) }}">
+                    Tu navegador no soporta la reproducción de video.
+                </video>
+                <a
+                    class="community-media-embed__download community-document-download"
+                    href="{{ $mediaUrl }}"
+                    download="{{ $file['name'] }}"
+                    data-turbo="false"
+                    aria-label="Descargar {{ $file['name'] }}"
+                    title="Descargar"
+                >
+                    {{ $cardIcons->svg('download') }}
+                </a>
+            </div>
+        @else
+            {{-- Documento descargable (comportamiento original) --}}
+            <div class="community-document">
+                <span class="community-document-icon" aria-hidden="true">{{ $cardIcons->svg('file-text') }}</span>
+                <div class="community-document-info">
+                    <strong>{{ $file['name'] }}</strong>
+                    <span>{{ strtoupper($file['extension']) }} · {{ max(1, (int) ceil($file['size_bytes'] / 1024)) }} KiB</span>
+                </div>
+                <a class="community-document-download" href="{{ $mediaUrl }}" data-turbo="false">
+                    {{ $cardIcons->svg('download') }}
+                    <span>Descargar</span>
+                </a>
+            </div>
+        @endif
     @endforeach
 
     <footer class="community-post-footer">

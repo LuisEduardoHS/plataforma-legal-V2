@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'LEXA | Plataforma Legal')
+@section('title', 'LEXA | Lefenda')
 
 @section('page-assets')
     @vite(['resources/css/lexa.css'])

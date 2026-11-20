@@ -70,7 +70,7 @@
     </section>
     <section class="landing-container landing-final-section" data-reveal aria-labelledby="join-title">
         <div class="landing-final">
-            <p class="landing-eyebrow">Tu siguiente paso</p><h2 id="join-title">Crea tu espacio en<br>Plataforma Legal.</h2><p>Explora, participa y vuelve a lo que te importa.</p>
+            <p class="landing-eyebrow">Tu siguiente paso</p><h2 id="join-title">Crea tu espacio en<br>Lefenda.</h2><p>Explora, participa y vuelve a lo que te importa.</p>
             <a class="landing-button landing-button-brand" href="{{ route('register') }}">Crear mi cuenta <x-lucide-arrow-right aria-hidden="true" /></a>
             <p class="landing-final-login">¿Ya tienes cuenta? <a href="{{ route('login') }}">Iniciar sesión</a></p>
         </div>

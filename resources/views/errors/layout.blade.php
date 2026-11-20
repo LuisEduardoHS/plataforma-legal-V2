@@ -39,7 +39,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="turbo-visit-control" content="reload">
     <meta name="turbo-cache-control" content="no-cache">
-    <title>{{ $title }} | Plataforma Legal</title>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('lefenda_icon.svg') }}">
+    <title>{{ $title }} | Lefenda</title>
     @vite(['resources/css/app.css'])
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,7 +48,7 @@
 </head>
 <body id="app" class="public-shell min-h-screen bg-bg dark:bg-bg-dark text-text dark:text-text-dark font-sans">
     <a class="ui-skip-link" href="#main-content">Saltar al contenido</a>
-    <header class="public-header"><div class="public-header-inner"><a class="public-brand" href="{{ route('landing') }}" data-turbo="false" aria-label="Plataforma Legal, portada"><span class="public-brand-mark" aria-hidden="true"></span>Plataforma Legal</a></div></header>
+    <header class="public-header"><div class="public-header-inner"><a class="public-brand" href="{{ route('landing') }}" data-turbo="false" aria-label="Lefenda, portada"><span class="public-brand-mark" aria-hidden="true"></span>Lefenda</a></div></header>
     <main id="main-content" tabindex="-1" class="max-w-3xl mx-auto px-[min(1.25rem,5vw)] py-12 break-words">
         <x-ui.card :padding="false" class="p-[min(1.25rem,5vw)] dark:bg-surface-dark dark:border-border-dark space-y-5">
             <p class="text-sm text-light-text dark:text-light-text-dark">Error {{ $status }}</p>

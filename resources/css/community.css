@@ -352,3 +352,84 @@
     .community-form-actions > :is(a,button) { flex: 1 1 auto; }
     .community-create-footer { padding: 16px; }
 }
+
+/* ── Multimedia embebida en publicaciones ─────────────────────────── */
+.community-media-embed {
+    position: relative;
+    margin: 14px 0 0;
+    border-radius: 10px;
+    /* overflow visible para que el botón de descarga no quede recortado */
+    overflow: visible;
+    border: 1px solid var(--community-border);
+    background: var(--community-soft);
+    display: block;
+}
+.community-media-embed--image {
+    max-width: 100%;
+}
+.community-media-embed--video {
+    max-width: 100%;
+}
+.community-media-embed__img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 10px;
+}
+.community-media-embed__video {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 480px;
+    border-radius: 10px;
+    background: #000;
+}
+/* Botón de descarga superpuesto en esquina superior derecha */
+.community-media-embed__download {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    min-height: 34px;
+    padding: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--community-border);
+    background: var(--community-surface);
+    color: var(--community-text);
+    text-decoration: none;
+    flex-shrink: 0;
+    opacity: 0.9;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    transition: opacity 160ms ease, background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.community-media-embed__download svg {
+    width: 14px;
+    height: 14px;
+}
+.community-media-embed__download:hover {
+    opacity: 1;
+    border-color: var(--community-accent);
+    color: var(--community-accent);
+    background: var(--community-selected);
+}
+/* En tarjetas con stretched-link: asegura que el botón quede por encima */
+.community-post:not(.community-post--detail) .community-media-embed__download,
+.home-post .community-media-embed__download {
+    z-index: 3;
+}
+@media (max-width: 600px) {
+    .community-media-embed__video {
+        max-height: 260px;
+    }
+    .community-media-embed__download {
+        top: 8px;
+        right: 8px;
+        min-width: 36px;
+        min-height: 36px;
+    }
+}

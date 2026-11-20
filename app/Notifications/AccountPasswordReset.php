@@ -15,7 +15,7 @@ class AccountPasswordReset extends ResetPassword
         ], '', '&', PHP_QUERY_RFC3986);
 
         return (new MailMessage)->mailer(app(RecoveryMailer::class)->name())
-            ->subject('Restablecer contraseña | Plataforma Legal')
+            ->subject('Restablecer contraseña | Lefenda')
             ->line('Recibimos una solicitud para restablecer tu contraseña.')
             ->action('Restablecer contraseña', $url)
             ->line('El enlace caduca en '.config('auth.passwords.'.config('auth.defaults.passwords').'.expire').' minutos y sólo puede utilizarse una vez.')
