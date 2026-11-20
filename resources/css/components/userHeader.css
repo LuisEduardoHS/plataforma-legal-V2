@@ -1,5 +1,4 @@
-@import "tailwindcss";
-@import "../app.css";
+@reference "../app.css";
 
 .headerNav-button {
     @apply text-text dark:text-text-dark rounded-lg lg:w-25 sm:px-4 lg:py-2 sm:text-xs text-[0.625rem] text-center flex flex-col gap-0.5
