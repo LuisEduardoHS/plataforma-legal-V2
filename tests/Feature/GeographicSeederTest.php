@@ -9,6 +9,7 @@ use Database\Seeders\CountrySeeder;
 use Database\Seeders\MunicipalitySeeder;
 use Database\Seeders\StateSeeder;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class GeographicSeederTest extends TestCase
@@ -16,7 +17,7 @@ class GeographicSeederTest extends TestCase
     private function assertTestingDatabase(): void
     {
         $this->assertSame(
-            'plataforma_legal_v2_test',
+            TestingIsolation::database(),
             DB::connection()->getDatabaseName()
         );
     }

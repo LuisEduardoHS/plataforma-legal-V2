@@ -17,6 +17,7 @@ use Illuminate\Support\ViewErrorBag;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class AccessibilityComponentsIntegrationTest extends TestCase
@@ -29,7 +30,7 @@ class AccessibilityComponentsIntegrationTest extends TestCase
         $this->get(route('login'))->assertOk();
         $this->assertSame('testing', app()->environment());
         $this->assertSame('mysql', DB::connection()->getDriverName());
-        $this->assertSame('plataforma_legal_v2_test', DB::selectOne('SELECT DATABASE() db')->db);
+        $this->assertSame(TestingIsolation::database(), DB::selectOne('SELECT DATABASE() db')->db);
         $this->assertSame('array', config('session.driver'));
         $this->assertSame('array', config('cache.default'));
         $this->assertStringStartsWith(str_replace('\\', '/', storage_path()).'/', str_replace('\\', '/', Storage::disk('attachments')->path('')));

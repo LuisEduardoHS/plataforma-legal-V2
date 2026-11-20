@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\EnforcedCsrfToken;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class PublicNavigationIsolationProbe
@@ -27,8 +28,8 @@ class PublicNavigationIsolationProbe
         $storage = str_replace('\\', '/', storage_path());
         $private = str_replace('\\', '/', config('filesystems.disks.attachments.root'));
         if (! app()->environment('testing') || $db->getDriverName() !== 'mysql'
-            || $db->getDatabaseName() !== 'plataforma_legal_v2_test'
-            || $db->selectOne('SELECT DATABASE() db')->db !== 'plataforma_legal_v2_test'
+            || $db->getDatabaseName() !== TestingIsolation::database()
+            || $db->selectOne('SELECT DATABASE() db')->db !== TestingIsolation::database()
             || config('session.driver') !== 'array' || config('cache.default') !== 'array'
             || str_starts_with($storage, str_replace('\\', '/', base_path()).'/')
             || ! str_starts_with($private, $storage.'/framework/testing/disks/public-navigation')) {

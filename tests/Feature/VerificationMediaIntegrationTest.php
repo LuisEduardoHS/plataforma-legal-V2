@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Support\TestingIsolation;
 use Tests\Support\VerificationFixtures;
 use Tests\TestCase;
 
@@ -41,7 +42,7 @@ class VerificationMediaIntegrationTest extends TestCase
         $this->seed(VerificationPermissionSeeder::class);
         $this->permissionIds = DB::table('permissions')->whereNotIn('id', $existing)->pluck('id')->all();
         Event::listen('eloquent.creating: '.Attachment::class, function () {
-            $this->assertSame('plataforma_legal_v2_test', DB::selectOne('SELECT DATABASE() db')->db);
+            $this->assertSame(TestingIsolation::database(), DB::selectOne('SELECT DATABASE() db')->db);
             $root = str_replace('\\', '/', Storage::disk(config('attachments.disk'))->path(''));
             $this->assertStringStartsWith(str_replace('\\', '/', storage_path('framework/testing/disks/attachments')).'/', $root);
         });
@@ -244,11 +245,11 @@ class VerificationMediaIntegrationTest extends TestCase
         $second = $this->reviewer();
         $version = $this->version($reviewer, $dossier->id, true);
         $config = config('database.connections.mysql');
-        $config['database'] = 'plataforma_legal_v2_test';
+        $config['database'] = TestingIsolation::database();
         $config['url'] = null;
         config(['database.connections.verification_http_rival' => $config]);
         $rival = DB::connection('verification_http_rival');
-        $this->assertSame('plataforma_legal_v2_test', $rival->selectOne('SELECT DATABASE() db')->db);
+        $this->assertSame(TestingIsolation::database(), $rival->selectOne('SELECT DATABASE() db')->db);
         $this->assertNotSame(DB::selectOne('SELECT CONNECTION_ID() id')->id, $rival->selectOne('SELECT CONNECTION_ID() id')->id);
         $prior = DB::selectOne('SELECT @@innodb_lock_wait_timeout seconds')->seconds;
         try {

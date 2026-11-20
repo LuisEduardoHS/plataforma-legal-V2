@@ -4,6 +4,11 @@ return [
     // Only server configuration selects the disk. It must never serve public URLs.
     'disk' => env('ATTACHMENTS_DISK', 'attachments'),
 
+    'quota' => [
+        'enabled' => env('ATTACHMENTS_QUOTA_ENABLED', true),
+        'per_user_bytes' => env('ATTACHMENTS_QUOTA_BYTES', 1073741824),
+    ],
+
     'max_bytes' => [
         'image' => 10 * 1024 * 1024,
         'video' => 100 * 1024 * 1024,

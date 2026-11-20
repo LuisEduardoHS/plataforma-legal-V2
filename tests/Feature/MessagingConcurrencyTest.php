@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class MessagingConcurrencyTest extends TestCase
@@ -23,8 +24,8 @@ class MessagingConcurrencyTest extends TestCase
     {
         $this->assertSame('testing', app()->environment());
         $this->assertSame('mysql', DB::connection()->getDriverName());
-        $this->assertSame('plataforma_legal_v2_test', DB::connection()->getDatabaseName());
-        $this->assertSame('plataforma_legal_v2_test', DB::selectOne('SELECT DATABASE() db')->db);
+        $this->assertSame(TestingIsolation::database(), DB::connection()->getDatabaseName());
+        $this->assertSame(TestingIsolation::database(), DB::selectOne('SELECT DATABASE() db')->db);
         $default = DB::getDefaultConnection();
         $db = DB::connection();
         $users = [];
@@ -37,7 +38,7 @@ class MessagingConcurrencyTest extends TestCase
             $users[] = $b->id;
             config(['database.connections.messaging_race' => config('database.connections.'.$default)]);
             $other = DB::connection('messaging_race');
-            $this->assertSame('plataforma_legal_v2_test', $other->selectOne('SELECT DATABASE() db')->db);
+            $this->assertSame(TestingIsolation::database(), $other->selectOne('SELECT DATABASE() db')->db);
             $other->statement('SET SESSION innodb_lock_wait_timeout = 1');
             $reportedCode = null;
             Log::listen(function (MessageLogged $event) use (&$reportedCode): void {

@@ -29,6 +29,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Support\TestingIsolation;
 use Tests\TestCase;
 
 class AttachmentTest extends TestCase
@@ -44,8 +45,8 @@ class AttachmentTest extends TestCase
         parent::setUp();
         $this->assertSame('testing', app()->environment());
         $this->assertSame('mysql', DB::connection()->getDriverName());
-        $this->assertSame('plataforma_legal_v2_test', DB::connection()->getDatabaseName());
-        $this->assertSame('plataforma_legal_v2_test', DB::selectOne('SELECT DATABASE() AS db')->db);
+        $this->assertSame(TestingIsolation::database(), DB::connection()->getDatabaseName());
+        $this->assertSame(TestingIsolation::database(), DB::selectOne('SELECT DATABASE() AS db')->db);
         Storage::fake('attachments');
         $this->service = app(AttachmentService::class);
     }
