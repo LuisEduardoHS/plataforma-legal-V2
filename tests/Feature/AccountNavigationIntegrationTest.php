@@ -93,12 +93,12 @@ class AccountNavigationIntegrationTest extends TestCase
         return $links;
     }
 
-    public function test_guest_has_one_native_account_menu_with_login_registration_and_help(): void
+    public function test_guest_has_public_navigation_with_native_disclosure_and_account_entries(): void
     {
         $dom = $this->dom($this->get('/ayuda')->assertOk()->getContent());
-        $this->assertSame(1, $dom->query('//details[@data-account-menu]')->length);
-        $this->assertSame(1, $dom->query('//details[@data-account-menu]/summary[@aria-label="Menú de cuenta"]')->length);
-        $this->assertSame([route('login'), route('register'), route('help')], $this->links($dom));
+        $this->assertSame(0, $dom->query('//details[@data-account-menu]')->length);
+        $this->assertSame(1, $dom->query('//details[@data-public-navigation]/summary[@aria-controls="public-navigation-panel"]')->length);
+        $this->assertSame(array_map(fn ($name) => route($name), ['community', 'professionals', 'articles', 'resources', 'help', 'login', 'register']), $this->links($dom));
         $this->assertSame(0, $dom->query('//*[@data-account-panel]//form')->length);
     }
 
@@ -203,7 +203,7 @@ class AccountNavigationIntegrationTest extends TestCase
         $this->post('/cerrar-sesion', ['_token' => $token])->assertRedirect('/');
         $this->assertGuest();
         $links = $this->links($this->dom($this->get('/ayuda')->assertOk()->getContent()));
-        $this->assertSame([route('login'), route('register'), route('help')], $links);
+        $this->assertSame(array_map(fn ($name) => route($name), ['community', 'professionals', 'articles', 'resources', 'help', 'login', 'register']), $links);
         $this->get('/guardados')->assertRedirect('/iniciar-sesion');
         $this->get('/cerrar-sesion')->assertStatus(405);
     }
@@ -220,7 +220,7 @@ class AccountNavigationIntegrationTest extends TestCase
         $actor->save();
         $this->get('/ayuda')->assertRedirect('/iniciar-sesion');
         $this->assertGuest();
-        $this->assertSame([route('login'), route('register'), route('help')], $this->links($this->dom($this->get('/ayuda')->assertOk()->getContent())));
+        $this->assertSame(array_map(fn ($name) => route($name), ['community', 'professionals', 'articles', 'resources', 'help', 'login', 'register']), $this->links($this->dom($this->get('/ayuda')->assertOk()->getContent())));
     }
 
     public function test_rendered_help_is_current_categorized_and_readable_without_scripts(): void

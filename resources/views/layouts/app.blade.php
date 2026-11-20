@@ -10,6 +10,7 @@
 --}}
 
 <!DOCTYPE html>
+@php($internalNavigation = auth()->user()?->isActive() ?? false)
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -20,7 +21,8 @@
 
     <title>@yield('title', 'Plataforma Legal')</title>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/components/userHeader.css'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if ($internalNavigation) @vite(['resources/css/components/userHeader.css']) @endif
     @yield('page-assets')
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,10 +33,10 @@
 <body class="min-h-screen bg-gray-50 dark:bg-bg-dark text-gray-900 dark:text-text-dark">
     <a class="ui-skip-link" href="#main-content">Saltar al contenido</a>
 
-    <div id="app" class="min-h-screen">
+    <div id="app" @class(['min-h-screen', 'public-shell' => ! $internalNavigation])>
 
         {{-- Encabezado compartido de las páginas internas --}}
-        @include('layouts.partials.header')
+        @if ($internalNavigation) @include('layouts.partials.header') @else <x-public.header /> @endif
 
         {{-- Contenido particular de cada página --}}
         <main id="main-content" tabindex="-1">

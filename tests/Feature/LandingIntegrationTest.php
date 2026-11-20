@@ -150,13 +150,16 @@ class LandingIntegrationTest extends TestCase
         $this->assertNotEmpty($queries); // The HTTP isolation probe actually ran.
     }
 
-    public function test_build_document_loads_css_and_fonts_without_any_application_javascript(): void
+    public function test_build_document_loads_only_the_light_public_disclosure_without_application_javascript(): void
     {
         $this->withVite();
         $this->app->make(Vite::class)->useHotFile(storage_path('absent.hot'));
         $dom = $this->dom($this->get('/')->assertOk()->getContent());
-        $this->assertSame(0, $dom->query('//script')->length);
-        $this->assertSame(0, $dom->query('//link[@rel="modulepreload"]')->length);
+        $this->assertSame(1, $dom->query('//script[@type="module"]')->length);
+        $this->assertStringContainsString('/assets/public-', $dom->evaluate('string(//script/@src)'));
+        foreach ($dom->query('//script/@src | //link[@rel="modulepreload"]/@href') as $asset) {
+            $this->assertDoesNotMatchRegularExpression('~/assets/(?:app|navigation)-~', $asset->value);
+        }
         $styles = [];
         foreach ($dom->query('//link[@rel="stylesheet"]') as $node) {
             $styles[] = $node->getAttribute('href');

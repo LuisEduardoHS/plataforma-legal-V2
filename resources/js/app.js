@@ -1,4 +1,5 @@
 import './bootstrap';
+import './public';
 import Alpine from 'alpinejs';
 import { onPage } from './ui/page';
 import { setupAccountMenu } from './ui/account-menu';
