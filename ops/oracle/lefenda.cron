@@ -1,0 +1,4 @@
+# Install in /etc/cron.d/lefenda (root-owned, 0644). No secrets here.
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+* * * * * lefenda cd /srv/lefenda/current && /usr/bin/flock -n /srv/lefenda/shared/storage/framework/scheduler.lock /usr/bin/php artisan schedule:run >> /srv/lefenda/shared/storage/logs/scheduler.log 2>&1

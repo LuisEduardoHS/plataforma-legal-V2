@@ -1,0 +1,7 @@
+-- Provision locally by a DBA only; never execute against existing environments here.
+-- Create accounts via protected secret provisioning, not literal passwords in this file.
+GRANT SELECT, INSERT, UPDATE, DELETE ON lefenda_staging.* TO 'lefenda_runtime'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES ON lefenda_staging.* TO 'lefenda_migrator'@'localhost';
+GRANT SELECT, SHOW VIEW, TRIGGER, EVENT ON lefenda_staging.* TO 'lefenda_backup'@'localhost';
+-- MySQL 8.0.20+ metadata privilege required to dump routine definitions.
+GRANT SHOW_ROUTINE ON *.* TO 'lefenda_backup'@'localhost';
