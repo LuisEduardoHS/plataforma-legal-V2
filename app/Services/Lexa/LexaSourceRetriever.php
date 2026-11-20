@@ -25,6 +25,12 @@ class LexaSourceRetriever
         $rows = LexaLegalChunk::query()
             ->join('lexa_legal_sources as sources', 'sources.id', '=', 'lexa_legal_chunks.lexa_legal_source_id')
             ->where('sources.is_verified', true)
+            ->whereNull('sources.superseded_by')
+            ->where(function ($q) {
+                $q->whereNull('sources.instrument_key')->orWhere(function ($imported) {
+                    $imported->whereNotNull('sources.verified_at')->whereNotNull('sources.valid_from');
+                });
+            })
             ->where(function ($q) use ($today) {
                 $q->whereNull('sources.valid_from')->orWhere('sources.valid_from', '<=', $today);
             })
@@ -54,6 +60,9 @@ class LexaSourceRetriever
                 'sources.source_name',
                 'sources.source_url',
                 'sources.last_reformed_at',
+                'sources.version_key',
+                'sources.document_hash',
+                'lexa_legal_chunks.part',
             ])
             ->selectRaw('MATCH(lexa_legal_chunks.article_ref, lexa_legal_chunks.heading, lexa_legal_chunks.content) AGAINST (? IN NATURAL LANGUAGE MODE) AS relevance', [$clean])
             ->orderByDesc('relevance')
@@ -62,6 +71,9 @@ class LexaSourceRetriever
 
         return $rows->map(fn ($row) => [
             'chunk_id' => (int) $row->id,
+            'version_key' => $row->version_key,
+            'document_hash' => $row->document_hash,
+            'part' => $row->part,
             'instrument' => $row->instrument,
             'short_name' => $row->short_name,
             'norm_type' => $row->norm_type,

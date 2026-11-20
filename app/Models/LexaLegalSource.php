@@ -20,6 +20,8 @@ class LexaLegalSource extends Model
             'valid_from' => 'date',
             'valid_to' => 'date',
             'is_verified' => 'boolean',
+            'provenance' => 'array',
+            'verified_at' => 'datetime',
         ];
     }
 
